@@ -16,15 +16,23 @@ This example users a compiled version of OpenCV 4.0.0 and requires following pac
 - Cmake 1.13
 - Boost::System
 
+## Docker setup
+To build the docker image:
+```
+docker build -t quarks:disco-gcc8
+```
+
+To run the docker image:
+```
+docker run -it -v $PWD:/quarks -p 18080:18080 --cap-add sys_ptrace quarks:disco-gcc
+```
+
 ## How to build
-
-After building and install OpenCV 4.0.0, GCC, Cmake and Boost::System you should.
-
 ```
 mkdir build
 cd build
 cmake ..
-make -$(nproc)
+ninja
 ```
 
 ### Testing
