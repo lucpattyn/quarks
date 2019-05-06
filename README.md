@@ -5,8 +5,10 @@ Modern C++ based server side framework for optimal solutions
 The philosophy and technological guidance behind Quarks can be found in this link:
 [quarks philosophy](https://dev.to/lucpattyn/quarks-a-new-approach-with-a-new-mindset-to-programming-10lk)
 
-This is an example using [Crow](https://github.com/ipkn/crow) library  to serve an OpenCV image filter. This example
-users a compiled version of OpenCV 4.0.0 and requires following packages:
+This is an example using [Crow](https://github.com/ipkn/crow) library  to serve an OpenCV image filter.
+We will have a mechanism in later stages to support various plugins. 
+We will provide OpenCV as a readily available plugin.
+This example users a compiled version of OpenCV 4.0.0 and requires following packages:
 
 - OpenCV 4.0.0
 - Crow Library v0.1
