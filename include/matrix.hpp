@@ -34,6 +34,8 @@
 
 namespace Quarks {
     
+    statix Matrix _Instance;
+    
     struct Matrix{
         
         enum CellType{
