@@ -31,9 +31,8 @@ docker run -it -v $PWD:/quarks -p 18080:18080 --cap-add sys_ptrace quarks:disco-
 ```
 mkdir build
 cd build
-cmake ..
+cmake .. -G Ninja
 ninja
-make -$(nproc)
 ```
 
 ### Testing
