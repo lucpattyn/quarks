@@ -39,18 +39,8 @@ int main(int argc, char ** argv) {
         return res;
     };
     
-    CROW_ROUTE(app, "/filter/gaussian")
-        .methods("POST"_method)(route_filter_gaussian_callback);
-    
-    CROW_ROUTE(app, "/filter/adjust")
-        .methods("POST"_method)(route_filter_adjust_callback);
-    
-    CROW_ROUTE(app, "/filter/clahe")
-        .methods("POST"_method)(route_filter_clahe_callback);
-    
-    CROW_ROUTE(app, "/quarks/cache/putjson")
-    .methods("POST"_method)
-    ([](const crow::request& req){
+    auto route_cache_putjson_callback =
+    [](const crow::request& req){
         auto x = crow::json::load(req.body);
         if (!x)
             return crow::response(400);
@@ -70,32 +60,53 @@ int main(int argc, char ** argv) {
         os << result;
         
         return crow::response{os.str()};
-    });
+    };
+    
+    auto route_cache_findjson_callback =
+    [](const crow::request& req)
+    {
+        const std::string& wild = req.body;
+        CROW_LOG_INFO << "wild-card : " << wild;
+        
+        std::vector<crow::json::wvalue> jsonResults;
+        Quarks::Cache::_Instance.findJson(wild, jsonResults);
+        
+        crow::json::wvalue w;
+        w["result"] = "";
+        
+        if(jsonResults.size()){
+            //w["result"] = jsonResults[0].s();
+            //CROW_LOG_INFO << "jsonResults[0] : "
+            //   <<  crow::json::dump(jsonResults[0])
+            
+            w["result"] = std::move(jsonResults);
+        }
+        
+        return w;
+        
+    }
+    
+    
+    CROW_ROUTE(app, "/filter/gaussian")
+        .methods("POST"_method)(route_filter_gaussian_callback);
+    
+    CROW_ROUTE(app, "/filter/adjust")
+        .methods("POST"_method)(route_filter_adjust_callback);
+    
+    CROW_ROUTE(app, "/filter/clahe")
+        .methods("POST"_method)(route_filter_clahe_callback);
+    
+    CROW_ROUTE(app, "/quarks/cache/putjson")
+    .methods("POST"_method)(route_cache_putjson_callback);
         
     CROW_ROUTE(app, "/quarks/cache/findjson")
-    .methods("GET"_method, "POST"_method)
-    ([](const crow::request& req)
-     {
-         const std::string& wild = req.body;
-         CROW_LOG_INFO << "wild-card : " << wild;
-         
-         std::vector<crow::json::wvalue> jsonResults;
-         Quarks::Cache::_Instance.findJson(wild, jsonResults);
-         
-         crow::json::wvalue w;
-         w["result"] = "";
-         
-         if(jsonResults.size()){
-             //w["result"] = jsonResults[0].s();
-             //CROW_LOG_INFO << "jsonResults[0] : "
-             //   <<  crow::json::dump(jsonResults[0])
-             
-             w["result"] = std::move(jsonResults);
-         }
-         
-         return w;
-         
-     });
+    .methods("GET"_method, "POST"_method)(route_cache_findjson_callback);
+    
+    
+    auto v = Quarks::Matrix::_Instance; // we will work with the matrix data struct
+                                            // in later api calls
+    
+    
     
     std::cout << "running .." << std::endl;
 
