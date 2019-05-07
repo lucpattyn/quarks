@@ -84,8 +84,7 @@ int main(int argc, char ** argv) {
         
         return w;
         
-    }
-    
+    };
     
     CROW_ROUTE(app, "/filter/gaussian")
         .methods("POST"_method)(route_filter_gaussian_callback);
@@ -103,7 +102,7 @@ int main(int argc, char ** argv) {
     .methods("GET"_method, "POST"_method)(route_cache_findjson_callback);
     
     
-    auto v = Quarks::Matrix::_Instance; // we will work with the matrix data struct
+    auto& v = Quarks::Matrix::_Instance; // we will work with the matrix data struct
                                             // in later api calls
     
     
