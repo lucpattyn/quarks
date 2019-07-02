@@ -1,9 +1,24 @@
 #include <quarks.hpp>
+#include "rocksdb/db.h"
 
 using namespace Quarks;
 
 Cache Cache::_Instance;
 Matrix Matrix::_Instance;
+
+rocksdb::DB* db = nullptr;
+rocksdb::Status dbStatus;
+
+void initDB(){
+    rocksdb::Options options;
+    options.create_if_missing = true;
+    dbStatus = rocksdb::DB::Open(options, "quarks_db", &db);
+}
+
+void closeDB(){
+    // close the database
+    delete db;
+}
 
 
 int wildcmp(const char *wild, const char *string) {
@@ -40,9 +55,33 @@ int wildcmp(const char *wild, const char *string) {
     return !*wild;
 }
 
+Cache::Cache(){
+    initDB();
+}
+
+Cache::~Cache(){
+    closeDB();
+}
+
 std::string Cache::putJson(std::string key, crow::json::rvalue& x) {
     
-    _cache[key] = std::move(x);
+    //_cache[key] = std::move(x);
+    crow::json::wvalue w = std::move(x);
+    std::string value = crow::json::dump(w);
+    
+    rocksdb::Slice keySlice = key;
+        
+    // modify the database
+    if (dbStatus.ok()){
+        rocksdb::Status status = db->Put(rocksdb::WriteOptions(), keySlice, value);
+        if(!status.ok()){
+            key = "";
+        }
+    
+    }else{
+        key = "";
+    }
+    
     
     return  key;
     
@@ -52,19 +91,28 @@ bool Cache::getJson(std::string key, crow::json::wvalue& out){
     
     bool ret = false;
     
-    std::map<std::string, crow::json::rvalue>::iterator it = _cache.find(key);
+    /*std::map<std::string, crow::json::rvalue>::iterator it = _cache.find(key);
     if (it != _cache.end()){
         out = it->second;
         ret = true;
+    }*/
+    if (dbStatus.ok()){
+        std::string value;
+        rocksdb::Status status = db->Get(rocksdb::ReadOptions(), key, &value);
+    
+        if(status.ok()){
+            out =  crow::json::load(value);
+            ret = true;
+        }
     }
     
     return ret;
     
 }
 
-void Cache::findJson(std::string wild, std::vector<crow::json::wvalue>& matchedResults) {
+bool Cache::findJson(std::string wild, std::vector<crow::json::wvalue>& matchedResults) {
 
-    for (std::map<std::string, crow::json::rvalue>::iterator it = _cache.begin();
+    /*for (std::map<std::string, crow::json::rvalue>::iterator it = _cache.begin();
          it != _cache.end(); ++it){
             if(wildcmp(wild.c_str(), it->first.c_str()) ){
                 crow::json::wvalue w;
@@ -73,7 +121,32 @@ void Cache::findJson(std::string wild, std::vector<crow::json::wvalue>& matchedR
                 
                 matchedResults.push_back(std::move(w));
             }
+    }*/
+    
+    if (dbStatus.ok()){
+    // create new iterator
+        rocksdb::Iterator* it = db->NewIterator(rocksdb::ReadOptions());
+        
+        // iterate all entries
+        for (it->SeekToFirst(); it->Valid(); it->Next()) {
+            CROW_LOG_INFO << "iterate : " << it->key().ToString()
+            << ": " << it->value().ToString() ; //<< endl;
+            
+            if(wildcmp(wild.c_str(), it->key().ToString().c_str())){
+                crow::json::wvalue w;
+                w = crow::json::load(it->value().ToString());
+                CROW_LOG_INFO << "w : " << crow::json::dump(w);
+                
+                matchedResults.push_back(std::move(w));
+                
+            }
+        }
+        //assert(it->status().ok());  // check for any errors found during the scan
+        
+        return it->status().ok();
     }
+    
+    return false;
     
 }
 

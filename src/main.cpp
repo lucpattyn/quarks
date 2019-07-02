@@ -4,9 +4,8 @@
 
 #include <quarks.hpp>
 
-
 int main(int argc, char ** argv) {
-    
+   
     std::vector<std::string> arguments(argv + 1, argv + argc);
 
     crow::SimpleApp app;
@@ -62,6 +61,19 @@ int main(int argc, char ** argv) {
         return crow::response{os.str()};
     };
     
+    auto route_cache_getjson_callback =
+    [](const crow::request& req)
+    {
+        const std::string& key = req.body;
+        CROW_LOG_INFO << "wild-card : " << key;
+        
+        crow::json::wvalue out;
+        Quarks::Cache::_Instance.getJson(key, out);
+        
+        return out;
+        
+    };
+    
     auto route_cache_findjson_callback =
     [](const crow::request& req)
     {
@@ -97,7 +109,10 @@ int main(int argc, char ** argv) {
     
     CROW_ROUTE(app, "/quarks/cache/putjson")
     .methods("POST"_method)(route_cache_putjson_callback);
-        
+  
+    CROW_ROUTE(app, "/quarks/cache/getjson")
+    .methods("GET"_method, "POST"_method)(route_cache_getjson_callback);
+    
     CROW_ROUTE(app, "/quarks/cache/findjson")
     .methods("GET"_method, "POST"_method)(route_cache_findjson_callback);
     

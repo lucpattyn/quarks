@@ -20,16 +20,19 @@ namespace Quarks {
         public:
         static Cache _Instance;
         
+        Cache();
+        ~Cache();
+        
         std::string putJson(std::string key, crow::json::rvalue& x);
         
         bool getJson(std::string key, crow::json::wvalue& out);
         
-        void findJson(std::string wild, std::vector<crow::json::wvalue>& matchedResults);
+        bool findJson(std::string wild, std::vector<crow::json::wvalue>& matchedResults);
     
         
         private:
         
-        std::map<std::string, crow::json::rvalue> _cache;
+        //std::map<std::string, crow::json::rvalue> _cache;
         
         
     };

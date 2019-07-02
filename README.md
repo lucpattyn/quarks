@@ -5,16 +5,20 @@ Modern C++ based server side framework for optimal solutions
 The philosophy and technological guidance behind Quarks can be found in this link:
 [quarks philosophy](https://dev.to/lucpattyn/quarks-a-new-approach-with-a-new-mindset-to-programming-10lk)
 
-This is an example using [Crow](https://github.com/ipkn/crow) library  to serve an OpenCV image filter.
 We will have a mechanism in later stages to support various plugins. 
 We will provide OpenCV as a readily available plugin.
-This example users a compiled version of OpenCV 4.0.0 and requires following packages:
 
-- OpenCV 4.0.0
+Thanks Arthur de Araújo Farias for providing a good example of using CROW with OpenCV.
+[arthurafarias/microservice-opencv-filter-gausian]
+
+This current example uses a compiled version of RocksDB and  OpenCV 4.0.0 and requires the following packages:
+
 - Crow Library v0.1
 - GCC with support to C++17
 - Cmake 1.13
 - Boost::System
+- RocksDB
+- OpenCV 4.0.0
 
 ## Docker setup
 To build the docker image:
@@ -31,9 +35,8 @@ docker run -it -v $PWD:/quarks -p 18080:18080 --cap-add sys_ptrace quarks:disco-
 ```
 mkdir build
 cd build
-cmake ..
+cmake .. -G Ninja
 ninja
-make -$(nproc)
 ```
 
 ### Testing
@@ -44,7 +47,43 @@ After initializing by issuing following command
 ./ocv_microservice_crow
 ```
 
-You should submit a POST request to http://localhost:18080/filters/gausian. The body of this request should be your
-binary PNG image. The response should be a gausian filtered image from the submited image.
+So here are the commands to put a json object against key, get that object against key and do a wildcard search of keys
 
-This however is not the purpose behind Quarks. It's just to get things started..
+a) Put a json object against a key:
+POST: http://0.0.0.0:18080/quarks/cache/putjson
+BODY:
+{"key":"g3_u3", "msg":"m3"}
+
+Note, for now a body must have the "key" attribute in passed json and the
+whole json object {"key":"g3_u3", "msg":"m3"} is saved against the key "g3_u3"
+
+b) Retrieve the json object by key:
+POST: http://0.0.0.0:18080/quarks/cache/getjson
+BODY: g3_u3
+
+c) Retrieve an array of json object by wildcard matching of keys..
+POST: http://0.0.0.0:18080/quarks/cache/findjson
+BODY: g3_u*
+
+You could  post a few values against keys with putjson, for example 
+POST: http://0.0.0.0:18080/quarks/cache/putjson
+BODY:
+{"key":"g1_u2", "msg":"m1"}
+
+POST: http://0.0.0.0:18080/quarks/cache/putjson
+BODY:
+{"key":"g1_u2", "msg":"m2"}
+
+POST: http://0.0.0.0:18080/quarks/cache/putjson
+BODY:
+{"key":"g3_u3", "msg":"m3"}
+
+and then check the results by 
+POST: http://0.0.0.0:18080/quarks/cache/findjson
+BODY: g1_u*
+
+For those interested in testing OpenCV as plugin,
+you should submit a POST request to http://localhost:18080/filters/gausian. The body of this request should be your
+binary PNG image. 
+The response should be a gausian filtered image from the submited image.
+OpenCV however is a plugin (an additional feature) and not the main purpose behind Quarks.

@@ -1,0 +1,13 @@
+# ninja log v5
+1	1570	1561894470000000000	CMakeFiles/ocv_microservice_crow.dir/base64.cpp.o	2043c9b083ffea0
+2	8973	1561894478000000000	CMakeFiles/ocv_microservice_crow.dir/filter.cpp.o	acd034ae2a41a222
+9	12401	1561894523000000000	CMakeFiles/ocv_microservice_crow.dir/quarks.cpp.o	e94f93b3d4f7f1c9
+8	26871	1561894538000000000	CMakeFiles/ocv_microservice_crow.dir/main.cpp.o	169850ff2389ad21
+33	13101	1561894598000000000	CMakeFiles/ocv_microservice_crow.dir/quarks.cpp.o	e94f93b3d4f7f1c9
+32	33603	1561894618000000000	CMakeFiles/ocv_microservice_crow.dir/main.cpp.o	169850ff2389ad21
+2	531	1561894705000000000	build.ninja	2eddf74ba9c25ae
+39	265	1561894705000000000	ocv_microservice_crow	c1e22f56ee44514e
+32	26172	1561894849000000000	CMakeFiles/ocv_microservice_crow.dir/main.cpp.o	169850ff2389ad21
+26173	26330	1561894850000000000	ocv_microservice_crow	c1e22f56ee44514e
+32	26650	1561894902000000000	CMakeFiles/ocv_microservice_crow.dir/main.cpp.o	169850ff2389ad21
+26651	26837	1561894902000000000	ocv_microservice_crow	c1e22f56ee44514e
