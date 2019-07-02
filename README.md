@@ -47,21 +47,21 @@ After initializing by issuing following command
 ./ocv_microservice_crow
 ```
 
-So here are the commands to put a json object against key, get that object against key and do a wildcard search of keys
+run the following commands to i) put a json object against key, ii) get that object against key and iii) do a wildcard search of keys
 
-a) Put a json object against a key:
+i) Put a json object against a key:
 POST: http://0.0.0.0:18080/quarks/cache/putjson
 BODY:
 {"key":"g3_u3", "msg":"m3"}
 
-Note, for now a body must have the "key" attribute in passed json and the
-whole json object {"key":"g3_u3", "msg":"m3"} is saved against the key "g3_u3"
+Note: In the json body, it is required to have the "key" attribute as a part of the json object.  The whole json object {"key":"g3_u3", "msg":"m3"} is saved against the key "g3_u3"
+We will improve this api later.
 
-b) Retrieve the json object by key:
+ii) Retrieve the json object by key:
 POST: http://0.0.0.0:18080/quarks/cache/getjson
 BODY: g3_u3
 
-c) Retrieve an array of json object by wildcard matching of keys..
+iii) Retrieve an array of json object by wildcard matching of keys..
 POST: http://0.0.0.0:18080/quarks/cache/findjson
 BODY: g3_u*
 
