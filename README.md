@@ -61,7 +61,7 @@ ii) Retrieve the json object by key:
 POST: http://0.0.0.0:18080/quarks/cache/getjson
 BODY: g3_u3
 
-iii) Retrieve an array of json object by wildcard matching of keys..
+iii) Retrieve an array of json objects by wildcard matching of keys..
 POST: http://0.0.0.0:18080/quarks/cache/findjson
 BODY: g3_u*
 
