@@ -5,7 +5,6 @@ using namespace Quarks;
 
 Cache Cache::_Instance;
 Matrix Matrix::_Instance;
-<<<<<<< Updated upstream
 
 rocksdb::DB* db = nullptr;
 rocksdb::Status dbStatus;
@@ -20,9 +19,6 @@ void closeDB(){
     // close the database
     delete db;
 }
-
-=======
->>>>>>> Stashed changes
 
 int wildcmp(const char *wild, const char *string) {
     // Written by Jack Handy - <A href="mailto:jakkhandy@hotmail.com">jakkhandy@hotmail.com</A>
