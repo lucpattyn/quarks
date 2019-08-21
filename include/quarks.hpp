@@ -27,8 +27,11 @@ namespace Quarks {
         
         bool getJson(std::string key, crow::json::wvalue& out);
         
-        bool findJson(std::string wild, std::vector<crow::json::wvalue>& matchedResults);
+        bool findJson(std::string wild,
+                      std::vector<crow::json::wvalue>& matchedResults);
     
+        bool filterJson(crow::json::rvalue& filter,
+                        std::vector<crow::json::wvalue>& matchedResults);
         
         private:
         

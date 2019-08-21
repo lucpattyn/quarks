@@ -149,3 +149,64 @@ bool Cache::findJson(std::string wild, std::vector<crow::json::wvalue>& matchedR
     
 }
 
+bool Cache::filterJson(crow::json::rvalue& filter,
+                       std::vector<crow::json::wvalue>& matchedResults) {
+    
+    
+    if (dbStatus.ok()){
+        CROW_LOG_INFO << "filter : " << crow::json::dump(filter);
+        
+        // create new iterator
+        rocksdb::Iterator* it = db->NewIterator(rocksdb::ReadOptions());
+        
+        std::string wild = filter["keys"].s();
+        CROW_LOG_INFO << "keys : " << wild.c_str();
+        
+        crow::json::wvalue subFilter;
+        subFilter["subfilter"] = filter["filter"];
+        //crow::json::rvalue subFilter = filter["filter"];
+        CROW_LOG_INFO << "subfilter : " << crow::json::dump(subFilter);
+        
+        crow::json::wvalue wMap;
+        wMap["map"]= std::move(subFilter["subfilter"]);
+        CROW_LOG_INFO << "map : " << crow::json::dump(wMap["map"]);
+        
+        std::string wx = crow::json::dump(wMap["map"]);
+        crow::json::rvalue map = crow::json::load(wx);
+        std::string mapField = map["map"]["field"].s();
+        std::string mapAs = map["map"]["as"].s();
+        
+        // iterate all entries
+        for (it->SeekToFirst(); it->Valid(); it->Next()) {
+            
+            std::string val = it->value().ToString();
+            
+            CROW_LOG_INFO << "iterate : " << it->key().ToString()
+            << ": " <<  val; //<< endl;
+            
+            if(wildcmp(wild.c_str(), it->key().ToString().c_str())){
+                crow::json::rvalue r;
+                r = crow::json::load(it->value().ToString());
+                
+                CROW_LOG_INFO << "r : " << val;
+            
+                std::string mapKey = r[mapField.c_str()].s();
+                crow::json::wvalue mapJson;
+                
+                crow::json::wvalue w = r;
+                if(getJson(mapKey, mapJson)){
+                    w[mapAs] = std::move(mapJson);
+                }
+                
+                matchedResults.push_back(std::move(w));
+                
+            }
+        }
+        //assert(it->status().ok());  // check for any errors found during the scan
+        
+        return it->status().ok();
+    }
+    
+    return false;
+    
+}

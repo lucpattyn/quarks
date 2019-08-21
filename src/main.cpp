@@ -100,6 +100,33 @@ int main(int argc, char ** argv) {
         
     };
     
+    auto route_cache_filterjson_callback =
+    [](const crow::request& req){
+        
+        crow::json::wvalue w;
+        w["result"] = "";
+        
+        auto x = crow::json::load(req.body);
+        if (!x){
+            w["error"] = "invalid filter value";
+            return w;
+        }
+        
+        std::vector<crow::json::wvalue> jsonResults;
+        Quarks::Cache::_Instance.filterJson(x, jsonResults);
+        
+        if(jsonResults.size()){
+            //w["result"] = jsonResults[0].s();
+            //CROW_LOG_INFO << "jsonResults[0] : "
+            //   <<  crow::json::dump(jsonResults[0])
+            
+            w["result"] = std::move(jsonResults);
+        }
+        
+        return w;
+        
+    };
+    
     CROW_ROUTE(app, "/filter/gaussian")
         .methods("POST"_method)(route_filter_gaussian_callback);
     
@@ -117,6 +144,9 @@ int main(int argc, char ** argv) {
     
     CROW_ROUTE(app, "/quarks/cache/findjson")
     .methods("GET"_method, "POST"_method)(route_cache_findjson_callback);
+    
+    CROW_ROUTE(app, "/quarks/cache/filterjson")
+    .methods("GET"_method, "POST"_method)(route_cache_filterjson_callback);
     
     
     auto& v = Quarks::Matrix::_Instance; // we will work with the matrix data struct

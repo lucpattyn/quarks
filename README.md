@@ -82,6 +82,76 @@ and then check the results by
 POST: http://0.0.0.0:18080/quarks/cache/findjson
 BODY: g1_u*
 
+There is also provision to run ORM style queries with filterjson
+POST: http://0.0.0.0:18080/quarks/cache/filterjson
+
+Sample Query Format , ..
+query items which are up for sale with key like item* (i.e item1, item2 etc.) , then find the sellers of such items (items has a seller_id field that contains the user_id of the seller) 
+
+BODY:
+{
+"keys":"item*",
+"filter":{"map": {"as":"seller", "field":"seller_id"}}
+}      
+
+To test it out,
+First insert some users->
+POST: http://0.0.0.0:18080/quarks/cache/putjson
+BODY:
+{"key":"user1", "value":{"name":"u1", "age":34}}
+{"key":"user2", "value":{"name":"u2", "age":43}}
+
+then insert some items->
+POST: http://0.0.0.0:18080/quarks/cache/putjson
+BODY:
+{
+"key":"item1",
+"value":{
+"id": "item1",
+"seller_id": "user1",
+"rating": 4,
+"approved": "1"
+}
+
+{
+"key":"item2",
+"value":{
+"id": "item2",
+"seller_id": "user2",
+"rating": 3,
+"approved": "1"
+}
+
+and then check the results by 
+POST: http://0.0.0.0:18080/quarks/cache/filterjson
+BODY:
+{
+"keys":"item*",
+"filter":{"map": {"field":"seller_id", "as":"seller"}}
+}    
+
+So we are able to iterate items (by "keys":"item*") and then run a join operation with the filter attribute ("filter":...) through the keyword map ({"map": {"field":"seller_id", "as":"seller"}})
+
+We aim to provide more complicated queries in future such as:
+{
+    keys: "item*",
+    where: [{rating:{gt:3}},{approved:{eq:1}}],
+    filter:
+   {                
+        map: {field:"seller_id", as:"seller"},          
+        filter:
+       {
+       include:
+         {
+           prefix:"ord*_",field:"user_id",suffix:"", 
+          as:"orders"                                        
+         },
+        where:{deliveryType:{eq:"pickup"}}              
+     }
+  }
+
+}      
+
 For those interested in testing OpenCV as plugin,
 you should submit a POST request to http://localhost:18080/filters/gausian. The body of this request should be your
 binary PNG image. 
