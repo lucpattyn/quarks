@@ -52,10 +52,10 @@ run the following commands to i) put a json object against key, ii) get that obj
 i) Put a json object against a key:
 POST: http://0.0.0.0:18080/quarks/cache/putjson
 BODY:
-{"key":"g3_u3", "msg":"m3"}
+{"key":"g3_u3", "value":{ "msg":"m3"}}
 
-Note: In the json body, it is required to have the "key" attribute as a part of the json object.  The whole json object {"key":"g3_u3", "msg":"m3"} is saved against the key "g3_u3"
-We will improve this api later.
+Note: In the json body, it is required to have a "key" attribute and a "value" attribute as a part of the json object.  The json object {"msg":"m3"}  under attribute "value" is saved against the key "g3_u3" in the persistent storage
+
 
 ii) Retrieve the json object by key:
 POST: http://0.0.0.0:18080/quarks/cache/getjson
@@ -68,15 +68,15 @@ BODY: g3_u*
 You could  post a few values against keys with putjson, for example 
 POST: http://0.0.0.0:18080/quarks/cache/putjson
 BODY:
-{"key":"g1_u2", "msg":"m1"}
+{"key":"g1_u2", "value":{"msg":"m1"}}
 
 POST: http://0.0.0.0:18080/quarks/cache/putjson
 BODY:
-{"key":"g1_u2", "msg":"m2"}
+{"key":"g1_u2", "value":{"msg":"m2"}}
 
 POST: http://0.0.0.0:18080/quarks/cache/putjson
 BODY:
-{"key":"g3_u3", "msg":"m3"}
+{"key":"g3_u3", "value":{"msg":"m3"}}
 
 and then check the results by 
 POST: http://0.0.0.0:18080/quarks/cache/findjson

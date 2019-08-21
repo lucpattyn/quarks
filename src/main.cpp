@@ -46,12 +46,14 @@ int main(int argc, char ** argv) {
         //int sum = x["a"].i()+x["b"].i();
         
         std::string s = x["key"].s();
+        crow::json::rvalue v = x["value"];
+        
         
         //crow::json::wvalue w = std::move(x);
         //CROW_LOG_INFO << "w : " << crow::json::dump(w);
         
         
-        std::string result = Quarks::Cache::_Instance.putJson(s, x);
+        std::string result = Quarks::Cache::_Instance.putJson(s, v);
         //std::string result = Quarks::Cache::cacheJson(x["a"].s(), x);
         
         std::ostringstream os;
