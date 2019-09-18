@@ -158,3 +158,5 @@ you should submit a POST request to http://localhost:18080/filters/gausian. The 
 binary PNG image. 
 The response should be a gausian filtered image from the submited image.
 OpenCV however is a plugin (an additional feature) and not the main purpose behind Quarks.
+Currently it is turned off by using #ifdef _USE_PLUGIN in the codes and if (_USE_PLUGINS) in CMakeLists.txt
+

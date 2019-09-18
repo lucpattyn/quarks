@@ -1,3 +1,5 @@
+#ifdef _USE_PLUGINS
+
 #include <filter.hpp>
 #include <base64.hpp>
 
@@ -144,3 +146,4 @@ std::string Filter::clahe(std::string & image_data){
     return  buffer_string;
 }
 
+#endif

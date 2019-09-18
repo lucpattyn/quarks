@@ -1,5 +1,9 @@
 #include <base64.hpp>
+
+#ifdef _USE_PLUGINS
 #include <filter.hpp>
+#endif
+
 #include <main.hpp>
 
 #include <quarks.hpp>
@@ -9,6 +13,8 @@ int main(int argc, char ** argv) {
     std::vector<std::string> arguments(argv + 1, argv + argc);
 
     crow::SimpleApp app;
+
+#ifdef _USE_PLUGINS
 
     auto route_filter_gaussian_callback =
         [](const crow::request &req) {
@@ -37,6 +43,9 @@ int main(int argc, char ** argv) {
         res.body = Core::Filter::clahe(body);
         return res;
     };
+    
+#endif
+    
     
     // core functionalities
     auto route_core_putjson_callback =
@@ -146,6 +155,7 @@ int main(int argc, char ** argv) {
         
     };
     
+#ifdef _USE_PLUGINS
     CROW_ROUTE(app, "/filter/gaussian")
         .methods("POST"_method)(route_filter_gaussian_callback);
     
@@ -154,6 +164,7 @@ int main(int argc, char ** argv) {
     
     CROW_ROUTE(app, "/filter/clahe")
         .methods("POST"_method)(route_filter_clahe_callback);
+#endif
     
     CROW_ROUTE(app, "/quarks/core/putjson")
     .methods("POST"_method)(route_core_putjson_callback);
