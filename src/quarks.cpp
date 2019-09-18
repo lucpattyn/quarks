@@ -3,7 +3,7 @@
 
 using namespace Quarks;
 
-Cache Cache::_Instance;
+Core Core::_Instance;
 Matrix Matrix::_Instance;
 
 rocksdb::DB* db = nullptr;
@@ -54,17 +54,17 @@ int wildcmp(const char *wild, const char *string) {
     return !*wild;
 }
 
-Cache::Cache(){
+Core::Core(){
     initDB();
 }
 
-Cache::~Cache(){
+Core::~Core(){
     closeDB();
 }
 
-std::string Cache::putJson(std::string key, crow::json::rvalue& x) {
+std::string Core::putJson(std::string key, crow::json::rvalue& x) {
     
-    //_cache[key] = std::move(x);
+    //_Core[key] = std::move(x);
     crow::json::wvalue w = std::move(x);
     std::string value = crow::json::dump(w);
     
@@ -86,12 +86,12 @@ std::string Cache::putJson(std::string key, crow::json::rvalue& x) {
     
 }
 
-bool Cache::getJson(std::string key, crow::json::wvalue& out){
+bool Core::getJson(std::string key, crow::json::wvalue& out){
     
     bool ret = false;
     
-    /*std::map<std::string, crow::json::rvalue>::iterator it = _cache.find(key);
-    if (it != _cache.end()){
+    /*std::map<std::string, crow::json::rvalue>::iterator it = _Core.find(key);
+    if (it != _Core.end()){
         out = it->second;
         ret = true;
     }*/
@@ -109,10 +109,10 @@ bool Cache::getJson(std::string key, crow::json::wvalue& out){
     
 }
 
-bool Cache::findJson(std::string wild, std::vector<crow::json::wvalue>& matchedResults) {
+bool Core::findJson(std::string wild, std::vector<crow::json::wvalue>& matchedResults) {
 
-    /*for (std::map<std::string, crow::json::rvalue>::iterator it = _cache.begin();
-         it != _cache.end(); ++it){
+    /*for (std::map<std::string, crow::json::rvalue>::iterator it = _Core.begin();
+         it != _Core.end(); ++it){
             if(wildcmp(wild.c_str(), it->first.c_str()) ){
                 crow::json::wvalue w;
                 w = it->second;
@@ -149,7 +149,7 @@ bool Cache::findJson(std::string wild, std::vector<crow::json::wvalue>& matchedR
     
 }
 
-bool Cache::filterJson(crow::json::rvalue& filter,
+bool Core::filterJson(crow::json::rvalue& filter,
                        std::vector<crow::json::wvalue>& matchedResults) {
     
     

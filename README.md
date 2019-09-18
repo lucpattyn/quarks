@@ -47,7 +47,7 @@ After initializing by issuing following command
 ./ocv_microservice_crow
 ```
 
-run the following commands to i) put a json object against key, ii) get that object against key and iii) do a wildcard search of keys
+run the following commands to i) put a json object against key, ii) get that object against key and iii) do a wildcard search of keys iv) apply filters and joins
 
 i) Put a json object against a key:
 POST: http://0.0.0.0:18080/quarks/cache/putjson
@@ -59,12 +59,13 @@ Note: In the json body, it is required to have a "key" attribute and a "value" a
 
 ii) Retrieve the json object by key:
 POST: http://0.0.0.0:18080/quarks/cache/getjson
-BODY: g3_u3
+BODY: {"key":"g3_u3"}
 
 iii) Retrieve an array of json objects by wildcard matching of keys..
 POST: http://0.0.0.0:18080/quarks/cache/findjson
-BODY: g3_u*
+BODY: {"wild":"g3_u*"}
 
+To test this API,
 You could  post a few values against keys with putjson, for example 
 POST: http://0.0.0.0:18080/quarks/cache/putjson
 BODY:
@@ -80,9 +81,9 @@ BODY:
 
 and then check the results by 
 POST: http://0.0.0.0:18080/quarks/cache/findjson
-BODY: g1_u*
+BODY: {"wild":"g3_u*"}
 
-There is also provision to run ORM style queries with filterjson
+iv) There is also provision to run ORM style queries with filterjson
 POST: http://0.0.0.0:18080/quarks/cache/filterjson
 
 Sample Query Format , ..

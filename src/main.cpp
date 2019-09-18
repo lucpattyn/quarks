@@ -38,7 +38,8 @@ int main(int argc, char ** argv) {
         return res;
     };
     
-    auto route_cache_putjson_callback =
+    // core functionalities
+    auto route_core_putjson_callback =
     [](const crow::request& req){
         auto x = crow::json::load(req.body);
         if (!x)
@@ -53,8 +54,8 @@ int main(int argc, char ** argv) {
         //CROW_LOG_INFO << "w : " << crow::json::dump(w);
         
         
-        std::string result = Quarks::Cache::_Instance.putJson(s, v);
-        //std::string result = Quarks::Cache::cacheJson(x["a"].s(), x);
+        std::string result = Quarks::Core::_Instance.putJson(s, v);
+        //std::string result = Quarks::Core::CoreJson(x["a"].s(), x);
         
         std::ostringstream os;
         //os << result << sum;
@@ -63,44 +64,62 @@ int main(int argc, char ** argv) {
         return crow::response{os.str()};
     };
     
-    auto route_cache_getjson_callback =
+    auto route_core_getjson_callback =
     [](const crow::request& req)
     {
-        const std::string& key = req.body;
-        CROW_LOG_INFO << "wild-card : " << key;
-        
         crow::json::wvalue out;
-        Quarks::Cache::_Instance.getJson(key, out);
+        auto x = crow::json::load(req.body);
+        if (!x){
+            out["error"] = "invalid parameters";
+            return out;
+        }
+        //int sum = x["a"].i()+x["b"].i();
+        
+        try{
+            std::string key = x["key"].s();
+            Quarks::Core::_Instance.getJson(key, out);
+            
+        }catch (const std::runtime_error& error){
+             out["error"] = "parameter 'key' missing";
+        }
         
         return out;
         
     };
     
-    auto route_cache_findjson_callback =
+    auto route_core_findjson_callback =
     [](const crow::request& req)
     {
-        const std::string& wild = req.body;
-        CROW_LOG_INFO << "wild-card : " << wild;
+        crow::json::wvalue out;
+        out["result"] = "";
         
-        std::vector<crow::json::wvalue> jsonResults;
-        Quarks::Cache::_Instance.findJson(wild, jsonResults);
-        
-        crow::json::wvalue w;
-        w["result"] = "";
-        
-        if(jsonResults.size()){
-            //w["result"] = jsonResults[0].s();
-            //CROW_LOG_INFO << "jsonResults[0] : "
-            //   <<  crow::json::dump(jsonResults[0])
-            
-            w["result"] = std::move(jsonResults);
+        auto x = crow::json::load(req.body);
+        if (!x){
+            out["error"] = "invalid parameters";
+            return out;
         }
         
-        return w;
+        //int sum = x["a"].i()+x["b"].i();
+        try{
+            std::string wild = x["wild"].s();
+            CROW_LOG_INFO << "wild-card : " << wild;
+            
+            std::vector<crow::json::wvalue> jsonResults;
+            Quarks::Core::_Instance.findJson(wild, jsonResults);
+            
+            if(jsonResults.size()){
+                out["result"] = std::move(jsonResults);
+            }
+            
+        }catch (const std::runtime_error& error){
+            out["error"] = "parameter 'wild' missing";
+        }
+        
+        return out;
         
     };
     
-    auto route_cache_filterjson_callback =
+    auto route_core_filterjson_callback =
     [](const crow::request& req){
         
         crow::json::wvalue w;
@@ -113,7 +132,7 @@ int main(int argc, char ** argv) {
         }
         
         std::vector<crow::json::wvalue> jsonResults;
-        Quarks::Cache::_Instance.filterJson(x, jsonResults);
+        Quarks::Core::_Instance.filterJson(x, jsonResults);
         
         if(jsonResults.size()){
             //w["result"] = jsonResults[0].s();
@@ -136,20 +155,20 @@ int main(int argc, char ** argv) {
     CROW_ROUTE(app, "/filter/clahe")
         .methods("POST"_method)(route_filter_clahe_callback);
     
-    CROW_ROUTE(app, "/quarks/cache/putjson")
-    .methods("POST"_method)(route_cache_putjson_callback);
+    CROW_ROUTE(app, "/quarks/core/putjson")
+    .methods("POST"_method)(route_core_putjson_callback);
   
-    CROW_ROUTE(app, "/quarks/cache/getjson")
-    .methods("GET"_method, "POST"_method)(route_cache_getjson_callback);
+    CROW_ROUTE(app, "/quarks/core/getjson")
+    .methods("GET"_method, "POST"_method)(route_core_getjson_callback);
     
-    CROW_ROUTE(app, "/quarks/cache/findjson")
-    .methods("GET"_method, "POST"_method)(route_cache_findjson_callback);
+    CROW_ROUTE(app, "/quarks/core/findjson")
+    .methods("GET"_method, "POST"_method)(route_core_findjson_callback);
     
-    CROW_ROUTE(app, "/quarks/cache/filterjson")
-    .methods("GET"_method, "POST"_method)(route_cache_filterjson_callback);
+    CROW_ROUTE(app, "/quarks/core/filterjson")
+    .methods("GET"_method, "POST"_method)(route_core_filterjson_callback);
     
     
-    auto& v = Quarks::Matrix::_Instance; // we will work with the matrix data struct
+    //auto& v = Quarks::Matrix::_Instance; // we will work with the matrix data struct
                                             // in later api calls
     
     

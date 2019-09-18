@@ -16,12 +16,12 @@ namespace Quarks {
      * @brief Solves the shortcomings of Redis - Sort, Expiry, Serialize
      * 
      */
-    class Cache {
+    class Core {
         public:
-        static Cache _Instance;
+        static Core _Instance;
         
-        Cache();
-        ~Cache();
+        Core();
+        ~Core();
         
         std::string putJson(std::string key, crow::json::rvalue& x);
         
@@ -35,7 +35,7 @@ namespace Quarks {
         
         private:
         
-        //std::map<std::string, crow::json::rvalue> _cache;
+        //std::map<std::string, crow::json::rvalue> _Core;
         
         
     };
