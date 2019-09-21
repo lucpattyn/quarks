@@ -55,31 +55,29 @@ Run the following commands to
 
 
  i) Put a json object against a key:
+ POST: http://0.0.0.0:18080/quarks/core/putjson
 ```
-POST: http://0.0.0.0:18080/quarks/core/putjson
 BODY:
 {"key":"g3_u3", "value":{ "msg":"m3"}}
 ```
 Note: In the json body, it is required to have a "key" attribute and a "value" attribute as a part of the json object.  The json object {"msg":"m3"}  under attribute "value" is saved against the key "g3_u3" in the persistent storage
 
 ii) Retrieve the json object by key:
-```
 POST: http://0.0.0.0:18080/quarks/core/getjson
+```
 BODY: {"key":"g3_u3"}
 ```
 iii) Retrieve an array of json objects by wildcard matching of keys..
-```
-
 POST: http://0.0.0.0:18080/quarks/core/findjson
+```
 BODY: {"wild":"g3_u*"}
 ```
 
 To test this API,
 You could  post a few values against keys with putjson, for example 
+POST: http://0.0.0.0:18080/quarks/core/putjson
 
 ```
-
-POST: http://0.0.0.0:18080/quarks/core/putjson
 BODY:
 {"key":"g1_u2", "value":{"msg":"m1"}}
 
@@ -94,20 +92,18 @@ BODY:
 ```
 
 and then check the results by 
-```
 POST: http://0.0.0.0:18080/quarks/core/findjson
+
+```
 BODY: {"keys":"g3_u*"}
 ```
 
-// iv) Filters and Joins: There is also provision to run ORM style queries with filterjson
-
-```
+iv) Filters and Joins: There is also provision to run ORM style queries with filterjson
 
 POST: http://0.0.0.0:18080/quarks/core/filterjson
-```
 
-Sample Query Format , ..
---query items which are up for sale with key like item* (i.e item1, item2 etc.) , then find the sellers of such items (items has a seller_id field that contains the user_id of the seller) --
+Sample Query Format for
+"querying items which are up for sale with key like item* (i.e item1, item2 etc.) , then find the sellers of such items (items has a seller_id field that contains the user_id of the seller) "
 
 ```
 BODY:
@@ -117,13 +113,11 @@ BODY:
 }      
 ```
 
-
 To test it out,
 First insert some users->
 
 POST: http://0.0.0.0:18080/quarks/core/putjson
 BODY:
-
 ```
 {"key":"user1", "value":{"name":"u1", "age":34}}
 {"key":"user2", "value":{"name":"u2", "age":43}}
@@ -132,7 +126,6 @@ BODY:
 then insert some items->
 POST: http://0.0.0.0:18080/quarks/core/putjson
 BODY:
-
 ```
 {
 "key":"item1",
@@ -162,11 +155,9 @@ BODY:
 "filter":{"map": {"field":"seller_id", "as":"seller"}}
 }    
 ```
-
 So we are able to iterate items (by "keys":"item*") and then run a join operation with the filter attribute ("filter":...) through the keyword map ({"map": {"field":"seller_id", "as":"seller"}})
 
 We aim to provide more complicated queries in future such as:
-
 ```
 {
     keys: "item*",
