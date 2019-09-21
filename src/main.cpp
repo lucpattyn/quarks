@@ -110,7 +110,7 @@ int main(int argc, char ** argv) {
         
         //int sum = x["a"].i()+x["b"].i();
         try{
-            std::string wild = x["wild"].s();
+            std::string wild = x["keys"].s();
             CROW_LOG_INFO << "wild-card : " << wild;
             
             std::vector<crow::json::wvalue> jsonResults;
@@ -121,7 +121,7 @@ int main(int argc, char ** argv) {
             }
             
         }catch (const std::runtime_error& error){
-            out["error"] = "parameter 'wild' missing";
+            out["error"] = "parameter 'keys' missing";
         }
         
         return out;

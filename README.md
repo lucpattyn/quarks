@@ -18,7 +18,7 @@ This current example uses a compiled version of RocksDB and  OpenCV 4.0.0 and re
 - Cmake 1.13
 - Boost::System
 - RocksDB
-- OpenCV 4.0.0
+- OpenCV 4.0.0 (Optional)
 
 ## Docker setup
 To build the docker image:
@@ -47,64 +47,87 @@ After initializing by issuing following command
 ./ocv_microservice_crow
 ```
 
-run the following commands to i) put a json object against key, ii) get that object against key and iii) do a wildcard search of keys iv) apply filters and joins
+Run the following commands to 
+    i) put a json object against key, 
+    ii) get that object against key 
+    iii) do a wildcard search of keys 
+    iv) apply filters and joins
 
-i) Put a json object against a key:
-POST: http://0.0.0.0:18080/quarks/cache/putjson
+
+'''
+// i) Put a json object against a key:
+POST: http://0.0.0.0:18080/quarks/core/putjson
 BODY:
 {"key":"g3_u3", "value":{ "msg":"m3"}}
 
+'''
+
 Note: In the json body, it is required to have a "key" attribute and a "value" attribute as a part of the json object.  The json object {"msg":"m3"}  under attribute "value" is saved against the key "g3_u3" in the persistent storage
 
-
-ii) Retrieve the json object by key:
-POST: http://0.0.0.0:18080/quarks/cache/getjson
+'''
+//ii) Retrieve the json object by key:
+POST: http://0.0.0.0:18080/quarks/core/getjson
 BODY: {"key":"g3_u3"}
+'''
 
-iii) Retrieve an array of json objects by wildcard matching of keys..
-POST: http://0.0.0.0:18080/quarks/cache/findjson
+'''
+//iii) Retrieve an array of json objects by wildcard matching of keys..
+POST: http://0.0.0.0:18080/quarks/core/findjson
 BODY: {"wild":"g3_u*"}
+'''
 
 To test this API,
 You could  post a few values against keys with putjson, for example 
-POST: http://0.0.0.0:18080/quarks/cache/putjson
+
+'''
+POST: http://0.0.0.0:18080/quarks/core/putjson
 BODY:
 {"key":"g1_u2", "value":{"msg":"m1"}}
 
-POST: http://0.0.0.0:18080/quarks/cache/putjson
+POST: http://0.0.0.0:18080/quarks/core/putjson
 BODY:
 {"key":"g1_u2", "value":{"msg":"m2"}}
 
-POST: http://0.0.0.0:18080/quarks/cache/putjson
+POST: http://0.0.0.0:18080/quarks/core/putjson
 BODY:
 {"key":"g3_u3", "value":{"msg":"m3"}}
 
-and then check the results by 
-POST: http://0.0.0.0:18080/quarks/cache/findjson
-BODY: {"wild":"g3_u*"}
+'''
 
-iv) There is also provision to run ORM style queries with filterjson
-POST: http://0.0.0.0:18080/quarks/cache/filterjson
+and then check the results by 
+'''
+POST: http://0.0.0.0:18080/quarks/core/findjson
+BODY: {"wild":"g3_u*"}
+'''
+
+'''
+// iv) There is also provision to run ORM style queries with filterjson
+POST: http://0.0.0.0:18080/quarks/core/filterjson
+'''
 
 Sample Query Format , ..
 query items which are up for sale with key like item* (i.e item1, item2 etc.) , then find the sellers of such items (items has a seller_id field that contains the user_id of the seller) 
 
+'''
 BODY:
 {
 "keys":"item*",
 "filter":{"map": {"as":"seller", "field":"seller_id"}}
 }      
+'''
 
 To test it out,
 First insert some users->
-POST: http://0.0.0.0:18080/quarks/cache/putjson
+POST: http://0.0.0.0:18080/quarks/core/putjson
 BODY:
+'''
 {"key":"user1", "value":{"name":"u1", "age":34}}
 {"key":"user2", "value":{"name":"u2", "age":43}}
-
+'''
 then insert some items->
-POST: http://0.0.0.0:18080/quarks/cache/putjson
+POST: http://0.0.0.0:18080/quarks/core/putjson
 BODY:
+'''
 {
 "key":"item1",
 "value":{
@@ -122,18 +145,22 @@ BODY:
 "rating": 3,
 "approved": "1"
 }
-
+'''
 and then check the results by 
-POST: http://0.0.0.0:18080/quarks/cache/filterjson
+POST: http://0.0.0.0:18080/quarks/core/filterjson
 BODY:
+'''
 {
 "keys":"item*",
 "filter":{"map": {"field":"seller_id", "as":"seller"}}
 }    
+'''
 
 So we are able to iterate items (by "keys":"item*") and then run a join operation with the filter attribute ("filter":...) through the keyword map ({"map": {"field":"seller_id", "as":"seller"}})
 
 We aim to provide more complicated queries in future such as:
+
+'''
 {
     keys: "item*",
     where: [{rating:{gt:3}},{approved:{eq:1}}],
@@ -151,7 +178,8 @@ We aim to provide more complicated queries in future such as:
      }
   }
 
-}      
+}  
+'''
 
 For those interested in testing OpenCV as plugin,
 you should submit a POST request to http://localhost:18080/filters/gausian. The body of this request should be your
