@@ -70,7 +70,7 @@ BODY: {"key":"g3_u3"}
 iii) Retrieve an array of json objects by wildcard matching of keys..
 POST: http://0.0.0.0:18080/quarks/core/findjson
 ```
-BODY: {"wild":"g3_u*"}
+BODY: {"keys":"g3_u*"}
 ```
 
 To test this API,
@@ -161,7 +161,7 @@ We aim to provide more complicated queries in future such as:
 ```
 {
     keys: "item*",
-    where: [{rating:{gt:3}},{approved:{eq:1}}],
+    where:[{"rating":{"gt":3}},{"approved":{"eq":1}}],
     filter:
    {                
         map: {field:"seller_id", as:"seller"},          
@@ -178,6 +178,28 @@ We aim to provide more complicated queries in future such as:
 
 }  
 ```
+Currently work going on to add v8 engine to support javascript in server side to further filter and sort queried results easily. 
+
+In that case the query might look something like this:
+
+```
+{
+"keys":"item*",
+"filter":{"map": {"field":"seller_id", "as":"seller"}},
+"script":"main.js",
+"filterfunction":"filter",
+"filterparams":[{"rating":{"gt":3}},{"approved":{"eq":1}}],
+"sortfunction":"sort",
+"sortparams":"decending"
+}  
+```
+The idea is the mentioned script main.js will have a filter function with a predefined form filter(item, params), and a sort function with predefined form sort(item1, item2, params)
+and it is up to the user to interpret the params in the server side and write the script codes accordingly.
+
+Quarks will allow minimum usage of scripting to ensure the server side codes remain super optimized.
+
+After v8 engine integration and scripting support,
+the next target would be to allow listener support through zero mq to communicate with other processes and services.
 
 For those interested in testing OpenCV as plugin,
 you should submit a POST request to http://localhost:18080/filters/gausian. 
