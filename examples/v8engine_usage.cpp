@@ -187,5 +187,123 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
+/*class JSUtil
+{
+private:
+    v8::Isolate         *  m_Isolate;
+    v8::Handle<v8::Object> m_global;
+    v8::Local<v8::Context> m_Context;
+    v8::Platform*          m_platform;
+    std::string LoadFileAsString(const char* name)
+    {
+#pragma warning(disable : 4996)
+        FILE* file = fopen(name, "rb");
+        if (file == nullptr)
+            return nullptr;
+        
+        fseek(file, 0, SEEK_END);
+        int size = ftell(file);
+        rewind(file);
+        
+        char* chars = new char[size + 1];
+        chars[size] = '\0';
+        for (int i = 0; i < size;)
+        {
+            int read = fread(&chars[i], 1, size - i, file);
+            i += read;
+        }
+        fclose(file);
+        std::string result = std::string(chars);
+        delete[] chars;
+        return result;
+    }
+    
+    bool InitV8Engine()
+    {
+        std::string exepath = R"(fullpath_of_exename)";
+        // Initialize V8.
+        v8::V8::InitializeICU();
+        v8::V8::InitializeExternalStartupData(exepath.c_str());
+        m_platform = v8::platform::CreateDefaultPlatform();
+        v8::V8::InitializePlatform(m_platform);
+        v8::V8::Initialize();
+        
+        
+        // Create a new Isolate and make it the current one.
+        ArrayBufferAllocator allocator;
+        v8::Isolate::CreateParams create_params;
+        create_params.array_buffer_allocator = &allocator;
+        
+        m_Isolate = v8::Isolate::New(create_params);
+        
+        v8::Isolate::Scope isolate_scope(m_Isolate);
+        // Create a stack-allocated handle scope.
+        v8::HandleScope handle_scope(m_Isolate);
+        // Create a new context.
+        m_Context = v8::Context::New(m_Isolate);
+        // Enter the context for compiling and running the hello world script.
+        v8::Context::Scope context_scope(m_Context);
+        
+        
+        IncludeJSFile(m_Context->Global());
+        return true;
+    }
+    
+    bool Shutdown()
+    {
+        // Dispose the isolate and tear down V8.
+        m_Isolate->Dispose();
+        V8::Dispose();
+        V8::ShutdownPlatform();
+        delete m_platform;
+    }
+    bool IncludeJSFile(v8::Handle<v8::Object> global)
+    {
+        //
+        // Try to include this js file into current context
+        //
+        // Create a string containing the JavaScript source code.
+        std::string FileBuff = LoadFileAsString(R"(somjsfile.js)");
+        v8::Local<v8::String> source = v8::String::NewFromUtf8(global->GetIsolate(), FileBuff.c_str());
+        // Compile the source code.
+        v8::Local<v8::Script> script = v8::Script::Compile(m_Context, source).ToLocalChecked();
+        // Run the script to get the result.
+        script->Run();
+        
+        return true;
+    }
+    
+    v8::Handle<v8::Value> CallJSFunction(std::string funcName, v8::Handle<v8::Value> argList[], unsigned int argCount)
+    {
+        v8::Handle<v8::Object> global = m_global;
+        // Create value for the return of the JS function
+        v8::Handle<v8::Value> js_result;
+        
+        v8::Local<v8::String> tmp = v8::String::NewFromUtf8(global->GetIsolate(), funcName.c_str());
+        // Grab JS function out of file
+        v8::Handle<v8::Value> value = global->Get(tmp);
+        // Cast value to v8::Function
+        v8::Handle<v8::Function> func = v8::Handle<v8::Function>::Cast(value);
+        // Call function with all set values
+        js_result = func->Call(global, argCount, argList);
+        // Return value from function
+        return js_result;
+    }
+public:
+    JSUtil()
+    {
+        InitV8Engine();
+    }
+    
+    ~JSUtil()
+    {
+        Shutdown();
+    }
+};
+c++ oop visual-c++ embedded-v8
+shareimprove this question
+edited Sep 27 '16 at 21:14
+*/
+
 // compile with g++ -std=c++11 v8engine.cpp main.cpp -lv8  -o v8test -lpthread
 

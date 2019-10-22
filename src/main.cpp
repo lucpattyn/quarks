@@ -8,11 +8,23 @@
 
 #include <quarks.hpp>
 
+#include <v8engine.hpp>
+
 int main(int argc, char ** argv) {
    
     std::vector<std::string> arguments(argv + 1, argv + argc);
 
     crow::SimpleApp app;
+    
+    Quarks::Core::_Instance.setEnvironment(argc, argv[0]);
+    
+    /*v8::V8::InitializeICUDefaultLocation(argv[0]);
+    v8::V8::InitializeExternalStartupData(argv[0]);
+    std::unique_ptr<v8::Platform> platform = v8::platform::NewDefaultPlatform();
+    v8::V8::InitializePlatform(platform.get());
+    v8::V8::Initialize();*/
+    
+    v8EngineInitializeInMain(argc, argv);
 
 #ifdef _USE_PLUGINS
 
@@ -188,5 +200,7 @@ int main(int argc, char ** argv) {
 
     app.port(18080).run();
 
+    v8EngineShutdownInMain();
+    
     return 0;
 }

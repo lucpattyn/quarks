@@ -23,9 +23,13 @@ namespace Quarks {
         Core();
         ~Core();
         
+        void setEnvironment(int argc, std::string argv);
+        
         std::string putJson(std::string key, crow::json::rvalue& x);
         
         bool getJson(std::string key, crow::json::wvalue& out);
+        
+        bool getValue(std::string key, std::string& value);
         
         bool findJson(std::string wild,
                       std::vector<crow::json::wvalue>& matchedResults);
@@ -33,7 +37,12 @@ namespace Quarks {
         bool filterJson(crow::json::rvalue& filter,
                         std::vector<crow::json::wvalue>& matchedResults);
         
+        
+        
         private:
+        
+        std::string _argv;
+        int _argc;
         
         //std::map<std::string, crow::json::rvalue> _Core;
         
