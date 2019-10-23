@@ -159,7 +159,8 @@ So we are able to iterate items (by "keys":"item*") and then run a join operatio
 
  v8 engine to support javascript in server side to further filter and sort queried results easily. 
 
-Now the post body looks like this the following with the js based extended filtering:
+Now the post body looks like the following 
+with the js based extended filtering:
 
 ```
 {
