@@ -200,7 +200,7 @@ We are invoking the JS module and the function while finding and iterating the m
 
 It is up to the user to interpret the params in the server side and write the script codes accordingly.
 
-In our example, we named the function - "extendedFilter" in main.js. 
+In our example, we named the function - "jsFilter" in main.js. 
 
 Quarks will allow minimum usage of scripting to ensure the server side codes remain super optimized.
 
