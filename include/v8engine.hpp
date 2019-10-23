@@ -52,11 +52,10 @@ struct v8Engine{
         v8::Local<v8::Context>& context;
     };
     
-    void run(std::function<void (v8Context&)> onReady);
+    int load(std::string fileName, std::function<int (v8Engine::v8Context&)> onLoad);
     
     std::string invoke(v8Context& context, std::string funcName, std::string elem, std::string args);
     
-    v8::Local<v8::String> _ReadFile(const char* name);
     
     void setResult(bool result){
         _result = result;
@@ -75,7 +74,8 @@ struct v8Engine{
 private:
     inline std::string CallJSFunction(v8Context& context, std::string funcName,
                     v8::Handle<v8::Value> argList[], unsigned int argCount);
-                   
+    
+    v8::Local<v8::String> _ReadFile(v8::Isolate* isolate, const char* name);
     
     bool _result;
     

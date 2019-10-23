@@ -108,7 +108,7 @@ int main(int argc, char ** argv) {
         
     };
     
-    auto route_core_findjson_callback =
+    auto route_core_iterjson_callback =
     [](const crow::request& req)
     {
         crow::json::wvalue out;
@@ -126,7 +126,7 @@ int main(int argc, char ** argv) {
             CROW_LOG_INFO << "wild-card : " << wild;
             
             std::vector<crow::json::wvalue> jsonResults;
-            Quarks::Core::_Instance.findJson(wild, jsonResults);
+            Quarks::Core::_Instance.iterJson(wild, jsonResults);
             
             if(jsonResults.size()){
                 out["result"] = std::move(jsonResults);
@@ -140,7 +140,7 @@ int main(int argc, char ** argv) {
         
     };
     
-    auto route_core_filterjson_callback =
+    auto route_core_searchjson_callback =
     [](const crow::request& req){
         
         crow::json::wvalue w;
@@ -153,7 +153,7 @@ int main(int argc, char ** argv) {
         }
         
         std::vector<crow::json::wvalue> jsonResults;
-        Quarks::Core::_Instance.filterJson(x, jsonResults);
+        Quarks::Core::_Instance.searchJson(x, jsonResults);
         
         if(jsonResults.size()){
             //w["result"] = jsonResults[0].s();
@@ -184,11 +184,11 @@ int main(int argc, char ** argv) {
     CROW_ROUTE(app, "/quarks/core/getjson")
     .methods("GET"_method, "POST"_method)(route_core_getjson_callback);
     
-    CROW_ROUTE(app, "/quarks/core/findjson")
-    .methods("GET"_method, "POST"_method)(route_core_findjson_callback);
+    CROW_ROUTE(app, "/quarks/core/iterjson")
+    .methods("GET"_method, "POST"_method)(route_core_iterjson_callback);
     
-    CROW_ROUTE(app, "/quarks/core/filterjson")
-    .methods("GET"_method, "POST"_method)(route_core_filterjson_callback);
+    CROW_ROUTE(app, "/quarks/core/searchjson")
+    .methods("GET"_method, "POST"_method)(route_core_searchjson_callback);
     
     
     //auto& v = Quarks::Matrix::_Instance; // we will work with the matrix data struct

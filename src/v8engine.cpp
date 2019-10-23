@@ -11,8 +11,27 @@
 
 using namespace v8;
 
+
+
+/*class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
+public:
+    virtual void *Allocate(size_t length) {
+        void *data = AllocateUninitialized(length);
+        return data == NULL ? data : memset(data, 0, length);
+    }
+    virtual void *AllocateUninitialized(size_t length) { return malloc(length); }
+    virtual void Free(void *data, size_t) { free(data); }
+};*/
+
+v8Engine::v8Engine(std::function<void (std::string)> logFunc /*= nullptr*/){
+    _logFunc = logFunc;
+}
+
+v8Engine::~v8Engine(){
+}
+
 // Reads a file into a v8 string.
-v8::Local<v8::String> _ReadFile(Isolate* isolate, const char* name)
+v8::Local<v8::String> v8Engine::_ReadFile(Isolate* isolate, const char* name)
 {
 #pragma warning(disable : 4996)
     FILE* file = fopen(name, "rb");
@@ -36,26 +55,10 @@ v8::Local<v8::String> _ReadFile(Isolate* isolate, const char* name)
     
 }
 
-/*class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
-public:
-    virtual void *Allocate(size_t length) {
-        void *data = AllocateUninitialized(length);
-        return data == NULL ? data : memset(data, 0, length);
-    }
-    virtual void *AllocateUninitialized(size_t length) { return malloc(length); }
-    virtual void Free(void *data, size_t) { free(data); }
-};*/
-
-v8Engine::v8Engine(std::function<void (std::string)> logFunc /*= nullptr*/){
-    _logFunc = logFunc;
-}
-
-v8Engine::~v8Engine(){
-}
-
-
-void v8Engine::run(std::function<void (v8Engine::v8Context&)> onReady)
+int v8Engine::load(std::string fileName, std::function<int (v8Engine::v8Context&)> onLoad)
 {
+    int ret = 0;
+    
     // Create a new Isolate and make it the current one.
     //ArrayBufferAllocator allocator;
     Isolate::CreateParams create_params;
@@ -74,19 +77,22 @@ void v8Engine::run(std::function<void (v8Engine::v8Context&)> onReady)
         // Enter the context for compiling and running the hello world script.
         Context::Scope context_scope(context);
         // Create a string containing the JavaScript source code.
-        Local<String> source =
+        /*Local<String> source =
         String::NewFromUtf8(isolate,
                             "function matcher() { var elem = arguments[0]; \
-                            var args = JSON.parse(arguments[1]); \
+                            var args = arguments[1]; \
                             var match = 0;if(args[0] == args[1]) { match = 1; } return match; }",
-                            NewStringType::kNormal).ToLocalChecked();
+                            NewStringType::kNormal).ToLocalChecked();*/
+        
+        Local<String> source = _ReadFile(isolate, fileName.c_str());
+        
         // Compile the source code.
         Local<Script> script = Script::Compile(context, source).ToLocalChecked();
         // Run the script to get the result.
         Local<Value> result = script->Run(context).ToLocalChecked();
         
         v8Context v8Ctx(isolate, context);
-        onReady(v8Ctx);
+        ret = onLoad(v8Ctx);
         // Convert the result to an UTF8 string and print it.
         //String::Utf8Value utf8(isolate, result);
         //printf("%s\n", *utf8);
@@ -96,7 +102,7 @@ void v8Engine::run(std::function<void (v8Engine::v8Context&)> onReady)
    
     delete create_params.array_buffer_allocator;
     
-    
+    return ret;
 }
 
 std::string v8Engine::CallJSFunction(v8Engine::v8Context& v8Ctx, std::string funcName, v8::Local<v8::Value> argList[], unsigned int argCount) {

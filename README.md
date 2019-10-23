@@ -68,17 +68,17 @@ POST: http://0.0.0.0:18080/quarks/core/getjson
 BODY: {"key":"g3_u3"}
 ```
 iii) Retrieve an array of json objects by wildcard matching of keys..
-POST: http://0.0.0.0:18080/quarks/core/findjson
+POST: http://0.0.0.0:18080/quarks/core/iterjson
 ```
 BODY: {"keys":"g3_u*"}
 ```
 
 To test this API,
 You could  post a few values against keys with putjson, for example 
-POST: http://0.0.0.0:18080/quarks/core/putjson
 
 ```
 BODY:
+POST: http://0.0.0.0:18080/quarks/core/putjson
 {"key":"g1_u2", "value":{"msg":"m1"}}
 
 POST: http://0.0.0.0:18080/quarks/core/putjson
@@ -92,15 +92,15 @@ BODY:
 ```
 
 and then check the results by 
-POST: http://0.0.0.0:18080/quarks/core/findjson
 
 ```
+POST: http://0.0.0.0:18080/quarks/core/iterjson
 BODY: {"keys":"g3_u*"}
 ```
 
-iv) Filters and Joins: There is also provision to run ORM style queries with filterjson
+iv) Filters and Joins: There is also provision to run ORM style queries with searchjson and applying filters
 
-POST: http://0.0.0.0:18080/quarks/core/filterjson
+POST: http://0.0.0.0:18080/quarks/core/searchjson
 
 Sample Query Format for
 "querying items which are up for sale with key like item* (i.e item1, item2 etc.) , then find the sellers of such items (items has a seller_id field that contains the user_id of the seller) "
@@ -147,7 +147,7 @@ BODY:
 ```
 
 Finally, check the results by 
-POST: http://0.0.0.0:18080/quarks/core/filterjson
+POST: http://0.0.0.0:18080/quarks/core/searchjson
 BODY:
 ```
 {
@@ -157,49 +157,55 @@ BODY:
 ```
 So we are able to iterate items (by "keys":"item*") and then run a join operation with the filter attribute ("filter":...) through the keyword map ({"map": {"field":"seller_id", "as":"seller"}})
 
-We aim to provide more complicated queries in future such as:
-```
-{
-    keys: "item*",
-    where:[{"rating":{"gt":3}},{"approved":{"eq":1}}],
-    filter:
-   {                
-        map: {field:"seller_id", as:"seller"},          
-        filter:
-       {
-       include:
-         {
-           prefix:"ord*_",field:"user_id",suffix:"", 
-          as:"orders"                                        
-         },
-        where:{deliveryType:{eq:"pickup"}}              
-     }
-  }
+ v8 engine to support javascript in server side to further filter and sort queried results easily. 
 
-}  
-```
-Currently work going on to add v8 engine to support javascript in server side to further filter and sort queried results easily. 
-
-In that case the query might look something like this:
+Now the post body looks like this the following with the js based extended filtering:
 
 ```
 {
 "keys":"item*",
-"filter":{"map": {"field":"seller_id", "as":"seller"}},
-"script":"main.js",
-"filterfunction":"filter",
-"filterparams":[{"rating":{"gt":3}},{"approved":{"eq":1}}],
-"sortfunction":"sort",
-"sortparams":"decending"
-}  
+    "include":{
+        "map": {"field":"seller_id", "as":"seller"},
+        "module":"main",
+        "filter":"jsFilter",
+        "params":"{\"approved\":1}"
+    }
+
+}
+
 ```
-The idea is the mentioned script main.js will have a filter function with a predefined form filter(item, params), and a sort function with predefined form sort(item1, item2, params)
-and it is up to the user to interpret the params in the server side and write the script codes accordingly.
+
+And the JS in server side looks like this:
+
+```
+function jsFilter() {
+    var elem = JSON.parse(arguments[0]);
+    var args = JSON.parse(arguments[1]);
+    var match = 0;
+    if(elem.approved == args.approved) {
+        match = 1;        
+    }
+
+    return match;
+}
+```
+
+Here module main is the main.js file residing in the server in the same path as the executable.
+function is the name of the JS Function which we will use to further filter the data.
+
+The idea is the mentioned script main.js will have a filter function with a predefined form filter(elem, params), or a sort function with predefined form sort(elem1, elem2, params) to further fitler/sort the data.
+
+'elem' is an individual item (one of many) found by the Quarks lookup through "keys":"item*" .
+We are invoking the JS module and the function while finding and iterating the matching items in C++.
+
+It is up to the user to interpret the params in the server side and write the script codes accordingly.
+
+In our example, we named the function - "extendedFilter" in main.js. 
 
 Quarks will allow minimum usage of scripting to ensure the server side codes remain super optimized.
 
 After v8 engine integration and scripting support,
-the next target would be to allow listener support through zero mq to communicate with other processes and services.
+the next target is to allow listener support through zero mq to communicate with other processes and services.
 
 For those interested in testing OpenCV as plugin,
 you should submit a POST request to http://localhost:18080/filters/gausian. 

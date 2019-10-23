@@ -17,6 +17,7 @@ FIND_PATH(V8_INCLUDE_DIR "v8.h"
           /Library/Frameworks/include
 #/usr/local/opt/v8@3.15/include
           /usr/include
+          /usr/local/include
           /sw/include # Fink
 #/opt/local/include # DarwinPorts
           /opt/csw/include # Blastwave
@@ -39,6 +40,7 @@ FIND_LIBRARY(V8_LIBRARY NAMES ${V8_NAMES}
              /Library/Frameworks
              /usr/local
 #/usr/local/opt/v8@3.15/lib
+             /usr/local/lib
              /usr
              /sw
              /opt/local
@@ -56,6 +58,7 @@ FIND_LIBRARY(V8S_LIBRARY NAMES ${V8S_NAMES}
              /Library/Frameworks
              /usr/local
 #  /usr/local/opt/v8@3.15/lib
+             /usr/local
              /usr
              /sw
              /opt/local

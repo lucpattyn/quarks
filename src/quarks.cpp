@@ -134,7 +134,7 @@ bool Core::getValue(std::string key, std::string& value){
     
 }
 
-bool Core::findJson(std::string wild, std::vector<crow::json::wvalue>& matchedResults) {
+bool Core::iterJson(std::string wild, std::vector<crow::json::wvalue>& matchedResults) {
 
     /*for (std::map<std::string, crow::json::rvalue>::iterator it = _Core.begin();
          it != _Core.end(); ++it){
@@ -174,7 +174,7 @@ bool Core::findJson(std::string wild, std::vector<crow::json::wvalue>& matchedRe
     
 }
 
-bool Core::filterJson(crow::json::rvalue& filter,
+bool Core::searchJson(crow::json::rvalue& args,
                        std::vector<crow::json::wvalue>& matchedResults) {
     
     
@@ -186,46 +186,49 @@ bool Core::filterJson(crow::json::rvalue& filter,
             CROW_LOG_INFO << log.c_str();
         });
         
-        auto funcOnV8EngineReady = [&core, &ve, &filter, &matchedResults](v8Engine::v8Context& v8Ctx){
+        std::string sArgs =  crow::json::dump(args);
+        CROW_LOG_INFO << "args : " << sArgs;
+        
+        std::string wild = args["keys"].s();
+        CROW_LOG_INFO << "keys : " << wild.c_str();
+        
+        crow::json::wvalue wArgs;
+        wArgs["include"] = args["include"];
+        CROW_LOG_INFO << "include : " << crow::json::dump(wArgs);
+        
+        crow::json::wvalue wFilter;
+        wFilter["include"]= std::move(wArgs["include"]);
+        CROW_LOG_INFO << "include : " << crow::json::dump(wFilter["include"]);
+        
+        std::string sFilter = crow::json::dump(wFilter["include"]);
+        crow::json::rvalue filter = crow::json::load(sFilter);
+        
+        std::string mapField = filter["map"]["field"].s();
+        std::string mapAs = filter["map"]["as"].s();
+        
+        std::string moduleName = filter["module"].s();
+        std::string funcName = filter["filter"].s();
+        std::string params = filter["params"].s();
+        
+        auto funcOnV8EngineLoaded = [&core, &ve, &wild, &funcName, &params, &mapField, &mapAs, &matchedResults]
+            (v8Engine::v8Context& v8Ctx) -> int {
             
-            std::string sfilter =  crow::json::dump(filter);
-            
-            CROW_LOG_INFO << "filter : " << sfilter;
-            
-            std::string wild = filter["keys"].s();
-            CROW_LOG_INFO << "keys : " << wild.c_str();
-            
-            std::string filterParams = filter["filterparams"].s();
-            
-            crow::json::wvalue subFilter;
-            subFilter["subfilter"] = filter["filter"];
-            //crow::json::rvalue subFilter = filter["filter"];
-            CROW_LOG_INFO << "subfilter : " << crow::json::dump(subFilter);
-            
-            crow::json::wvalue wMap;
-            wMap["map"]= std::move(subFilter["subfilter"]);
-            CROW_LOG_INFO << "map : " << crow::json::dump(wMap["map"]);
-            
-            std::string wx = crow::json::dump(wMap["map"]);
-            crow::json::rvalue map = crow::json::load(wx);
-            std::string mapField = map["map"]["field"].s();
-            std::string mapAs = map["map"]["as"].s();
             // create new iterator
             rocksdb::Iterator* it = db->NewIterator(rocksdb::ReadOptions());
             
             // iterate all entries
             for (it->SeekToFirst(); it->Valid(); it->Next()) {
                 
-                std::string val = it->value().ToString();
+                std::string elem = it->value().ToString();
                 
                 CROW_LOG_INFO << "iterate : " << it->key().ToString()
-                << ": " <<  val; //<< endl;
+                << ": " <<  elem; //<< endl;
                 
                 if(wildcmp(wild.c_str(), it->key().ToString().c_str())){
                     crow::json::rvalue r;
                     r = crow::json::load(it->value().ToString());
                     
-                    CROW_LOG_INFO << "r : " << val;
+                    CROW_LOG_INFO << "r : " << elem;
                     
                     std::string mapKey = r[mapField.c_str()].s();
                     crow::json::wvalue mapJson;
@@ -236,8 +239,8 @@ bool Core::filterJson(crow::json::rvalue& filter,
                     }
                     
                     //std::string allow = ve.invoke("matcher", sfilter.c_str(), //filterParams.c_str());
-                    
-                    std::string allow = ve.invoke(v8Ctx, "matcher", val, filterParams.c_str());
+                    std::string e = crow::json::dump(w);
+                    std::string allow = ve.invoke(v8Ctx, funcName, e, params.c_str());
                     if(atoi(allow.c_str()) == 1){
                         matchedResults.push_back(std::move(w));
                     }
@@ -245,14 +248,13 @@ bool Core::filterJson(crow::json::rvalue& filter,
                 }
             }
             
-            ve.setResult(it->status().ok());
-        }; // funcOnReady
+            return (it->status().ok());
+                
+            
+        }; // funcOnV8EngineLoaded
         
-        ve.run(funcOnV8EngineReady);
-        
-        //assert(it->status().ok());  // check for any errors found during the scan
-        
-        return ve.getResult();
+        std::string moduleJS = moduleName + ".js";
+        return ve.load(moduleJS, funcOnV8EngineLoaded);
         
     }
     
