@@ -16,20 +16,34 @@ namespace Quarks {
      * @brief Solves the shortcomings of Redis - Sort, Expiry, Serialize
      * 
      */
-    class Cache {
+    class Core {
         public:
-        static Cache _Instance;
+        static Core _Instance;
+        
+        Core();
+        ~Core();
+        
+        void setEnvironment(int argc, std::string argv);
         
         std::string putJson(std::string key, crow::json::rvalue& x);
-        
         bool getJson(std::string key, crow::json::wvalue& out);
         
-        void findJson(std::string wild, std::vector<crow::json::wvalue>& matchedResults);
+        bool getValue(std::string key, std::string& value);
+        
+        bool iterJson(std::string wild,
+                      std::vector<crow::json::wvalue>& matchedResults);
     
+        bool searchJson(crow::json::rvalue& args,
+                        std::vector<crow::json::wvalue>& matchedResults);
+        
+        
         
         private:
         
-        std::map<std::string, crow::json::rvalue> _cache;
+        std::string _argv;
+        int _argc;
+        
+        //std::map<std::string, crow::json::rvalue> _Core;
         
         
     };

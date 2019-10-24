@@ -16,6 +16,7 @@ endif()
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/CMakeModules)
 
 option(BUILD_DOCS "build docs alongside the project" OFF)
+option(_USE_PLUGINS "Use plugins" OFF)
 
 find_program(CTEST_MEMORYCHECK_COMMAND NAMES valgrind)
 find_program(CTEST_COVERAGE_COMMAND NAMES gcov)
@@ -39,7 +40,10 @@ INCLUDE(Dart)
 add_custom_target(memcheck COMMAND ${CMAKE_CTEST_COMMAND}  --force-new-ctest-process --test-action memcheck)
 add_custom_target(coverage COMMAND ${CMAKE_CTEST_COMMAND}  --force-new-ctest-process --test-action coverage)
 
+if (_USE_PLUGINS)
 find_package( OpenCV 4.0.0 REQUIRED )
+endif()
+
 include_directories( ${PROJECT_SOURCE_DIR}/include )
 include_directories( ${OpenCV_INCLUDE_DIRS} )
 
@@ -73,7 +77,18 @@ else()
     message(FATAL_ERROR "Boost not found. Could not build this app.")
 endif()
 
-target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread )
+find_package(V8 COMPONENTS system REQUIRED)
+
+if (V8_FOUND)
+    include_directories(${V8_INCLUDEDIR})    
+
+ #   target_link_libraries(ocv_microservice_crow ${V8_LIBRARIES})
+
+else()
+    message(FATAL_ERROR "V8 not found. Could not build this app.")
+endif()
+
+target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb /usr/local/lib/libv8.dylib /usr/local/lib/libv8_libplatform.dylib)
 
 if (BUILD_TESTS)
     find_package(GTest)
