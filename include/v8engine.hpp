@@ -4,6 +4,9 @@
 #ifndef _V8ENGINE_H_
 #define _V8ENGINE_H_
 
+#include <string>
+#include <functional>
+
 #define _V8_LATEST
 
 #include "v8.h"
@@ -11,9 +14,6 @@
 #ifdef _V8_LATEST
 #include "libplatform/libplatform.h"
 #endif
-
-#include <string>
-
 
 
 // Create a stack-allocated handle scope.
@@ -89,14 +89,34 @@ private:
 #else
 
 struct v8Engine{
-    v8Engine(v8::Persistent<v8::Context>& ctx);
+    v8Engine(std::function<void (std::string)> logFunc = nullptr);
     ~v8Engine();
     
-    v8::Handle<v8::Object> global;
+    struct v8Context{
+        v8Context(v8::Handle<v8::Object> gb, v8::Persistent<v8::Context>& ctx):context(ctx){
+            global = gb;
+            
+        }
+        
+        v8::Handle<v8::Object> global;
+        v8::Persistent<v8::Context>& context;
+    };
     
-    std::string invoke(const char* fncName, const char* element,
-                        const char* arguments);
+    int load(std::string fileName, std::function<int (v8Engine::v8Context&)> onLoad);
     
+    std::string invoke(v8Context& context, std::string funcName, std::string elem, std::string args);
+    
+    void log(std::string s){
+        if(_logFunc){
+            _logFunc(s.c_str());
+        }
+    }
+    
+private:
+    v8::Handle<v8::String> _ReadFile(const char* name);
+    
+    std::function<void (std::string)> _logFunc;
+
 };
 
 #endif

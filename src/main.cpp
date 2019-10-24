@@ -24,8 +24,10 @@ int main(int argc, char ** argv) {
     v8::V8::InitializePlatform(platform.get());
     v8::V8::Initialize();*/
     
+#ifdef _V8_LATEST
     v8EngineInitializeInMain(argc, argv);
-
+#endif
+    
 #ifdef _USE_PLUGINS
 
     auto route_filter_gaussian_callback =
@@ -194,13 +196,59 @@ int main(int argc, char ** argv) {
     //auto& v = Quarks::Matrix::_Instance; // we will work with the matrix data struct
                                             // in later api calls
     
+    auto resourceLoader = [](crow::mustache::context& x, std::string filename) {
+        char name[256];
+        gethostname(name, 256);
+        x["servername"] = name;
+        
+        return crow::mustache::load(filename);
+    };
     
+    // html serving
+    CROW_ROUTE(app, "/")
+    ([&resourceLoader](){
+        crow::mustache::context x;
+        auto page = resourceLoader(x, "index.html");
+        return page.render(x);
+    });
+    
+    CROW_ROUTE(app, "/home")
+    ([&resourceLoader](){
+        crow::mustache::context x;
+        auto page = resourceLoader(x, "home.html");
+        return page.render(x);
+    });
+        
+    CROW_ROUTE(app, "/home/<int>")
+    ([&resourceLoader](int resId){
+        crow::mustache::context x;
+        auto page = resourceLoader(x, std::to_string(resId) + ".html");
+        return page.render(x);
+    });
+    
+    // js serving
+    CROW_ROUTE(app, "/js/<int>")
+    ([&resourceLoader](int resId){
+        crow::mustache::context x;
+        auto page = resourceLoader(x, std::to_string(resId) + ".js");
+        return page.render(x);
+    });
+    
+    // css serving
+    CROW_ROUTE(app, "/css/<int>")
+    ([&resourceLoader](int resId){
+        crow::mustache::context x;
+        auto page = resourceLoader(x, std::to_string(resId) + ".css");
+        return page.render(x);
+    });
     
     std::cout << "running .." << std::endl;
 
     app.port(18080).run();
-
+    
+#ifdef _V8_LATEST
     v8EngineShutdownInMain();
+#endif
     
     return 0;
 }

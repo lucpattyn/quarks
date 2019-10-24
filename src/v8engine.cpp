@@ -132,8 +132,7 @@ std::string v8Engine::CallJSFunction(v8Engine::v8Context& v8Ctx, std::string fun
     return *utf8;
 }
 
-std::string v8Engine::invoke(v8Engine::v8Context& v8Ctx, std::string funcName, std::string element,
-                             std::string params){
+std::string v8Engine::invoke(v8Engine::v8Context& v8Ctx, std::string funcName, std::string element, std::string params){
     v8::Local<v8::Value>  args[2];
     
     args[0] =  String::NewFromUtf8(v8Ctx.isolate, element.c_str(),
@@ -147,22 +146,53 @@ std::string v8Engine::invoke(v8Engine::v8Context& v8Ctx, std::string funcName, s
 
 #else
 
-v8Engine::v8Engine(v8::Persistent<v8::Context>& ctx){
+v8Engine::v8Engine(std::function<void (std::string)> logFunc /*= nullptr*/){
+    _logFunc = logFunc;
+}
+
+// Reads a file into a v8 string.
+v8::Handle<v8::String> v8Engine::_ReadFile(const char* name)
+{
+#pragma warning(disable : 4996)
+    FILE* file = fopen(name, "rb");
+    if (file == NULL) return v8::Handle<v8::String>();
     
+    fseek(file, 0, SEEK_END);
+    int size = ftell(file);
+    rewind(file);
+    
+    char* chars = new char[size + 1];
+    chars[size] = '\0';
+    for (int i = 0; i < size;)
+    {
+        int read = fread(&chars[i], 1, size - i, file);
+        i += read;
+    }
+    fclose(file);
+    v8::Handle<v8::String>  result = v8::String::New(chars);
+    delete[] chars;
+    return result;
+    
+}
+
+int v8Engine::load(std::string fileName, std::function<int (v8Engine::v8Context&)> onLoad){
+    int ret = 0;
+    
+    v8::HandleScope handle_scope;
+    v8::Persistent<v8::Context> context = v8::Context::New();
+    v8::Context::Scope context_scope(context);
     
     //context->AllowCodeGenerationFromStrings(true);
     
     // Enter the created context for compiling and
     // running the hello world script.
-    /*v8::Handle<v8::String> source;
+    v8::Handle<v8::String> source;
     v8::Handle<v8::Script> script;
     v8::Handle<v8::Value> result;
     
     
     // Create a string containing the JavaScript source code.
-    source = v8::String::New("function matcher() { var elem = arguments[0]; \
-                             var args = JSON.parse(arguments[1]); \
-                             var match = 0;if(args[0] == args[1]) { match = 1; } return match; }");
+    source = _ReadFile(fileName.c_str());
     
     // Compile the source code.
     script = v8::Script::Compile(source);
@@ -171,10 +201,12 @@ v8Engine::v8Engine(v8::Persistent<v8::Context>& ctx){
     result = script->Run();
     
     // Dispose the persistent context.
-    ctx.Dispose();
+    context.Dispose();
+   
+    v8Context v8Ctx(context->Global(), context);
+    ret = onLoad(v8Ctx);
     
-    global = ctx->Global();*/
-    
+    return ret;
     
 }
 
@@ -182,21 +214,19 @@ v8Engine::~v8Engine(){
     
 }
 
-std::string v8Engine::invoke(const char* fnc, const char* element, const char* arguments){
+std::string v8Engine::invoke(v8Context& context, std::string funcName, std::string element, std::string params){
     
-    v8::Handle<v8::Value> value = global->Get(v8::String::New(fnc));
+    v8::Handle<v8::Value> value = context.global->Get(v8::String::New(funcName.c_str()));
     v8::Handle<v8::Function> func = v8::Handle<v8::Function>::Cast(value);
     
     v8::Handle<v8::Value> args[2];
-    args[0] = v8::String::New(element);
-    args[1] = v8::String::New(arguments);
+    args[0] = v8::String::New(element.c_str());
+    args[1] = v8::String::New(params.c_str());
     
-    v8::Handle<v8::Value> js_result = func->Call(global, 2, args);
+    v8::Handle<v8::Value> js_result = func->Call(context.global, 2, args);
     v8::String::AsciiValue ascii(js_result);
     
-    std::string final_result = *ascii;
-    
-    return final_result;
+    return *ascii;
 }
 
 #endif
