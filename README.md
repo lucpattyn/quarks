@@ -157,7 +157,7 @@ BODY:
 ```
 So we are able to iterate items (by "keys":"item*") and then run a join operation with the filter attribute ("filter":...) through the keyword map ({"map": {"field":"seller_id", "as":"seller"}})
 
- v8 engine to support javascript in server side to further filter and sort queried results easily. 
+v8 engine has been integrated to support scripting in server side to further filter/sort queried results. 
 
 Now the post body looks like the following 
 with the js based extended filtering:
