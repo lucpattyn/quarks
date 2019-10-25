@@ -77,7 +77,7 @@ else()
     message(FATAL_ERROR "Boost not found. Could not build this app.")
 endif()
 
-target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb /usr/local/lib/libv8.dylib /usr/local/lib/libv8_libplatform.dylib)
+target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb -lv8)
 
 if (BUILD_TESTS)
     find_package(GTest)
