@@ -77,17 +77,6 @@ else()
     message(FATAL_ERROR "Boost not found. Could not build this app.")
 endif()
 
-find_package(V8 COMPONENTS system REQUIRED)
-
-if (V8_FOUND)
-    include_directories(${V8_INCLUDEDIR})    
-
- #   target_link_libraries(ocv_microservice_crow ${V8_LIBRARIES})
-
-else()
-    message(FATAL_ERROR "V8 not found. Could not build this app.")
-endif()
-
 target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb /usr/local/lib/libv8.dylib /usr/local/lib/libv8_libplatform.dylib)
 
 if (BUILD_TESTS)
