@@ -3,6 +3,8 @@
 
 #include "rocksdb/db.h"
 
+#include <iomanip>
+
 using namespace Quarks;
 
 Core Core::_Instance;
@@ -70,9 +72,10 @@ void Core::setEnvironment(int argc, std::string argv){
     _argc = argc;
 }
 
-std::string Core::putJson(std::string key, crow::json::rvalue& x) {
+bool Core::putJson(std::string key, crow::json::rvalue& x, crow::json::wvalue& out) {
     
-    //_Core[key] = std::move(x);
+    bool ret = true;
+    
     crow::json::wvalue w = std::move(x);
     std::string value = crow::json::dump(w);
     
@@ -80,17 +83,24 @@ std::string Core::putJson(std::string key, crow::json::rvalue& x) {
         
     // modify the database
     if (dbStatus.ok()){
+	
         rocksdb::Status status = db->Put(rocksdb::WriteOptions(), keySlice, value);
         if(!status.ok()){
             key = "";
+	    ret = false;
         }
     
     }else{
         key = "";
+        ret = false;
     }
+
+    std::stringstream ss;
+    ss<< "{" << std::quoted("result") << ":" << std::quoted(key) << "}";    
     
-    
-    return  key;
+    out = crow::json::load(ss.str());
+
+    return  ret;
     
 }
 
@@ -153,13 +163,13 @@ bool Core::iterJson(std::string wild, std::vector<crow::json::wvalue>& matchedRe
         
         // iterate all entries
         for (it->SeekToFirst(); it->Valid(); it->Next()) {
-            CROW_LOG_INFO << "iterate : " << it->key().ToString()
-            << ": " << it->value().ToString() ; //<< endl;
+            //CROW_LOG_INFO << "iterate : " << it->key().ToString()
+            //<< ": " << it->value().ToString() ; //<< endl;
             
             if(wildcmp(wild.c_str(), it->key().ToString().c_str())){
                 crow::json::wvalue w;
                 w = crow::json::load(it->value().ToString());
-                CROW_LOG_INFO << "w : " << crow::json::dump(w);
+                //CROW_LOG_INFO << "w : " << crow::json::dump(w);
                 
                 matchedResults.push_back(std::move(w));
                 
@@ -221,14 +231,14 @@ bool Core::searchJson(crow::json::rvalue& args,
                 
                 std::string elem = it->value().ToString();
                 
-                CROW_LOG_INFO << "iterate : " << it->key().ToString()
-                << ": " <<  elem; //<< endl;
+                //CROW_LOG_INFO << "iterate : " << it->key().ToString()
+                //<< ": " <<  elem; //<< endl;
                 
                 if(wildcmp(wild.c_str(), it->key().ToString().c_str())){
                     crow::json::rvalue r;
                     r = crow::json::load(it->value().ToString());
                     
-                    CROW_LOG_INFO << "r : " << elem;
+                    //CROW_LOG_INFO << "r : " << elem;
                     
                     std::string mapKey = r[mapField.c_str()].s();
                     crow::json::wvalue mapJson;

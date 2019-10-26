@@ -1,4 +1,5 @@
 #include <base64.hpp>
+//#include <fstream> 
 
 #ifdef _USE_PLUGINS
 #include <filter.hpp>
@@ -9,6 +10,8 @@
 #include <quarks.hpp>
 
 #include <v8engine.hpp>
+
+
 
 int main(int argc, char ** argv) {
    
@@ -64,27 +67,38 @@ int main(int argc, char ** argv) {
     // core functionalities
     auto route_core_putjson_callback =
     [](const crow::request& req){
-        auto x = crow::json::load(req.body);
-        if (!x)
-            return crow::response(400);
-        //int sum = x["a"].i()+x["b"].i();
-        
+
+	crow::json::wvalue out;
+
+        auto x = crow::json::load(req.body);        
+	if (!x){	   
+	   CROW_LOG_INFO << req.body;	  
+	   out["error"] = "invalid post body";
+	
+	   return out;
+        }
+
         std::string s = x["key"].s();
-        crow::json::rvalue v = x["value"];
+        crow::json::rvalue v = x["value"];        
+               
+        bool success = Quarks::Core::_Instance.putJson(s, v, out);
+               
+       
+	/*auto res = crow::response{os.str()};
+	res.add_header("Access-Control-Allow-Origin", "*");
+	res.add_header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
+	res.add_header("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
         
-        
-        //crow::json::wvalue w = std::move(x);
-        //CROW_LOG_INFO << "w : " << crow::json::dump(w);
-        
-        
-        std::string result = Quarks::Core::_Instance.putJson(s, v);
-        //std::string result = Quarks::Core::CoreJson(x["a"].s(), x);
-        
-        std::ostringstream os;
-        //os << result << sum;
-        os << result;
-        
-        return crow::response{os.str()};
+
+        return res;*/
+
+	if(!success){
+	     out["error"] = "save failed";
+
+	}
+
+	return out;
+
     };
     
     auto route_core_getjson_callback =
@@ -96,8 +110,7 @@ int main(int argc, char ** argv) {
             out["error"] = "invalid parameters";
             return out;
         }
-        //int sum = x["a"].i()+x["b"].i();
-        
+                
         try{
             std::string key = x["key"].s();
             Quarks::Core::_Instance.getJson(key, out);
@@ -109,6 +122,81 @@ int main(int argc, char ** argv) {
         return out;
         
     };
+
+    auto route_core_getkey_callback =
+    [](const crow::request& req)
+    {
+        crow::json::wvalue out;
+	//CROW_LOG_INFO <<"get_key:";
+	//CROW_LOG_INFO<<req.url_params;
+       
+        try{
+	
+	    crow::json::wvalue jsonResult;
+	
+	    std::vector<crow::json::wvalue> jsonResults;
+
+	    auto x = req.url_params.get("key");
+	    std::string key = (x == nullptr ? "" : x); 
+
+	    if(key.size() > 0){           
+                Quarks::Core::_Instance.getJson(key, jsonResult);
+	    }
+
+	    auto k = req.url_params.get("keys");
+	    std::string wild = (k == nullptr ? "" : k);
+            //CROW_LOG_INFO << "wild-card : " << wild;
+            
+            
+	    if(wild.size() > 0){
+            	Quarks::Core::_Instance.iterJson(wild, jsonResults);
+	    }
+
+	    if(key.size() > 0){
+	    	jsonResults.push_back(std::move(jsonResult));
+	    }
+            
+            if(jsonResults.size() > 0){
+                out["result"] = std::move(jsonResults);
+            }
+            
+        }catch (const std::runtime_error& error){
+             out["error"] = "parameter 'key' or 'keys' missing";
+        }
+        
+        return out;
+        
+    };
+
+    auto route_core_getkeys_callback =
+    [](const crow::request& req)
+    {
+        crow::json::wvalue out;
+        
+	try{
+	    auto x = req.url_params.get("keys");
+	    std::string wild = (x == nullptr ? "" : x);
+            //CROW_LOG_INFO << "wild-card : " << wild;
+            
+            std::vector<crow::json::wvalue> jsonResults;
+
+	    if(wild.size() > 0){
+            	Quarks::Core::_Instance.iterJson(wild, jsonResults);
+	    }
+            
+            if(jsonResults.size()){
+                out["result"] = std::move(jsonResults);
+            }
+            
+        }catch (const std::runtime_error& error){
+            out["error"] = "parameter 'keys' missing";
+        }
+        
+        return out;
+        
+    };
+
+
     
     auto route_core_iterjson_callback =
     [](const crow::request& req)
@@ -120,12 +208,11 @@ int main(int argc, char ** argv) {
         if (!x){
             out["error"] = "invalid parameters";
             return out;
-        }
+        }        
         
-        //int sum = x["a"].i()+x["b"].i();
         try{
             std::string wild = x["keys"].s();
-            CROW_LOG_INFO << "wild-card : " << wild;
+            //CROW_LOG_INFO << "wild-card : " << wild;
             
             std::vector<crow::json::wvalue> jsonResults;
             Quarks::Core::_Instance.iterJson(wild, jsonResults);
@@ -150,7 +237,7 @@ int main(int argc, char ** argv) {
         
         auto x = crow::json::load(req.body);
         if (!x){
-            w["error"] = "invalid filter value";
+            w["error"] = "invalid parameters";
             return w;
         }
         
@@ -167,24 +254,21 @@ int main(int argc, char ** argv) {
         
         return w;
         
-    };
-    
-#ifdef _USE_PLUGINS
-    CROW_ROUTE(app, "/filter/gaussian")
-        .methods("POST"_method)(route_filter_gaussian_callback);
-    
-    CROW_ROUTE(app, "/filter/adjust")
-        .methods("POST"_method)(route_filter_adjust_callback);
-    
-    CROW_ROUTE(app, "/filter/clahe")
-        .methods("POST"_method)(route_filter_clahe_callback);
-#endif
+    };    
     
     CROW_ROUTE(app, "/quarks/core/putjson")
     .methods("POST"_method)(route_core_putjson_callback);
   
     CROW_ROUTE(app, "/quarks/core/getjson")
     .methods("GET"_method, "POST"_method)(route_core_getjson_callback);
+
+
+    CROW_ROUTE(app, "/quarks/core/get")
+    (route_core_getkey_callback);
+
+    CROW_ROUTE(app, "/quarks/core/getall")
+    (route_core_getkeys_callback);
+
     
     CROW_ROUTE(app, "/quarks/core/iterjson")
     .methods("GET"_method, "POST"_method)(route_core_iterjson_callback);
@@ -196,21 +280,129 @@ int main(int argc, char ** argv) {
     //auto& v = Quarks::Matrix::_Instance; // we will work with the matrix data struct
                                             // in later api calls
     
-    auto resourceLoader = [](crow::mustache::context& x, std::string filename) {
+    auto resourceLoader = [](crow::mustache::context& x, std::string filename,
+				 const char* base = nullptr) {
         char name[256];
         gethostname(name, 256);
         x["servername"] = name;
+
+	crow::mustache::set_base(".");
+	if(base == nullptr){
+	    crow::mustache::set_base("templates"); 
+	}else{
+	    crow::mustache::set_base(base);
+	}           
         
         return crow::mustache::load(filename);
     };
     
+    // generic file serving from templates
+
+    auto readFile = [](std::string name){
+	
+	/*if(imageFile){		
+		std::ifstream f(name.c_str(), std::ifstream::in|std::ifstream::binary|std::ifstream::ate);
+		if(!f.is_open()) {return std::string("");};
+		std::streampos size = f.tellg();
+		char* image = new char [size];
+		f.seekg (0, std::ifstream::beg);
+		f.read (image, size);
+		f.close();
+
+		std::string s(image, size);
+
+		delete[] image;
+
+		return s;
+
+	}*/
+
+    	FILE* file = fopen(name.c_str(), "rb");
+    	if (file == NULL) return std::string("");
+    
+    	fseek(file, 0, SEEK_END);
+    	int size = ftell(file);
+    	rewind(file);
+    
+    	char* chars = new char[size + 1];
+	chars[size] = '\0';
+	
+    	for (int i = 0; i < size;)
+    	{
+        	int read = fread(&chars[i], 1, size - i, file);
+        	i += read;
+    	}
+    	fclose(file);
+
+	std::string strChars(chars, size);
+	delete[] chars;
+
+	return strChars;
+
+    };
+
+     CROW_ROUTE(app, "/")
+    ([&resourceLoader, &readFile](const crow::request& req){
+        
+	std::string result;
+     	
+	//crow::mustache::context x;        
+	//bool useMustache = false;
+
+	const char* q = req.url_params.get("q");	
+	std::string asset;
+
+	if(q == nullptr){	
+	    crow::mustache::context x;    
+	    auto page = resourceLoader(x, "index.html");
+            result = page.render(x);
+	}else{
+	    asset = q;
+
+	    /*std::size_t found = asset.find_last_of("/\\");
+	    std::string fileName = asset.substr(found + 1);
+
+	    if(found != std::string::npos) {    	
+		if (fileName.find(".css") != std::string::npos){
+		    useMustache = true;
+		}	
+
+	    }
+
+	    if(useMustache){
+		std::string base = asset.substr(0, found);
+		//CROW_LOG_INFO << base;
+
+		auto page = resourceLoader(x, fileName, base.c_str());
+                result = page.render(x);
+	    	
+	    }else{
+		
+		result = readFile(asset);
+	    }*/
+
+	   result = readFile(asset);
+	}  		
+	
+	std::ostringstream os;
+        os << result;
+
+	//CROW_LOG_INFO << result;
+
+	auto res = crow::response{os.str()};
+	
+	return res;
+
+    });
+
+
     // html serving
-    CROW_ROUTE(app, "/")
+    /*CROW_ROUTE(app, "/")
     ([&resourceLoader](){
-        crow::mustache::context x;
+        crow::mustache::context x;	
         auto page = resourceLoader(x, "index.html");
         return page.render(x);
-    });
+    });*/
     
     CROW_ROUTE(app, "/home")
     ([&resourceLoader](){
@@ -218,6 +410,7 @@ int main(int argc, char ** argv) {
         auto page = resourceLoader(x, "home.html");
         return page.render(x);
     });
+
         
     CROW_ROUTE(app, "/home/<int>")
     ([&resourceLoader](int resId){
@@ -241,6 +434,19 @@ int main(int argc, char ** argv) {
         auto page = resourceLoader(x, std::to_string(resId) + ".css");
         return page.render(x);
     });
+
+
+#ifdef _USE_PLUGINS
+    CROW_ROUTE(app, "/filter/gaussian")
+        .methods("POST"_method)(route_filter_gaussian_callback);
+    
+    CROW_ROUTE(app, "/filter/adjust")
+        .methods("POST"_method)(route_filter_adjust_callback);
+    
+    CROW_ROUTE(app, "/filter/clahe")
+        .methods("POST"_method)(route_filter_clahe_callback);
+#endif
+
     
     std::cout << "running .." << std::endl;
 

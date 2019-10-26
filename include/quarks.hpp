@@ -25,7 +25,7 @@ namespace Quarks {
         
         void setEnvironment(int argc, std::string argv);
         
-        std::string putJson(std::string key, crow::json::rvalue& x);
+        bool putJson(std::string key, crow::json::rvalue& x, crow::json::wvalue& out);
         bool getJson(std::string key, crow::json::wvalue& out);
         
         bool getValue(std::string key, std::string& value);
