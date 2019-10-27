@@ -11,13 +11,14 @@ We will provide OpenCV as a readily available plugin.
 Thanks Arthur de Araújo Farias for providing a good example of using CROW with OpenCV.
 [arthurafarias/microservice-opencv-filter-gausian]
 
-This current example uses a compiled version of RocksDB and  OpenCV 4.0.0 and requires the following packages:
+This current example uses a compiled version of RocksDB, OpenCV 4.0.0 and Chrome v8 Engine and requires the following packages:
 
 - Crow Library v0.1
 - GCC with support to C++17
 - Cmake 1.13
 - Boost::System
 - RocksDB
+- v8 Javascript Engine 
 - OpenCV 4.0.0 (Optional)
 
 ## Docker setup
