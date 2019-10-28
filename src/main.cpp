@@ -1,17 +1,21 @@
 #include <base64.hpp>
-//#include <fstream> 
+#include <fstream>
 
 #ifdef _USE_PLUGINS
 #include <filter.hpp>
 #endif
 
 #include <main.hpp>
-
 #include <quarks.hpp>
-
 #include <v8engine.hpp>
 
+#include <curl/curl.h>
 
+static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp)
+{
+    ((std::string*)userp)->append((char*)contents, size * nmemb);
+    return size * nmemb;
+}
 
 int main(int argc, char ** argv) {
    
@@ -256,6 +260,50 @@ int main(int argc, char ** argv) {
         
     };    
     
+    auto route_ai_callback =
+    [](const crow::request& req){
+        const char* q = req.url_params.get("msg");
+        
+        std::string url = std::string("https://acobot-brainshop-ai-v1.p.rapidapi.com/get?bid=178&key=sX5A2PcYZbsN5EY6&uid=mashape&msg=") + q;
+        
+        CURL *curl;
+        CURLcode cres;
+        std::string readBuffer;
+        
+        curl = curl_easy_init();
+        if(curl) {
+            
+            struct curl_slist *headers = NULL;
+            headers = curl_slist_append(headers, "Accept: application/json");
+            headers = curl_slist_append(headers, "Content-Type: application/json; charset=utf-8");
+            headers = curl_slist_append(headers, "X-RapidAPI-Key: 89cd5a2676msh7cf7274830b66fbp1e09d8jsn21a8f654a6e9");
+            
+            
+            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+            curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+            
+            //curl_easy_setopt(curl, CURLOPT_POST, 1);
+            //curl_easy_setopt(curl, CURLOPT_POSTFIELDS, R"({\"queryInput\":{\"text\":{\"text\":\"any good jokes\",\"languageCode\":\"en\"}},\"queryParams\":{\"timeZone\":\"Asia/Dhaka\"}})");
+            
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+            cres = curl_easy_perform(curl);
+            curl_easy_cleanup(curl);
+            
+            std::cout << readBuffer << std::endl;
+        }
+        
+        std::ostringstream os;
+        os << readBuffer;
+        
+        auto res = crow::response{os.str()};
+        res.add_header("Access-Control-Allow-Origin", "*");
+        res.add_header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
+        res.add_header("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+        
+        return res;
+    };
+    
     CROW_ROUTE(app, "/quarks/core/putjson")
     .methods("POST"_method)(route_core_putjson_callback);
   
@@ -300,7 +348,6 @@ int main(int argc, char ** argv) {
 
     auto readFile = [](std::string name){
 	
-	/*if(imageFile){		
 		std::ifstream f(name.c_str(), std::ifstream::in|std::ifstream::binary|std::ifstream::ate);
 		if(!f.is_open()) {return std::string("");};
 		std::streampos size = f.tellg();
@@ -315,9 +362,8 @@ int main(int argc, char ** argv) {
 
 		return s;
 
-	}*/
-
-    	FILE* file = fopen(name.c_str(), "rb");
+	
+    	/*FILE* file = fopen(name.c_str(), "rb");
     	if (file == NULL) return std::string("");
     
     	fseek(file, 0, SEEK_END);
@@ -325,7 +371,7 @@ int main(int argc, char ** argv) {
     	rewind(file);
     
     	char* chars = new char[size + 1];
-	chars[size] = '\0';
+        chars[size] = '\0';
 	
     	for (int i = 0; i < size;)
     	{
@@ -334,62 +380,76 @@ int main(int argc, char ** argv) {
     	}
     	fclose(file);
 
-	std::string strChars(chars, size);
-	delete[] chars;
+        std::string strChars(chars, size);
+        delete[] chars;
 
-	return strChars;
+        return strChars;*/
 
     };
 
-     CROW_ROUTE(app, "/")
+    CROW_ROUTE(app, "/")
     ([&resourceLoader, &readFile](const crow::request& req){
         
 	std::string result;
-     	
-	//crow::mustache::context x;        
-	//bool useMustache = false;
-
+	
 	const char* q = req.url_params.get("q");	
-	std::string asset;
-
+	
+    //bool useMustache = false;
+    bool stylesheet = false;
+        
 	if(q == nullptr){	
 	    crow::mustache::context x;    
 	    auto page = resourceLoader(x, "index.html");
             result = page.render(x);
+        
 	}else{
-	    asset = q;
+        std::string asset = q;
+        
+        if(asset.size() > 4){
+            size_t css = asset.size() - 4;
+            //CROW_LOG_INFO << asset.substr(css);
+            if(!asset.substr(css).compare(".css")){
+                stylesheet = true;
+            }
+        }
+        
+        /*
+         
+         std::size_t found = asset.find_last_of("/\\");
+         std::string fileName = asset.substr(found + 1);
+         
+         if(found != std::string::npos) {
+            if (fileName.find(".css") != std::string::npos){
+                useMustache = true;
+            }
+         
+         }
 
-	    /*std::size_t found = asset.find_last_of("/\\");
-	    std::string fileName = asset.substr(found + 1);
-
-	    if(found != std::string::npos) {    	
-		if (fileName.find(".css") != std::string::npos){
-		    useMustache = true;
-		}	
-
-	    }
-
-	    if(useMustache){
-		std::string base = asset.substr(0, found);
-		//CROW_LOG_INFO << base;
-
-		auto page = resourceLoader(x, fileName, base.c_str());
-                result = page.render(x);
+         
+         if(useMustache){
+            std::string base = asset.substr(0, found);
+            //CROW_LOG_INFO << base;
+            crow::mustache::context x;
+            auto page = resourceLoader(x, fileName, base.c_str());
+            result = page.render(x);
 	    	
 	    }else{
-		
-		result = readFile(asset);
+            result = readFile(asset);
 	    }*/
 
 	   result = readFile(asset);
 	}  		
 	
 	std::ostringstream os;
-        os << result;
+    os << result;
 
 	//CROW_LOG_INFO << result;
 
 	auto res = crow::response{os.str()};
+    if(stylesheet){
+        //CROW_LOG_INFO << "stylesheet requested";
+        res.add_header("Content-type", "text/css");
+    }
 	
 	return res;
 
@@ -447,6 +507,11 @@ int main(int argc, char ** argv) {
         .methods("POST"_method)(route_filter_clahe_callback);
 #endif
 
+// AI calls
+    
+    CROW_ROUTE(app, "/ai")
+    .methods("GET"_method)(route_ai_callback);
+    
     
     std::cout << "running .." << std::endl;
 
