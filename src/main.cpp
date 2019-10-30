@@ -361,7 +361,6 @@ int main(int argc, char ** argv) {
 		delete[] image;
 
 		return s;
-
 	
     	/*FILE* file = fopen(name.c_str(), "rb");
     	if (file == NULL) return std::string("");
@@ -471,9 +470,6 @@ int main(int argc, char ** argv) {
     
     CROW_ROUTE(app, "/console")
     ([&defaultPageLoader](const crow::request& req){
-        //crow::mustache::context x;
-        //auto page = resourceLoader(x, "console/index.html");
-        //return page.render(x);
         auto res = defaultPageLoader(req, "console/index.html");
         return res;
     });
@@ -526,10 +522,9 @@ int main(int argc, char ** argv) {
     CROW_ROUTE(app, "/ai")
     .methods("GET"_method)(route_ai_callback);
     
-    
     std::cout << "running .." << std::endl;
 
-    app.port(18080).run();
+    app.port(18080).multithreaded().run();
     
 #ifdef _V8_LATEST
     v8EngineShutdownInMain();

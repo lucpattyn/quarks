@@ -49,15 +49,21 @@ var scan = function (command, onScanned){
         var n = 0;
         for(i = 0; i < text.length; i++){
             try{
-                if(text[i] == ',' || text[i] == '?' || text[i] == ';'){
+                if(",;".search(new RegExp("[" + text[i] + "]")) != -1){
                     //if(!n){
-                    //    print(text.substring(n, i + 1));
+                    //    print(text.substring(n, i + 1));
                     //}else{
                         print(text.substring(n, i + 1), " \\> "); // because i excludes last char
+                        printLine("", ">");
                     //}
                     n = i + 1;
                 }else if(i == text.length - 1){
+            
                     print(text.substring(n, i + 1), " >> ");
+                    printLine("", ">>>");
+            
+                    printLine(" anything else ? ");
+            
                 }
             }
             catch(e){
@@ -65,7 +71,7 @@ var scan = function (command, onScanned){
                 console.log(text[i]);
             }
         }
-       
+            
     });
     
     /*if(command == "register"){

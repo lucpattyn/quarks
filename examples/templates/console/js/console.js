@@ -69,8 +69,7 @@ function drawPrompt(Yoffset, index)
     if(index > -1){
         textOut = allUserCmdsPrompts[index];
     }
-    
-    console.log(textOut);
+    //console.log(textOut);
         
 	ctx.fillText  (textOut,leftWindowMargin, Yoffset * lineHeight);
 }
@@ -87,18 +86,21 @@ function blotOutCursor(){
 	ctx.fillRect(cursor.x,cursor.y,cursor.width,cursor.height);
 }
 
+// LUC:
+var drawTimer = null;
+
 function keyDownHandler(e){
 	
 	var currentKey = null;
 	if (e.code !== undefined)
 	{
 		currentKey = e.code;
-		console.log("e.code : " + e.code);
+		//console.log("e.code : " + e.code);
 	}
 	else
 	{
 		currentKey = e.keyCode;
-		console.log("e.keyCode : " + e.keyCode);
+		//console.log("e.keyCode : " + e.keyCode);
 	}
 	console.log(currentKey);
 	// handle backspace key
@@ -117,10 +119,12 @@ function keyDownHandler(e){
 	// handle <ENTER> key
 	if (currentKey == 13 || currentKey == 'Enter')
 	{
-		blotOutCursor();
+        // LUC:
+		/*blotOutCursor();
 		drawNewLine();
 		cursor.x=promptWidth-charWidth;
-		cursor.y+=lineHeight;
+		cursor.y+=lineHeight;*/
+        
 		if (currentCmd.length > 0)
 		{
             // LUC:
@@ -128,6 +132,8 @@ function keyDownHandler(e){
             commandsPusher.pushCommand = function(command, prompt){
                 allUserCmds.push(command);
                 allUserCmdsPrompts.push(prompt);
+                
+                //draw();
             };
             commandsPusher.defaultPrompt = PROMPT;
             commandsPusher.lastCommand = currentCmd;
@@ -135,18 +141,16 @@ function keyDownHandler(e){
             commandsPusher.pushCommand(commandsPusher.lastCommand, PROMPT);
             
             // console hook
-            onCRLF(commandsPusher, function(){
-                   draw(); // to draw previous commands/print messages
-               
-                   
-                   blotOutCursor();
-                   drawNewLine();
-                   cursor.x=promptWidth;
-                   cursor.y+=lineHeight; //
-                   
-                   // Redraw after new line
-                   draw();
-               
+            onCRLF(commandsPusher, function(newLine){
+               if(newLine){
+           
+                    blotOutCursor();
+                    drawNewLine();
+                    cursor.x=promptWidth;
+                    cursor.y+=lineHeight;
+           
+                    draw();
+                }
                    
             });
             

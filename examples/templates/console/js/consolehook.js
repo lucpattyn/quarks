@@ -17,17 +17,30 @@ var print = function(text, prompt){
     
     setTimeout(function(){
         if(drawFunc){
-               drawFunc();
+               drawFunc(false);
         }
     }, 10);
 
 };
 
+var printLine = function(text, prompt){
+    if (typeof prompt === 'undefined'){
+        prompt = defaultPrompt;
+    }
+    
+    setTimeout(function(){
+        if(drawFunc){
+            drawFunc(true);
+        }
+    }, 10);
+
+}
+
 function scanResponse(text, pushCommand, drawer){
     pushCommand(format(text), defaultPrompt);
     
     setTimeout(function(){
-               drawer();
+               drawer(true);
     }, 300);
 }
 
