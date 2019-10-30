@@ -387,72 +387,77 @@ int main(int argc, char ** argv) {
 
     };
 
-    CROW_ROUTE(app, "/")
-    ([&resourceLoader, &readFile](const crow::request& req){
+    auto defaultPageLoader = [&resourceLoader, &readFile](const crow::request& req, std::string defaultPage){
         
-	std::string result;
-	
-	const char* q = req.url_params.get("q");	
-	
-    //bool useMustache = false;
-    bool stylesheet = false;
+        std::string result;
         
-	if(q == nullptr){	
-	    crow::mustache::context x;    
-	    auto page = resourceLoader(x, "index.html");
+        const char* q = req.url_params.get("q");
+        
+        //bool useMustache = false;
+        bool stylesheet = false;
+        
+        if(q == nullptr){
+            crow::mustache::context x;
+            auto page = resourceLoader(x, defaultPage);
             result = page.render(x);
-        
-	}else{
-        std::string asset = q;
-        
-        if(asset.size() > 4){
-            size_t css = asset.size() - 4;
-            //CROW_LOG_INFO << asset.substr(css);
-            if(!asset.substr(css).compare(".css")){
-                stylesheet = true;
+            
+        }else{
+            std::string asset = q;
+            
+            if(asset.size() > 4){
+                size_t css = asset.size() - 4;
+                //CROW_LOG_INFO << asset.substr(css);
+                if(!asset.substr(css).compare(".css")){
+                    stylesheet = true;
+                }
             }
+            
+            /*
+             
+             std::size_t found = asset.find_last_of("/\\");
+             std::string fileName = asset.substr(found + 1);
+             
+             if(found != std::string::npos) {
+             if (fileName.find(".css") != std::string::npos){
+             useMustache = true;
+             }
+             
+             }
+             
+             
+             if(useMustache){
+             std::string base = asset.substr(0, found);
+             //CROW_LOG_INFO << base;
+             crow::mustache::context x;
+             auto page = resourceLoader(x, fileName, base.c_str());
+             result = page.render(x);
+             
+             }else{
+             result = readFile(asset);
+             }*/
+            
+            result = readFile(asset);
         }
         
-        /*
-         
-         std::size_t found = asset.find_last_of("/\\");
-         std::string fileName = asset.substr(found + 1);
-         
-         if(found != std::string::npos) {
-            if (fileName.find(".css") != std::string::npos){
-                useMustache = true;
-            }
-         
-         }
-
-         
-         if(useMustache){
-            std::string base = asset.substr(0, found);
-            //CROW_LOG_INFO << base;
-            crow::mustache::context x;
-            auto page = resourceLoader(x, fileName, base.c_str());
-            result = page.render(x);
-	    	
-	    }else{
-            result = readFile(asset);
-	    }*/
-
-	   result = readFile(asset);
-	}  		
-	
-	std::ostringstream os;
-    os << result;
-
-	//CROW_LOG_INFO << result;
-
-	auto res = crow::response{os.str()};
-    if(stylesheet){
-        //CROW_LOG_INFO << "stylesheet requested";
-        res.add_header("Content-type", "text/css");
-    }
-	
-	return res;
-
+        std::ostringstream os;
+        os << result;
+        
+        //CROW_LOG_INFO << result;
+        
+        auto res = crow::response{os.str()};
+        if(stylesheet){
+            //CROW_LOG_INFO << "stylesheet requested";
+            res.add_header("Content-type", "text/css");
+        }
+        
+        return res;
+        
+    };
+    
+    CROW_ROUTE(app, "/")
+    ([&defaultPageLoader](const crow::request& req){
+        auto res = defaultPageLoader(req, "index.html");
+        return res;
     });
 
 
@@ -463,6 +468,15 @@ int main(int argc, char ** argv) {
         auto page = resourceLoader(x, "index.html");
         return page.render(x);
     });*/
+    
+    CROW_ROUTE(app, "/console")
+    ([&defaultPageLoader](const crow::request& req){
+        //crow::mustache::context x;
+        //auto page = resourceLoader(x, "console/index.html");
+        //return page.render(x);
+        auto res = defaultPageLoader(req, "console/index.html");
+        return res;
+    });
     
     CROW_ROUTE(app, "/home")
     ([&resourceLoader](){
