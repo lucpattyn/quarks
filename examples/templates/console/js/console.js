@@ -132,8 +132,7 @@ function keyDownHandler(e){
             commandsPusher.pushCommand = function(command, prompt){
                 allUserCmds.push(command);
                 allUserCmdsPrompts.push(prompt);
-                
-                //draw();
+            
             };
             commandsPusher.defaultPrompt = PROMPT;
             commandsPusher.lastCommand = currentCmd;

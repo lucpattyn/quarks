@@ -260,11 +260,54 @@ int main(int argc, char ** argv) {
         
     };    
     
-    auto route_ai_callback =
-    [](const crow::request& req){
-        const char* q = req.url_params.get("msg");
+    auto uriDecode = [](const std::string& in, std::string& out){
+        out.clear();
+        out.reserve(in.size());
+        for (std::size_t i = 0; i < in.size(); ++i)
+        {
+            if (in[i] == '%')
+            {
+                if (i + 3 <= in.size())
+                {
+                    int value = 0;
+                    std::istringstream is(in.substr(i + 1, 2));
+                    if (is >> std::hex >> value)
+                    {
+                        out += static_cast<char>(value);
+                        i += 2;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else if (in[i] == '+')
+            {
+                out += ' ';
+            }
+            else
+            {
+                out += in[i];
+            }
+        }
+        return true;
         
-        std::string url = std::string("https://acobot-brainshop-ai-v1.p.rapidapi.com/get?bid=178&key=sX5A2PcYZbsN5EY6&uid=mashape&msg=") + q;
+        
+    };
+    
+    auto route_ai_callback =
+    [&uriDecode](const crow::request& req){
+        const char* q = req.url_params.get("msg");
+        std::string params;
+        //uriDecode(q, params);
+        
+        CROW_LOG_INFO << "uri params:" << params << q;
+       
         
         CURL *curl;
         CURLcode cres;
@@ -272,6 +315,11 @@ int main(int argc, char ** argv) {
         
         curl = curl_easy_init();
         if(curl) {
+            
+            char *output = curl_easy_escape(curl, q, 0);
+            std::string url = std::string("https://acobot-brainshop-ai-v1.p.rapidapi.com/get?bid=178&key=sX5A2PcYZbsN5EY6&uid=mashape&msg=") + output;
+            
+            curl_free(output);
             
             struct curl_slist *headers = NULL;
             headers = curl_slist_append(headers, "Accept: application/json");
@@ -334,12 +382,12 @@ int main(int argc, char ** argv) {
         gethostname(name, 256);
         x["servername"] = name;
 
-	crow::mustache::set_base(".");
-	if(base == nullptr){
-	    crow::mustache::set_base("templates"); 
-	}else{
-	    crow::mustache::set_base(base);
-	}           
+        crow::mustache::set_base(".");
+        if(base == nullptr){
+            crow::mustache::set_base("templates");
+        }else{
+            crow::mustache::set_base(base);
+        }
         
         return crow::mustache::load(filename);
     };
@@ -385,8 +433,8 @@ int main(int argc, char ** argv) {
         return strChars;*/
 
     };
-
-    auto defaultPageLoader = [&resourceLoader, &readFile](const crow::request& req, std::string defaultPage){
+   
+    auto defaultPageLoader = [&resourceLoader, &readFile, &uriDecode](const crow::request& req, std::string defaultPage){
         
         std::string result;
         
@@ -401,7 +449,9 @@ int main(int argc, char ** argv) {
             result = page.render(x);
             
         }else{
-            std::string asset = q;
+            std::string asset;
+            asset = q;
+            //uriDecode(q, asset);
             
             if(asset.size() > 4){
                 size_t css = asset.size() - 4;

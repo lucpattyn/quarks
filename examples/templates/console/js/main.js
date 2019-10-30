@@ -40,7 +40,14 @@ function putJSON(url, header, data, callback){
 
 
 var scan = function (command, onScanned){
-    var url = ("ai?msg=" + command).replace(" ", "_");
+    
+    console.log(command);
+    if(command == "register"){
+        onScanned("register to what ??");
+        return;
+    }
+    
+    var url = ("ai?msg=" + encodeURI(command));
     getJSON(url, null, function(responseText){
         var text = "" + JSON.parse(responseText).cnt;
         console.log(text);
@@ -62,7 +69,7 @@ var scan = function (command, onScanned){
                     print(text.substring(n, i + 1), " >> ");
                     printLine("", ">>>");
             
-                    printLine(" anything else ? ");
+                    printLine("");
             
                 }
             }

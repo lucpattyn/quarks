@@ -40,6 +40,7 @@ function scanResponse(text, pushCommand, drawer){
     pushCommand(format(text), defaultPrompt);
     
     setTimeout(function(){
+               printLine("");
                drawer(true);
     }, 300);
 }
