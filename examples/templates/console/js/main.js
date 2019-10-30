@@ -48,15 +48,21 @@ var scan = function (command, onScanned){
 
         var n = 0;
         for(i = 0; i < text.length; i++){
-            if(",;".search(text[i]?text[i]:'') != -1){
-                //if(!n){
-                //    print(text.substring(n, i + 1));
-                //}else{
-                    print(text.substring(n, i + 1), " \\> "); // because i excludes last char
-                //}
-                n = i + 1;
-            }else if(i == text.length){
-                print(text.substring(n, i + 1), " >> ");
+            try{
+                if(text[i] == ',' || text[i] == '?' || text[i] == ';'){
+                    //if(!n){
+                    //    print(text.substring(n, i + 1));
+                    //}else{
+                        print(text.substring(n, i + 1), " \\> "); // because i excludes last char
+                    //}
+                    n = i + 1;
+                }else if(i == text.length - 1){
+                    print(text.substring(n, i + 1), " >> ");
+                }
+            }
+            catch(e){
+                console.log(e);
+                console.log(text[i]);
             }
         }
        

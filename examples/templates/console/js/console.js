@@ -136,15 +136,17 @@ function keyDownHandler(e){
             
             // console hook
             onCRLF(commandsPusher, function(){
-                         draw();
+                   draw(); // to draw previous commands/print messages
+               
                    
-                         blotOutCursor();
-                         drawNewLine();
-                         cursor.x=promptWidth;
-                         cursor.y+=lineHeight;
+                   blotOutCursor();
+                   drawNewLine();
+                   cursor.x=promptWidth;
+                   cursor.y+=lineHeight; //
                    
-                         draw();
-                   
+                   // Redraw after new line
+                   draw();
+               
                    
             });
             
