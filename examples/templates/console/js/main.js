@@ -38,14 +38,72 @@ function putJSON(url, header, data, callback){
     }
 }
 
+var mode = 0; // 0 is ai, 1 is put, 2 is get, 3 is getall, -1 means busy
 
 var scan = function (command, onScanned){
     
     console.log(command);
-    if(command == "register"){
-        onScanned("register to what ??");
+    
+    if(command.trim() == "put"){
+        onScanned('Enter json body .. example: {"key":"msg1", "value":{"msg":"yo!"}}');
+	mode = 1;
         return;
     }
+    if(mode == 1){	
+	mode = -1;
+	var url = ("put?body=" + encodeURI(command));
+    	getJSON(url, null, function(responseText){
+		onScanned(responseText);
+		mode = 0; 	
+
+	});
+	
+	return;
+	
+    }
+
+    if(command.trim() == "get"){
+        onScanned('Enter key .. example: msg1');
+	mode = 2;
+        return;
+    }
+    if(mode == 2){
+	mode = -1;	
+	var url = ("get?key=" + encodeURI(command.trim()));
+    	getJSON(url, null, function(responseText){
+		onScanned(responseText);
+		mode = 0; 	
+
+	});
+
+	return;
+		
+    }
+
+
+    if(command.trim() == "getall"){
+        onScanned('Enter keys .. example: msg*');
+	mode = 3;
+        return;
+    }
+    if(mode == 3){
+	mode = -1; 
+	var url = ("getall?keys=" + encodeURI(command.trim()));
+    	getJSON(url, null, function(responseText){
+		onScanned(responseText);
+		mode = 0; 	
+
+	});	
+	
+	return;
+    }
+
+    if(mode != 0){
+    	console.log("unexpected .. !");
+    }
+
+
+    // ai mode on
     
     var url = ("ai?msg=" + encodeURI(command));
     getJSON(url, null, function(responseText){
