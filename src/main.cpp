@@ -72,14 +72,14 @@ int main(int argc, char ** argv) {
     auto route_core_putjson_callback =
     [](const crow::request& req){
 
-	crow::json::wvalue out;
+        crow::json::wvalue out;
 
         auto x = crow::json::load(req.body);        
-	if (!x){	   
-	   CROW_LOG_INFO << req.body;	  
-	   out["error"] = "invalid post body";
+        if (!x){
+            CROW_LOG_INFO << req.body;
+            out["error"] = "invalid post body";
 	
-	   return out;
+            return out;
         }
 
         std::string s = x["key"].s();
@@ -96,12 +96,12 @@ int main(int argc, char ** argv) {
 
         return res;*/
 
-	if(!success){
-	     out["error"] = "save failed";
+        if(!success){
+            out["error"] = "save failed";
 
-	}
+        }
 
-	return out;
+        return out;
 
     };
     
@@ -442,6 +442,7 @@ int main(int argc, char ** argv) {
         
         //bool useMustache = false;
         bool stylesheet = false;
+	bool javascript = false;
         
         if(q == nullptr){
             crow::mustache::context x;
@@ -453,12 +454,24 @@ int main(int argc, char ** argv) {
             asset = q;
             //uriDecode(q, asset);
             
-            if(asset.size() > 4){
+            
+
+	    if(asset.size() > 3){
+                size_t js = asset.size() - 3;
+                //CROW_LOG_INFO << asset.substr(css);
+                if(!asset.substr(js).compare(".js")){
+                    javascript = true;
+                }
+		
+            }
+
+	    if(asset.size() > 4){
                 size_t css = asset.size() - 4;
                 //CROW_LOG_INFO << asset.substr(css);
                 if(!asset.substr(css).compare(".css")){
                     stylesheet = true;
                 }
+		
             }
             
             /*
@@ -494,10 +507,19 @@ int main(int argc, char ** argv) {
         //CROW_LOG_INFO << result;
         
         auto res = crow::response{os.str()};
-        if(stylesheet){
+
+	if(javascript){
+	   res.add_header("Content-type", "application/javascript");
+
+	}        
+        else if(stylesheet){
             //CROW_LOG_INFO << "stylesheet requested";
             res.add_header("Content-type", "text/css");
-        }
+        
+	}else{
+	    res.set_header("Content-Type", "text/html; charset=UTF-8");
+	
+	}
         
         return res;
         
