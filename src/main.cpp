@@ -68,18 +68,18 @@ int main(int argc, char ** argv) {
 #endif
     
     
+    
+
     // core functionalities
-    auto route_core_putjson_callback =
-    [](const crow::request& req){
 
-        crow::json::wvalue out;
+    auto putjson = [](std::string body, crow::json::wvalue& out)
+    {	
 
-        auto x = crow::json::load(req.body);        
+	auto x = crow::json::load(body);        
         if (!x){
-            CROW_LOG_INFO << req.body;
+            CROW_LOG_INFO << body;
             out["error"] = "invalid post body";
 	
-            return out;
         }
 
         std::string s = x["key"].s();
@@ -101,7 +101,45 @@ int main(int argc, char ** argv) {
 
         }
 
-        return out;
+
+    };
+
+    auto route_core_putjson_callback =
+    [putjson](const crow::request& req){
+
+        crow::json::wvalue out;
+	putjson(req.body, out);
+
+	return out;
+
+        /*auto x = crow::json::load(req.body);        
+        if (!x){
+            CROW_LOG_INFO << req.body;
+            out["error"] = "invalid post body";
+	
+            return out;
+        }
+
+        std::string s = x["key"].s();
+        crow::json::rvalue v = x["value"];        
+               
+        bool success = Quarks::Core::_Instance.putJson(s, v, out);*/
+               
+       
+	/*auto res = crow::response{os.str()};
+	res.add_header("Access-Control-Allow-Origin", "*");
+	res.add_header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
+	res.add_header("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+        
+
+        return res;*/
+
+        /*if(!success){
+            out["error"] = "save failed";
+
+        }
+
+        return out;*/
 
     };
     
@@ -180,7 +218,7 @@ int main(int argc, char ** argv) {
 	try{
 	    auto x = req.url_params.get("keys");
 	    std::string wild = (x == nullptr ? "" : x);
-            //CROW_LOG_INFO << "wild-card : " << wild;
+            CROW_LOG_INFO << "wild-card : " << wild;
             
             std::vector<crow::json::wvalue> jsonResults;
 
@@ -200,6 +238,19 @@ int main(int argc, char ** argv) {
         
     };
 
+
+    auto route_core_put_callback =
+    [putjson](const crow::request& req)
+    {
+	auto x = req.url_params.get("body");
+	
+	crow::json::wvalue out;
+	putjson(x, out);
+
+
+	return out;
+        
+    };
 
     
     auto route_core_iterjson_callback =
@@ -310,7 +361,7 @@ int main(int argc, char ** argv) {
        
         
         CURL *curl;
-        CURLcode cres;
+        //CURLcode cres;
         std::string readBuffer;
         
         curl = curl_easy_init();
@@ -335,7 +386,9 @@ int main(int argc, char ** argv) {
             //curl_easy_setopt(curl, CURLOPT_POSTFIELDS, R"({\"queryInput\":{\"text\":{\"text\":\"any good jokes\",\"languageCode\":\"en\"}},\"queryParams\":{\"timeZone\":\"Asia/Dhaka\"}})");
             
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
-            cres = curl_easy_perform(curl);
+            //cres = curl_easy_perform(curl);
+	    curl_easy_perform(curl);
+
             curl_easy_cleanup(curl);
             
             std::cout << readBuffer << std::endl;
@@ -352,24 +405,26 @@ int main(int argc, char ** argv) {
         return res;
     };
     
-    CROW_ROUTE(app, "/quarks/core/putjson")
+    CROW_ROUTE(app, "/putjson")
     .methods("POST"_method)(route_core_putjson_callback);
   
-    CROW_ROUTE(app, "/quarks/core/getjson")
+    CROW_ROUTE(app, "/getjson")
     .methods("GET"_method, "POST"_method)(route_core_getjson_callback);
 
 
-    CROW_ROUTE(app, "/quarks/core/get")
+    CROW_ROUTE(app, "/get")
     (route_core_getkey_callback);
 
-    CROW_ROUTE(app, "/quarks/core/getall")
+    CROW_ROUTE(app, "/getall")
     (route_core_getkeys_callback);
 
+    CROW_ROUTE(app, "/put")
+    (route_core_put_callback);
     
-    CROW_ROUTE(app, "/quarks/core/iterjson")
+    CROW_ROUTE(app, "/iterjson")
     .methods("GET"_method, "POST"_method)(route_core_iterjson_callback);
     
-    CROW_ROUTE(app, "/quarks/core/searchjson")
+    CROW_ROUTE(app, "/searchjson")
     .methods("GET"_method, "POST"_method)(route_core_searchjson_callback);
     
     
@@ -452,8 +507,7 @@ int main(int argc, char ** argv) {
         }else{
             std::string asset;
             asset = q;
-            //uriDecode(q, asset);
-            
+            //uriDecode(q, asset);            
             
 
 	    if(asset.size() > 3){
