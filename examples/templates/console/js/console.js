@@ -232,7 +232,7 @@ function draw()
 	// LUC:
 	if(allUserCmds.length > 20){
 		allUserCmds.splice(0, 5);
-		allUserCmdsPrompts(0, 5);
+		allUserCmdsPrompts.splice(0, 5);
 		
 	}
 	cursor.y = (allUserCmds.length + 1) * lineHeight;	
