@@ -229,6 +229,14 @@ function draw()
 	ctx.font = outputFont;
 	ctx.fillStyle = fontColor;
 	
+	// LUC:
+	if(allUserCmds.length > 20){
+		allUserCmds.splice(0, 5);
+		allUserCmdsPrompts(0, 5);
+		
+	}
+	cursor.y = (allUserCmds.length + 1) * lineHeight;	
+
 	for (var i=0;i<allUserCmds.length;i++)
 	{
 		drawPrompt(i+1, i);
