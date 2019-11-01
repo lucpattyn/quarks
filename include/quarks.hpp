@@ -38,6 +38,9 @@ namespace Quarks {
     
         bool searchJson(crow::json::rvalue& args,
                         std::vector<crow::json::wvalue>& matchedResults);
+
+	bool fileTransfer(std::string moduleName, std::string funcName, 
+			std::string channelName, std::string remoteDescription);
         
         
         

@@ -313,3 +313,33 @@ bool Core::searchJson(crow::json::rvalue& args,
     return false;
     
 }
+
+bool Core::fileTransfer(std::string moduleName, std::string funcName, std::string channelName,
+		 std::string remoteDescription) {
+    
+	Core& core = *this;
+        
+        v8Engine ve([](std::string log){
+            CROW_LOG_INFO << log.c_str();
+        });
+        
+        
+        auto v8Loaded = [&core, &ve, &funcName, &channelName, &remoteDescription]
+            (v8Engine::v8Context& v8Ctx) -> int {
+            
+            std::string rawData = ve.invoke(v8Ctx, funcName, channelName, remoteDescription);
+            
+            //writeFile(fileName, rawData);
+	    CROW_LOG_INFO << rawData;
+                
+	    return (rawData.size() > 0);
+            
+        }; 
+        
+        std::string moduleJS = moduleName + ".js";
+	CROW_LOG_INFO << moduleJS;
+
+        return ve.load(moduleJS, v8Loaded);        
+      // return true;
+}
+

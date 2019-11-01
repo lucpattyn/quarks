@@ -340,7 +340,21 @@ int main(int argc, char ** argv) {
         
         return w;
         
-    };    
+    };   
+
+    auto route_core_filetransfer_callback=
+    [](const crow::request& req){
+	bool ret = Quarks::Core::_Instance.fileTransfer("filetransfer", "transfer", "sendfile", "remotedes");	
+
+	if(ret){
+		return R"({"result":"transferred"})";
+	}else{
+		return R"({"error":"not transferred"})";
+	}
+	
+    };
+
+    // html stuff 
     
     auto uriDecode = [](const std::string& in, std::string& out){
         out.clear();
@@ -458,6 +472,9 @@ int main(int argc, char ** argv) {
     
     CROW_ROUTE(app, "/searchjson")
     .methods("GET"_method, "POST"_method)(route_core_searchjson_callback);
+
+    CROW_ROUTE(app, "/filetransfer")
+    .methods("GET"_method, "POST"_method)(route_core_filetransfer_callback);   
     
     
     //auto& v = Quarks::Matrix::_Instance; // we will work with the matrix data struct
