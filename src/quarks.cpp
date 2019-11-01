@@ -72,6 +72,48 @@ void Core::setEnvironment(int argc, std::string argv){
     _argc = argc;
 }
 
+bool Core::put(std::string body, std::string& out) {
+
+    auto x = crow::json::load(body);        
+    if (!x){
+    	CROW_LOG_INFO << "invalid put body" << body;
+            out = "invalid put body";
+	
+    }
+
+    std::string key = x["key"].s();
+    std::string value = x["value"].s();  
+    
+    bool ret = false;
+    
+        
+    rocksdb::Slice keySlice = key;
+        
+    // modify the database
+    if (dbStatus.ok()){
+	ret = true;
+
+        rocksdb::Status status = db->Put(rocksdb::WriteOptions(), keySlice, value);
+        if(!status.ok()){
+            key = "{\"result\":\"error\"}";
+	    ret = false;
+        }
+    
+    }else{
+        key = "";
+        ret = false;
+    }
+
+    //std::stringstream ss;
+    //ss<< "{" << std::quoted("result") << ":" << std::quoted(key) << "}";    
+    
+    out = std::string("{") + R"("result")" + std::string(":\"")  + key + std::string("\"}");
+
+    return  ret;
+    
+}
+
+
 bool Core::putJson(std::string key, crow::json::rvalue& x, crow::json::wvalue& out) {
     
     bool ret = true;
@@ -127,7 +169,7 @@ bool Core::getJson(std::string key, crow::json::wvalue& out){
     
 }
 
-bool Core::getValue(std::string key, std::string& value){
+bool Core::get(std::string key, std::string& value){
     
     bool ret = false;
     

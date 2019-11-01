@@ -71,6 +71,106 @@ int main(int argc, char ** argv) {
     
 
     // core functionalities
+    auto put = [](std::string body, std::string& out)
+    {	
+	
+	CROW_LOG_INFO << body;
+	
+        bool success = Quarks::Core::_Instance.put(body, out);
+               
+       
+	/*auto res = crow::response{os.str()};
+	res.add_header("Access-Control-Allow-Origin", "*");
+	res.add_header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
+	res.add_header("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+        
+
+        return res;*/
+
+    	return success;
+
+
+    };
+
+    auto route_core_put_callback =
+    [put](const crow::request& req){
+
+	std::string out;
+
+	std::string body = req.body;
+
+	auto x = req.url_params.get("body");
+	if(x != nullptr){
+	    body = x;
+	}
+
+	put(body, out);
+
+	return out;
+
+    };
+
+
+    auto route_core_getkey_callback =
+    [](const crow::request& req)
+    {
+        std::string out = "";
+	//CROW_LOG_INFO <<"get_key:";
+	//CROW_LOG_INFO<<req.url_params;
+       
+        try{	
+	   
+	    auto x = req.url_params.get("key");
+	    std::string key = (x == nullptr ? "" : x); 
+
+	    if(key.size() > 0){           
+                Quarks::Core::_Instance.get(key, out);
+	    }else{
+		out = "{\"error\": \"parameter 'key' missing\"}";
+	    }    
+                        
+            
+        }catch (const std::runtime_error& error){
+             out = R"({"error":"key parsing error"})";
+        }
+        
+        return out;
+        
+    };
+
+    auto route_core_getkeys_callback =
+    [](const crow::request& req)
+    {
+        crow::json::wvalue out;
+        
+	try{
+	    auto x = req.url_params.get("keys");
+	    std::string wild = (x == nullptr ? "" : x);
+            CROW_LOG_INFO << "wild-card : " << wild;
+            
+            std::vector<crow::json::wvalue> jsonResults;
+
+	    if(wild.size() > 0){
+            	Quarks::Core::_Instance.iterJson(wild, jsonResults);
+	    }else{
+		out["error"] = "{\"error\":\"parameter 'keys' missing\"}";
+
+	    }
+            
+            if(jsonResults.size()){
+                out["result"] = std::move(jsonResults);
+            }
+            
+        }catch (const std::runtime_error& error){
+            out["error"] = R"({"error" : "parsing error"})";
+        }
+        
+        return out;
+        
+    };
+
+
+
 
     auto putjson = [](std::string body, crow::json::wvalue& out)
     {	
@@ -165,84 +265,15 @@ int main(int argc, char ** argv) {
         
     };
 
-    auto route_core_getkey_callback =
-    [](const crow::request& req)
-    {
-        crow::json::wvalue out;
-	//CROW_LOG_INFO <<"get_key:";
-	//CROW_LOG_INFO<<req.url_params;
-       
-        try{
-	
-	    crow::json::wvalue jsonResult;
-	
-	    std::vector<crow::json::wvalue> jsonResults;
+    
 
-	    auto x = req.url_params.get("key");
-	    std::string key = (x == nullptr ? "" : x); 
-
-	    if(key.size() > 0){           
-                Quarks::Core::_Instance.getJson(key, jsonResult);
-	    }
-
-	    auto k = req.url_params.get("keys");
-	    std::string wild = (k == nullptr ? "" : k);
-            //CROW_LOG_INFO << "wild-card : " << wild;
-            
-            
-	    if(wild.size() > 0){
-            	Quarks::Core::_Instance.iterJson(wild, jsonResults);
-	    }
-
-	    if(key.size() > 0){
-	    	jsonResults.push_back(std::move(jsonResult));
-	    }
-            
-            if(jsonResults.size() > 0){
-                out["result"] = std::move(jsonResults);
-            }
-            
-        }catch (const std::runtime_error& error){
-             out["error"] = "parameter 'key' or 'keys' missing";
-        }
-        
-        return out;
-        
-    };
-
-    auto route_core_getkeys_callback =
-    [](const crow::request& req)
-    {
-        crow::json::wvalue out;
-        
-	try{
-	    auto x = req.url_params.get("keys");
-	    std::string wild = (x == nullptr ? "" : x);
-            CROW_LOG_INFO << "wild-card : " << wild;
-            
-            std::vector<crow::json::wvalue> jsonResults;
-
-	    if(wild.size() > 0){
-            	Quarks::Core::_Instance.iterJson(wild, jsonResults);
-	    }
-            
-            if(jsonResults.size()){
-                out["result"] = std::move(jsonResults);
-            }
-            
-        }catch (const std::runtime_error& error){
-            out["error"] = "parameter 'keys' missing";
-        }
-        
-        return out;
-        
-    };
-
-
-    auto route_core_put_callback =
+    /*auto route_core_put_callback =
     [putjson](const crow::request& req)
     {
 	auto x = req.url_params.get("body");
+	if(x == nullptr){
+	    x = req.body;
+	}
 	
 	crow::json::wvalue out;
 	putjson(x, out);
@@ -250,7 +281,7 @@ int main(int argc, char ** argv) {
 
 	return out;
         
-    };
+    };*/
 
     
     auto route_core_iterjson_callback =
@@ -405,22 +436,23 @@ int main(int argc, char ** argv) {
         return res;
     };
     
-    CROW_ROUTE(app, "/putjson")
-    .methods("POST"_method)(route_core_putjson_callback);
-  
-    CROW_ROUTE(app, "/getjson")
-    .methods("GET"_method, "POST"_method)(route_core_getjson_callback);
-
+    CROW_ROUTE(app, "/put")
+    (route_core_put_callback);
 
     CROW_ROUTE(app, "/get")
     (route_core_getkey_callback);
 
     CROW_ROUTE(app, "/getall")
     (route_core_getkeys_callback);
+  
 
-    CROW_ROUTE(app, "/put")
-    (route_core_put_callback);
-    
+    CROW_ROUTE(app, "/putjson")
+    .methods("POST"_method)(route_core_putjson_callback);
+  
+    CROW_ROUTE(app, "/getjson")
+    .methods("GET"_method, "POST"_method)(route_core_getjson_callback);
+   
+        
     CROW_ROUTE(app, "/iterjson")
     .methods("GET"_method, "POST"_method)(route_core_iterjson_callback);
     
