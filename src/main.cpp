@@ -179,6 +179,8 @@ int main(int argc, char ** argv) {
         if (!x){
             CROW_LOG_INFO << body;
             out["error"] = "invalid post body";
+
+	    return;
 	
         }
 
@@ -343,7 +345,7 @@ int main(int argc, char ** argv) {
     };   
 
     auto route_core_filetransfer_callback=
-    [](const crow::request& req){
+    [](/*const crow::request& req*/){
 	bool ret = Quarks::Core::_Instance.fileTransfer("filetransfer", "transfer", "sendfile", "remotedes");	
 
 	if(ret){

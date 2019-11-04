@@ -77,15 +77,28 @@ bool Core::put(std::string body, std::string& out) {
     auto x = crow::json::load(body);        
     if (!x){
     	CROW_LOG_INFO << "invalid put body" << body;
-            out = "invalid put body";
+        //out = "invalid put body";
+	 
+	out = "{\"error\": \"Invalid put parameters\"}";
+
+	return false;
 	
     }
 
     std::string key = x["key"].s();
-    std::string value = x["value"].s();  
+    //std::string value = x["value"].s();  
+    auto r = x["value"];
+    if(!r){
+	out = "{\"error\": \"Parameter 'value' missing\"}";
+	return false;
+    }
     
-    bool ret = false;
-    
+    crow::json::wvalue w = std::move(r);
+    std::string value = crow::json::dump(w);
+
+    CROW_LOG_INFO << "put body : " << body << "key : " << key << ", value : " << value << "\n";
+        
+    bool ret = false;    
         
     rocksdb::Slice keySlice = key;
         
@@ -95,19 +108,20 @@ bool Core::put(std::string body, std::string& out) {
 
         rocksdb::Status status = db->Put(rocksdb::WriteOptions(), keySlice, value);
         if(!status.ok()){
-            key = "{\"result\":\"error\"}";
+            key = "{\"error\":\"data failed to save\"}";
 	    ret = false;
         }
     
     }else{
-        key = "";
+        key = "{\"error\":\"db status error\"}";
         ret = false;
     }
 
     //std::stringstream ss;
     //ss<< "{" << std::quoted("result") << ":" << std::quoted(key) << "}";    
-    
-    out = std::string("{") + R"("result")" + std::string(":\"")  + key + std::string("\"}");
+    if(ret){
+    	out = std::string("{") + R"("result")" + std::string(":\"")  + key + std::string("\"}");
+    }
 
     return  ret;
     
@@ -210,8 +224,16 @@ bool Core::iterJson(std::string wild, std::vector<crow::json::wvalue>& matchedRe
             
             if(wildcmp(wild.c_str(), it->key().ToString().c_str())){
                 crow::json::wvalue w;
-                w = crow::json::load(it->value().ToString());
+                auto x = crow::json::load(it->value().ToString());
                 //CROW_LOG_INFO << "w : " << crow::json::dump(w);
+
+		if(!x){
+		    w =  crow::json::load(std::string("[\"") + 
+						it->value().ToString() + std::string("\"]"));
+
+		}else{
+		    w = x;
+		}
                 
                 matchedResults.push_back(std::move(w));
                 
@@ -277,8 +299,15 @@ bool Core::searchJson(crow::json::rvalue& args,
                 //<< ": " <<  elem; //<< endl;
                 
                 if(wildcmp(wild.c_str(), it->key().ToString().c_str())){
-                    crow::json::rvalue r;
-                    r = crow::json::load(it->value().ToString());
+                    //crow::json::rvalue r;
+                    auto r = crow::json::load(it->value().ToString());
+		    if(!r){
+		    	r =  crow::json::load(std::string("[\"") + 
+						it->value().ToString() + std::string("\"]"));
+
+
+		    }
+
                     
                     //CROW_LOG_INFO << "r : " << elem;
                     
