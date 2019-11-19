@@ -25,8 +25,8 @@ namespace Quarks {
         
         void setEnvironment(int argc, std::string argv);
 
-	bool put(std::string body, std::string& out);
-	bool get(std::string key, std::string& value);
+        bool put(std::string body, std::string& out);
+        bool get(std::string key, std::string& value);
         
         
         bool putJson(std::string key, crow::json::rvalue& x, crow::json::wvalue& out);
@@ -39,11 +39,12 @@ namespace Quarks {
         bool searchJson(crow::json::rvalue& args,
                         std::vector<crow::json::wvalue>& matchedResults);
 
-	bool fileTransfer(std::string moduleName, std::string funcName, 
+        bool openTCPSocketClient();
+        
+        bool fileTransfer(std::string moduleName, std::string funcName,
 			std::string channelName, std::string remoteDescription);
         
-        
-        
+               
         private:
         
         std::string _argv;

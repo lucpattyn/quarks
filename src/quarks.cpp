@@ -5,6 +5,15 @@
 
 #include <iomanip>
 
+#include <iostream>
+#include <boost/asio.hpp>
+
+using namespace boost::asio;
+using ip::tcp;
+//using std::string;
+//using std::cout;
+//using std::endl;
+
 using namespace Quarks;
 
 Core Core::_Instance;
@@ -25,31 +34,31 @@ void closeDB(){
     delete db;
 }
 
-int wildcmp(const char *wild, const char *string) {
+int wildcmp(const char *wild, const char *str) {
     // Written by Jack Handy - <A href="mailto:jakkhandy@hotmail.com">jakkhandy@hotmail.com</A>
     const char *cp = NULL, *mp = NULL;
     
-    while ((*string) && (*wild != '*')) {
-        if ((*wild != *string) && (*wild != '?')) {
+    while ((*str) && (*wild != '*')) {
+        if ((*wild != *str) && (*wild != '?')) {
             return 0;
         }
         wild++;
-        string++;
+        str++;
     }
     
-    while (*string) {
+    while (*str) {
         if (*wild == '*') {
             if (!*++wild) {
                 return 1;
             }
             mp = wild;
-            cp = string+1;
-        } else if ((*wild == *string) || (*wild == '?')) {
+            cp = str+1;
+        } else if ((*wild == *str) || (*wild == '?')) {
             wild++;
-            string++;
+            str++;
         } else {
             wild = mp;
-            string = cp++;
+            str = cp++;
         }
     }
     
@@ -200,6 +209,42 @@ bool Core::get(std::string key, std::string& value){
     
 }
 
+bool prefixIter(rocksdb::Iterator*& it, std::string wild,
+                std::vector<crow::json::wvalue>& matchedResults){
+    
+    std::size_t found = wild.find("*");
+    if(found != std::string::npos && found == 0){
+        return false;
+    }
+    
+    rocksdb::Slice prefix = wild.substr(0, found);;
+    for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
+        if(wildcmp(wild.c_str(), it->key().ToString().c_str())){
+            crow::json::wvalue w;
+            auto x = crow::json::load(it->value().ToString());
+            //CROW_LOG_INFO << "w : " << crow::json::dump(w);
+            
+            if(!x){
+                w =  crow::json::load(std::string("[\"") +
+                                      it->value().ToString() + std::string("\"]"));
+                
+            }else{
+                w = x;
+            }
+            
+            matchedResults.push_back(std::move(w));
+            
+        }
+        // do something
+    }
+    
+    return true;
+    
+   
+}
+
+
+
 bool Core::iterJson(std::string wild, std::vector<crow::json::wvalue>& matchedResults) {
 
     /*for (std::map<std::string, crow::json::rvalue>::iterator it = _Core.begin();
@@ -216,6 +261,9 @@ bool Core::iterJson(std::string wild, std::vector<crow::json::wvalue>& matchedRe
     if (dbStatus.ok()){
     // create new iterator
         rocksdb::Iterator* it = db->NewIterator(rocksdb::ReadOptions());
+        if(prefixIter(it, wild, matchedResults)){
+            return it->status().ok();
+        }
         
         // iterate all entries
         for (it->SeekToFirst(); it->Valid(); it->Next()) {
@@ -227,13 +275,13 @@ bool Core::iterJson(std::string wild, std::vector<crow::json::wvalue>& matchedRe
                 auto x = crow::json::load(it->value().ToString());
                 //CROW_LOG_INFO << "w : " << crow::json::dump(w);
 
-		if(!x){
-		    w =  crow::json::load(std::string("[\"") + 
-						it->value().ToString() + std::string("\"]"));
+                if(!x){
+                    w =  crow::json::load(std::string("[\"") +
+                                it->value().ToString() + std::string("\"]"));
 
-		}else{
-		    w = x;
-		}
+                }else{
+                    w = x;
+                }
                 
                 matchedResults.push_back(std::move(w));
                 
@@ -247,6 +295,7 @@ bool Core::iterJson(std::string wild, std::vector<crow::json::wvalue>& matchedRe
     return false;
     
 }
+
 
 bool Core::searchJson(crow::json::rvalue& args,
                        std::vector<crow::json::wvalue>& matchedResults) {
@@ -289,9 +338,25 @@ bool Core::searchJson(crow::json::rvalue& args,
             
             // create new iterator
             rocksdb::Iterator* it = db->NewIterator(rocksdb::ReadOptions());
+                
+            bool prefixSearch = true;
+            std::size_t found = wild.find("*");
+            if(found != std::string::npos && found == 0){
+                prefixSearch = false;
+            }
             
+            rocksdb::Slice prefix = wild.substr(0, found);
+            //for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next())
+            
+            if(!prefixSearch){
+                it->SeekToFirst();
+            }else{
+                it->Seek(prefix);
+            }
+                
             // iterate all entries
-            for (it->SeekToFirst(); it->Valid(); it->Next()) {
+            for (  ; prefixSearch ? (it->Valid() && it->key().starts_with(prefix)) : it->Valid();
+                 it->Next()) {
                 
                 std::string elem = it->value().ToString();
                 
@@ -301,12 +366,12 @@ bool Core::searchJson(crow::json::rvalue& args,
                 if(wildcmp(wild.c_str(), it->key().ToString().c_str())){
                     //crow::json::rvalue r;
                     auto r = crow::json::load(it->value().ToString());
-		    if(!r){
-		    	r =  crow::json::load(std::string("[\"") + 
-						it->value().ToString() + std::string("\"]"));
+                    if(!r){
+                        r =  crow::json::load(std::string("[\"") +
+                                it->value().ToString() + std::string("\"]"));
 
 
-		    }
+                    }
 
                     
                     //CROW_LOG_INFO << "r : " << elem;
@@ -343,6 +408,8 @@ bool Core::searchJson(crow::json::rvalue& args,
     
 }
 
+
+
 bool Core::fileTransfer(std::string moduleName, std::string funcName, std::string channelName,
 		 std::string remoteDescription) {
     
@@ -359,16 +426,57 @@ bool Core::fileTransfer(std::string moduleName, std::string funcName, std::strin
             std::string rawData = ve.invoke(v8Ctx, funcName, channelName, remoteDescription);
             
             //writeFile(fileName, rawData);
-	    CROW_LOG_INFO << rawData;
+            CROW_LOG_INFO << rawData;
                 
-	    return (rawData.size() > 0);
+            return (rawData.size() > 0);
             
         }; 
         
         std::string moduleJS = moduleName + ".js";
-	CROW_LOG_INFO << moduleJS;
+        CROW_LOG_INFO << moduleJS;
 
         return ve.load(moduleJS, v8Loaded);        
       // return true;
+}
+
+
+bool Core::openTCPSocketClient(){
+    bool ret = false;
+    
+    boost::asio::io_service io_service;
+    
+    //socket creation
+    tcp::socket socket(io_service);
+    
+    //connection
+    socket.connect( tcp::endpoint( boost::asio::ip::address::from_string("127.0.0.1"), 1234 ));
+    
+    // request/message from client
+    const std::string msg = "Hello from Client!\n";
+    boost::system::error_code error;
+    boost::asio::write( socket, boost::asio::buffer(msg), error );
+    if( !error ) {
+        CROW_LOG_INFO << "Client sent hello message!";
+        ret = true;
+    }
+    else {
+        ret = false;
+        CROW_LOG_INFO << "send failed: " << error.message();
+    }
+    
+    // getting a response from the server
+    boost::asio::streambuf receive_buffer;
+    boost::asio::read(socket, receive_buffer, boost::asio::transfer_all(), error);
+    if( error && error != boost::asio::error::eof ) {
+        ret = false;
+        CROW_LOG_INFO << "receive failed: " << error.message();
+    }
+    else {
+        ret = true;
+        const char* data = boost::asio::buffer_cast<const char*>(receive_buffer.data());
+        CROW_LOG_INFO << data;
+    }
+    
+    return ret;
 }
 

@@ -346,14 +346,26 @@ int main(int argc, char ** argv) {
 
     auto route_core_filetransfer_callback=
     [](/*const crow::request& req*/){
-	bool ret = Quarks::Core::_Instance.fileTransfer("filetransfer", "transfer", "sendfile", "remotedes");	
+        bool ret = Quarks::Core::_Instance.fileTransfer("filetransfer", "transfer", "sendfile", "remotedes");
 
-	if(ret){
-		return R"({"result":"transferred"})";
-	}else{
-		return R"({"error":"not transferred"})";
-	}
+        if(ret){
+            return R"({"result":"transferred"})";
+        }else{
+            return R"({"error":"not transferred"})";
+        }
 	
+    };
+    
+    auto route_core_opentcpsocket_callback=
+    [](/*const crow::request& req*/){
+        bool ret = Quarks::Core::_Instance.openTCPSocketClient();
+        
+        if(ret){
+            return R"({"result":"opened socket"})";
+        }else{
+            return R"({"error":"socket closed"})";
+        }
+        
     };
 
     // html stuff 
@@ -474,6 +486,9 @@ int main(int argc, char ** argv) {
     
     CROW_ROUTE(app, "/searchjson")
     .methods("GET"_method, "POST"_method)(route_core_searchjson_callback);
+    
+    CROW_ROUTE(app, "/opentcpsocket")
+    .methods("GET"_method, "POST"_method)(route_core_opentcpsocket_callback);
 
     CROW_ROUTE(app, "/filetransfer")
     .methods("GET"_method, "POST"_method)(route_core_filetransfer_callback);   
