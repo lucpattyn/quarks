@@ -217,12 +217,11 @@ bool prefixIter(rocksdb::Iterator*& it, std::string wild,
         return false;
     }
     
-    rocksdb::Slice prefix = wild.substr(0, found);;
+    rocksdb::Slice prefix = wild.substr(0, found);
     for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
         if(wildcmp(wild.c_str(), it->key().ToString().c_str())){
             crow::json::wvalue w;
             auto x = crow::json::load(it->value().ToString());
-            //CROW_LOG_INFO << "w : " << crow::json::dump(w);
             
             if(!x){
                 w =  crow::json::load(std::string("[\"") +
@@ -231,6 +230,8 @@ bool prefixIter(rocksdb::Iterator*& it, std::string wild,
             }else{
                 w = x;
             }
+            
+            CROW_LOG_INFO << "w : " << crow::json::dump(w);
             
             matchedResults.push_back(std::move(w));
             
