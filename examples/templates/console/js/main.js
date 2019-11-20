@@ -51,7 +51,7 @@ var scan = function (command, onScanned){
     }
     if(mode == 1){	
 	mode = -1;
-	var url = ("put?body=" + encodeURI(command));
+	var url = ("put?body=" + encodeURIComponent(command));
     	getJSON(url, null, function(responseText){
 		onScanned(responseText);
 		mode = 0; 	
