@@ -218,7 +218,9 @@ bool prefixIter(rocksdb::Iterator*& it, std::string wild,
     }
     
     rocksdb::Slice prefix = wild.substr(0, found);
-    for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
+    
+    // Go Backwards
+    for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Prev()) {
         if(wildcmp(wild.c_str(), it->key().ToString().c_str())){
             crow::json::wvalue w;
             auto x = crow::json::load(it->value().ToString());
@@ -231,13 +233,40 @@ bool prefixIter(rocksdb::Iterator*& it, std::string wild,
                 w = x;
             }
             
-            CROW_LOG_INFO << "w : " << crow::json::dump(w);
+            CROW_LOG_INFO << "w : backwd" << crow::json::dump(w);
             
             matchedResults.push_back(std::move(w));
             
         }
         // do something
     }
+    
+    // Go Forward
+    it->Seek(prefix); // already processed so need to start from next
+    
+    for (it->Next(); it->Valid() && it->key().starts_with(prefix); it->Next()) {
+        if(wildcmp(wild.c_str(), it->key().ToString().c_str())){
+            crow::json::wvalue w;
+            auto x = crow::json::load(it->value().ToString());
+            
+            if(!x){
+                w =  crow::json::load(std::string("[\"") +
+                                      it->value().ToString() + std::string("\"]"));
+                
+            }else{
+                w = x;
+            }
+            
+            CROW_LOG_INFO << "w fwd: " << crow::json::dump(w);
+            
+            matchedResults.push_back(std::move(w));
+            
+        }
+        // do something
+    }
+    
+    
+   
     
     return true;
     
