@@ -26,7 +26,7 @@ void initDB(){
     rocksdb::Options options;
     options.create_if_missing = true;
     dbStatus = rocksdb::DB::Open(options, "quarks_db", &db);
-        
+    
 }
 
 void closeDB(){
@@ -82,56 +82,56 @@ void Core::setEnvironment(int argc, std::string argv){
 }
 
 bool Core::put(std::string body, std::string& out) {
-
-    auto x = crow::json::load(body);        
+    
+    auto x = crow::json::load(body);
     if (!x){
-    	CROW_LOG_INFO << "invalid put body" << body;
+        CROW_LOG_INFO << "invalid put body" << body;
         //out = "invalid put body";
-	 
-	out = "{\"error\": \"Invalid put parameters\"}";
-
-	return false;
-	
+        
+        out = "{\"error\": \"Invalid put parameters\"}";
+        
+        return false;
+        
     }
-
+    
     std::string key = x["key"].s();
-    //std::string value = x["value"].s();  
+    //std::string value = x["value"].s();
     auto r = x["value"];
     if(!r){
-	out = "{\"error\": \"Parameter 'value' missing\"}";
-	return false;
+        out = "{\"error\": \"Parameter 'value' missing\"}";
+        return false;
     }
     
     crow::json::wvalue w = std::move(r);
     std::string value = crow::json::dump(w);
-
+    
     CROW_LOG_INFO << "put body : " << body << "key : " << key << ", value : " << value << "\n";
-        
-    bool ret = false;    
-        
+    
+    bool ret = false;
+    
     rocksdb::Slice keySlice = key;
-        
+    
     // modify the database
     if (dbStatus.ok()){
-	ret = true;
-
+        ret = true;
+        
         rocksdb::Status status = db->Put(rocksdb::WriteOptions(), keySlice, value);
         if(!status.ok()){
             key = "{\"error\":\"data failed to save\"}";
-	    ret = false;
+            ret = false;
         }
-    
+        
     }else{
         key = "{\"error\":\"db status error\"}";
         ret = false;
     }
-
+    
     //std::stringstream ss;
-    //ss<< "{" << std::quoted("result") << ":" << std::quoted(key) << "}";    
+    //ss<< "{" << std::quoted("result") << ":" << std::quoted(key) << "}";
     if(ret){
-    	out = std::string("{") + R"("result")" + std::string(":\"")  + key + std::string("\"}");
+        out = std::string("{") + R"("result")" + std::string(":\"")  + key + std::string("\"}");
     }
-
+    
     return  ret;
     
 }
@@ -145,26 +145,26 @@ bool Core::putJson(std::string key, crow::json::rvalue& x, crow::json::wvalue& o
     std::string value = crow::json::dump(w);
     
     rocksdb::Slice keySlice = key;
-        
+    
     // modify the database
     if (dbStatus.ok()){
-	
+        
         rocksdb::Status status = db->Put(rocksdb::WriteOptions(), keySlice, value);
         if(!status.ok()){
             key = "";
-	    ret = false;
+            ret = false;
         }
-    
+        
     }else{
         key = "";
         ret = false;
     }
-
+    
     std::stringstream ss;
-    ss<< "{" << std::quoted("result") << ":" << std::quoted(key) << "}";    
+    ss<< "{" << std::quoted("result") << ":" << std::quoted(key) << "}";
     
     out = crow::json::load(ss.str());
-
+    
     return  ret;
     
 }
@@ -174,14 +174,14 @@ bool Core::getJson(std::string key, crow::json::wvalue& out){
     bool ret = false;
     
     /*std::map<std::string, crow::json::rvalue>::iterator it = _Core.find(key);
-    if (it != _Core.end()){
-        out = it->second;
-        ret = true;
-    }*/
+     if (it != _Core.end()){
+     out = it->second;
+     ret = true;
+     }*/
     if (dbStatus.ok()){
         std::string value;
         rocksdb::Status status = db->Get(rocksdb::ReadOptions(), key, &value);
-    
+        
         if(status.ok()){
             out =  crow::json::load(value);
             ret = true;
@@ -217,34 +217,44 @@ bool prefixIter(rocksdb::Iterator*& it, std::string wild,
         return false;
     }
     
-    rocksdb::Slice prefix = wild.substr(0, found);
+    std::string pre = wild.substr(0, found);
+    
+    rocksdb::Slice prefix(pre);
+    
+    rocksdb::Slice prefixPrint = prefix;
+    CROW_LOG_INFO << "prefix : " << prefixPrint.ToString();
+    
+    it->Seek(prefix);
+    
+    CROW_LOG_INFO << "key : " <<  it->key().ToString();
+    
     
     // Go Backwards
-    for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Prev()) {
-        if(wildcmp(wild.c_str(), it->key().ToString().c_str())){
-            crow::json::wvalue w;
-            auto x = crow::json::load(it->value().ToString());
-            
-            if(!x){
-                w =  crow::json::load(std::string("[\"") +
-                                      it->value().ToString() + std::string("\"]"));
-                
-            }else{
-                w = x;
-            }
-            
-            CROW_LOG_INFO << "w : backwd" << crow::json::dump(w);
-            
-            matchedResults.push_back(std::move(w));
-            
-        }
-        // do something
-    }
+    /*for ( ; it->Valid() && it->key().starts_with(prefix); it->Prev()) {
+     if(wildcmp(wild.c_str(), it->key().ToString().c_str())){
+     crow::json::wvalue w;
+     auto x = crow::json::load(it->value().ToString());
+     
+     if(!x){
+     w =  crow::json::load(std::string("[\"") +
+     it->value().ToString() + std::string("\"]"));
+     
+     }else{
+     w = x;
+     }
+     
+     CROW_LOG_INFO << "w backwd : " << crow::json::dump(w);
+     
+     matchedResults.push_back(std::move(w));
+     
+     }
+     // do something
+     }*/
     
     // Go Forward
-    it->Seek(prefix); // already processed so need to start from next
+    //it->Seek(prefix); // already processed so need to start from next
     
-    for (it->Next(); it->Valid() && it->key().starts_with(prefix); it->Next()) {
+    for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
         if(wildcmp(wild.c_str(), it->key().ToString().c_str())){
             crow::json::wvalue w;
             auto x = crow::json::load(it->value().ToString());
@@ -266,31 +276,33 @@ bool prefixIter(rocksdb::Iterator*& it, std::string wild,
     }
     
     
-   
+    
     
     return true;
     
-   
+    
 }
 
 
 
 bool Core::iterJson(std::string wild, std::vector<crow::json::wvalue>& matchedResults) {
-
+    
     /*for (std::map<std::string, crow::json::rvalue>::iterator it = _Core.begin();
-         it != _Core.end(); ++it){
-            if(wildcmp(wild.c_str(), it->first.c_str()) ){
-                crow::json::wvalue w;
-                w = it->second;
-                CROW_LOG_INFO << "w : " << crow::json::dump(w);
-                
-                matchedResults.push_back(std::move(w));
-            }
-    }*/
+     it != _Core.end(); ++it){
+     if(wildcmp(wild.c_str(), it->first.c_str()) ){
+     crow::json::wvalue w;
+     w = it->second;
+     CROW_LOG_INFO << "w : " << crow::json::dump(w);
+     
+     matchedResults.push_back(std::move(w));
+     }
+     }*/
     
     if (dbStatus.ok()){
-    // create new iterator
-        rocksdb::Iterator* it = db->NewIterator(rocksdb::ReadOptions());
+        // create new iterator
+        rocksdb::ReadOptions ro;
+        rocksdb::Iterator* it = db->NewIterator(ro);
+        //rocksdb::Iterator* it = db->NewIterator(rocksdb::ReadOptions());
         if(prefixIter(it, wild, matchedResults)){
             return it->status().ok();
         }
@@ -304,11 +316,11 @@ bool Core::iterJson(std::string wild, std::vector<crow::json::wvalue>& matchedRe
                 crow::json::wvalue w;
                 auto x = crow::json::load(it->value().ToString());
                 //CROW_LOG_INFO << "w : " << crow::json::dump(w);
-
+                
                 if(!x){
                     w =  crow::json::load(std::string("[\"") +
-                                it->value().ToString() + std::string("\"]"));
-
+                                          it->value().ToString() + std::string("\"]"));
+                    
                 }else{
                     w = x;
                 }
@@ -328,7 +340,7 @@ bool Core::iterJson(std::string wild, std::vector<crow::json::wvalue>& matchedRe
 
 
 bool Core::searchJson(crow::json::rvalue& args,
-                       std::vector<crow::json::wvalue>& matchedResults) {
+                      std::vector<crow::json::wvalue>& matchedResults) {
     
     
     if (dbStatus.ok()){
@@ -364,18 +376,18 @@ bool Core::searchJson(crow::json::rvalue& args,
         std::string params = filter["params"].s();
         
         auto funcOnV8EngineLoaded = [&core, &ve, &wild, &funcName, &params, &mapField, &mapAs, &matchedResults]
-            (v8Engine::v8Context& v8Ctx) -> int {
+        (v8Engine::v8Context& v8Ctx) -> int {
             
             // create new iterator
             rocksdb::Iterator* it = db->NewIterator(rocksdb::ReadOptions());
-                
+            
             bool prefixSearch = true;
             std::size_t found = wild.find("*");
             if(found != std::string::npos && found == 0){
                 prefixSearch = false;
             }
             
-            rocksdb::Slice prefix = wild.substr(0, found);
+            rocksdb::Slice prefix(wild.substr(0, found));
             //for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next())
             
             if(!prefixSearch){
@@ -383,7 +395,7 @@ bool Core::searchJson(crow::json::rvalue& args,
             }else{
                 it->Seek(prefix);
             }
-                
+            
             // iterate all entries
             for (  ; prefixSearch ? (it->Valid() && it->key().starts_with(prefix)) : it->Valid();
                  it->Next()) {
@@ -398,11 +410,11 @@ bool Core::searchJson(crow::json::rvalue& args,
                     auto r = crow::json::load(it->value().ToString());
                     if(!r){
                         r =  crow::json::load(std::string("[\"") +
-                                it->value().ToString() + std::string("\"]"));
-
-
+                                              it->value().ToString() + std::string("\"]"));
+                        
+                        
                     }
-
+                    
                     
                     //CROW_LOG_INFO << "r : " << elem;
                     
@@ -425,7 +437,7 @@ bool Core::searchJson(crow::json::rvalue& args,
             }
             
             return (it->status().ok());
-                
+            
             
         }; // funcOnV8EngineLoaded
         
@@ -441,32 +453,32 @@ bool Core::searchJson(crow::json::rvalue& args,
 
 
 bool Core::fileTransfer(std::string moduleName, std::string funcName, std::string channelName,
-		 std::string remoteDescription) {
+                        std::string remoteDescription) {
     
-	Core& core = *this;
+    //Core& core = *this;
+    
+    v8Engine ve([](std::string log){
+        CROW_LOG_INFO << log.c_str();
+    });
+    
+    
+    auto v8Loaded = [&ve, &funcName, &channelName, &remoteDescription]
+    (v8Engine::v8Context& v8Ctx) -> int {
         
-        v8Engine ve([](std::string log){
-            CROW_LOG_INFO << log.c_str();
-        });
+        std::string rawData = ve.invoke(v8Ctx, funcName, channelName, remoteDescription);
         
+        //writeFile(fileName, rawData);
+        CROW_LOG_INFO << rawData;
         
-        auto v8Loaded = [&core, &ve, &funcName, &channelName, &remoteDescription]
-            (v8Engine::v8Context& v8Ctx) -> int {
-            
-            std::string rawData = ve.invoke(v8Ctx, funcName, channelName, remoteDescription);
-            
-            //writeFile(fileName, rawData);
-            CROW_LOG_INFO << rawData;
-                
-            return (rawData.size() > 0);
-            
-        }; 
+        return (rawData.size() > 0);
         
-        std::string moduleJS = moduleName + ".js";
-        CROW_LOG_INFO << moduleJS;
-
-        return ve.load(moduleJS, v8Loaded);        
-      // return true;
+    };
+    
+    std::string moduleJS = moduleName + ".js";
+    CROW_LOG_INFO << moduleJS;
+    
+    return ve.load(moduleJS, v8Loaded);
+    // return true;
 }
 
 

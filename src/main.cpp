@@ -74,15 +74,15 @@ int main(int argc, char ** argv) {
     auto put = [](std::string body, std::string& out)
     {	
 	
-	CROW_LOG_INFO << body;
+        CROW_LOG_INFO << body;
 	
         bool success = Quarks::Core::_Instance.put(body, out);
                
        
-	/*auto res = crow::response{os.str()};
-	res.add_header("Access-Control-Allow-Origin", "*");
-	res.add_header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
-	res.add_header("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+        /*auto res = crow::response{os.str()};
+        res.add_header("Access-Control-Allow-Origin", "*");
+        res.add_header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
+        res.add_header("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
         
 
         return res;*/
@@ -95,18 +95,18 @@ int main(int argc, char ** argv) {
     auto route_core_put_callback =
     [put](const crow::request& req){
 
-	std::string out;
+        std::string out;
 
-	std::string body = req.body;
+        std::string body = req.body;
 
-	auto x = req.url_params.get("body");
-	if(x != nullptr){
-	    body = x;
-	}
+        auto x = req.url_params.get("body");
+        if(x != nullptr){
+            body = x;
+        }
 
-	put(body, out);
+        put(body, out);
 
-	return out;
+        return out;
 
     };
 
@@ -115,22 +115,22 @@ int main(int argc, char ** argv) {
     [](const crow::request& req)
     {
         std::string out = "";
-	//CROW_LOG_INFO <<"get_key:";
-	//CROW_LOG_INFO<<req.url_params;
+        //CROW_LOG_INFO <<"get_key:";
+        //CROW_LOG_INFO<<req.url_params;
        
         try{	
 	   
-	    auto x = req.url_params.get("key");
-	    std::string key = (x == nullptr ? "" : x); 
+            auto x = req.url_params.get("key");
+            std::string key = (x == nullptr ? "" : x);
 
-	    if(key.size() > 0){           
+            if(key.size() > 0){
                 Quarks::Core::_Instance.get(key, out);
-	    }else{
-		out = "{\"error\": \"parameter 'key' missing\"}";
-	    }    
+            }else{
+                out = "{\"error\": \"parameter 'key' missing\"}";
+            }
                         
             
-        }catch (const std::runtime_error& error){
+        } catch (const std::runtime_error& error){
              out = R"({"error":"key parsing error"})";
         }
         
@@ -143,25 +143,25 @@ int main(int argc, char ** argv) {
     {
         crow::json::wvalue out;
         
-	try{
-	    auto x = req.url_params.get("keys");
-	    std::string wild = (x == nullptr ? "" : x);
-            CROW_LOG_INFO << "wild-card : " << wild;
+        try{
+            auto x = req.url_params.get("keys");
+            std::string wild = (x == nullptr ? "" : x);
+                CROW_LOG_INFO << "wild-card : " << wild;
             
-            std::vector<crow::json::wvalue> jsonResults;
+                std::vector<crow::json::wvalue> jsonResults;
 
-	    if(wild.size() > 0){
-            	Quarks::Core::_Instance.iterJson(wild, jsonResults);
-	    }else{
-		out["error"] = "{\"error\":\"parameter 'keys' missing\"}";
+            if(wild.size() > 0){
+                    Quarks::Core::_Instance.iterJson(wild, jsonResults);
+            }else{
+            out["error"] = "{\"error\":\"parameter 'keys' missing\"}";
 
-	    }
+            }
             
             if(jsonResults.size()){
                 out["result"] = std::move(jsonResults);
             }
             
-        }catch (const std::runtime_error& error){
+        } catch (const std::runtime_error& error){
             out["error"] = R"({"error" : "parsing error"})";
         }
         
@@ -169,13 +169,10 @@ int main(int argc, char ** argv) {
         
     };
 
-
-
-
     auto putjson = [](std::string body, crow::json::wvalue& out)
     {	
 
-	auto x = crow::json::load(body);        
+	    auto x = crow::json::load(body);
         if (!x){
             CROW_LOG_INFO << body;
             out["error"] = "invalid post body";
@@ -190,11 +187,11 @@ int main(int argc, char ** argv) {
         bool success = Quarks::Core::_Instance.putJson(s, v, out);
                
        
-	/*auto res = crow::response{os.str()};
-	res.add_header("Access-Control-Allow-Origin", "*");
-	res.add_header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
-	res.add_header("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
-        
+        /*auto res = crow::response{os.str()};
+        res.add_header("Access-Control-Allow-Origin", "*");
+        res.add_header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
+        res.add_header("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+         
 
         return res;*/
 
@@ -210,9 +207,9 @@ int main(int argc, char ** argv) {
     [putjson](const crow::request& req){
 
         crow::json::wvalue out;
-	putjson(req.body, out);
+        putjson(req.body, out);
 
-	return out;
+        return out;
 
         /*auto x = crow::json::load(req.body);        
         if (!x){
@@ -227,12 +224,12 @@ int main(int argc, char ** argv) {
                
         bool success = Quarks::Core::_Instance.putJson(s, v, out);*/
                
-       
-	/*auto res = crow::response{os.str()};
-	res.add_header("Access-Control-Allow-Origin", "*");
-	res.add_header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
-	res.add_header("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
         
+        /*auto res = crow::response{os.str()};
+        res.add_header("Access-Control-Allow-Origin", "*");
+        res.add_header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
+        res.add_header("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+         
 
         return res;*/
 
@@ -259,7 +256,7 @@ int main(int argc, char ** argv) {
             std::string key = x["key"].s();
             Quarks::Core::_Instance.getJson(key, out);
             
-        }catch (const std::runtime_error& error){
+        } catch (const std::runtime_error& error){
              out["error"] = "parameter 'key' missing";
         }
         
@@ -309,7 +306,7 @@ int main(int argc, char ** argv) {
                 out["result"] = std::move(jsonResults);
             }
             
-        }catch (const std::runtime_error& error){
+        } catch (const std::runtime_error& error){
             out["error"] = "parameter 'keys' missing";
         }
         
@@ -411,7 +408,7 @@ int main(int argc, char ** argv) {
     };
     
     auto route_ai_callback =
-    [&uriDecode](const crow::request& req){
+    [](const crow::request& req){
         const char* q = req.url_params.get("msg");
         std::string params;
         //uriDecode(q, params);
@@ -446,7 +443,7 @@ int main(int argc, char ** argv) {
             
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
             //cres = curl_easy_perform(curl);
-	    curl_easy_perform(curl);
+            curl_easy_perform(curl);
 
             curl_easy_cleanup(curl);
             
@@ -563,7 +560,7 @@ int main(int argc, char ** argv) {
         
         //bool useMustache = false;
         bool stylesheet = false;
-	bool javascript = false;
+        bool javascript = false;
         
         if(q == nullptr){
             crow::mustache::context x;
@@ -573,25 +570,25 @@ int main(int argc, char ** argv) {
         }else{
             std::string asset;
             asset = q;
-            //uriDecode(q, asset);            
+            //uriDecode(q, asset);
             
 
-	    if(asset.size() > 3){
+            if(asset.size() > 3){
                 size_t js = asset.size() - 3;
                 //CROW_LOG_INFO << asset.substr(css);
                 if(!asset.substr(js).compare(".js")){
                     javascript = true;
                 }
-		
+            
             }
 
-	    if(asset.size() > 4){
+            if(asset.size() > 4){
                 size_t css = asset.size() - 4;
                 //CROW_LOG_INFO << asset.substr(css);
                 if(!asset.substr(css).compare(".css")){
                     stylesheet = true;
                 }
-		
+            
             }
             
             /*
@@ -600,26 +597,27 @@ int main(int argc, char ** argv) {
              std::string fileName = asset.substr(found + 1);
              
              if(found != std::string::npos) {
-             if (fileName.find(".css") != std::string::npos){
-             useMustache = true;
-             }
+                 if (fileName.find(".css") != std::string::npos){
+                    useMustache = true;
+                 }
              
              }
              
              
              if(useMustache){
-             std::string base = asset.substr(0, found);
-             //CROW_LOG_INFO << base;
-             crow::mustache::context x;
-             auto page = resourceLoader(x, fileName, base.c_str());
-             result = page.render(x);
+                 std::string base = asset.substr(0, found);
+                 //CROW_LOG_INFO << base;
+                 crow::mustache::context x;
+                 auto page = resourceLoader(x, fileName, base.c_str());
+                 result = page.render(x);
              
              }else{
-             result = readFile(asset);
+                result = readFile(asset);
              }*/
             
             result = readFile(asset);
-        }
+            
+        } // end of else ..
         
         std::ostringstream os;
         os << result;
@@ -628,18 +626,15 @@ int main(int argc, char ** argv) {
         
         auto res = crow::response{os.str()};
 
-	if(javascript){
-	   res.add_header("Content-type", "application/javascript");
+        if(javascript){
+           res.add_header("Content-type", "application/javascript");
 
-	}        
-        else if(stylesheet){
+        }else if(stylesheet){
             //CROW_LOG_INFO << "stylesheet requested";
             res.add_header("Content-type", "text/css");
-        
-	}else{
-	    res.set_header("Content-Type", "text/html; charset=UTF-8");
-	
-	}
+        }else{
+            res.set_header("Content-Type", "text/html; charset=UTF-8");
+        }
         
         return res;
         
