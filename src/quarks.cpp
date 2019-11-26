@@ -84,28 +84,23 @@ void Core::setEnvironment(int argc, std::string argv){
 bool Core::put(std::string body, std::string& out) {
     
     auto x = crow::json::load(body);
+   
     if (!x){
         CROW_LOG_INFO << "invalid put body" << body;
         //out = "invalid put body";
         
-        out = "{\"error\": \"Invalid put parameters\"}";
+        out = "{\"error\": \"Invalid put body\"}";
         
         return false;
         
     }
     
     std::string key = x["key"].s();
-    //std::string value = x["value"].s();
-    auto r = x["value"];
-    if(!r){
-        out = "{\"error\": \"Parameter 'value' missing\"}";
-        return false;
-    }
+    CROW_LOG_INFO << "key found :  " << key;
     
-    crow::json::wvalue w = std::move(r);
-    std::string value = crow::json::dump(w);
+    std::string value = crow::json::dump(x["value"]);
     
-    CROW_LOG_INFO << "put body : " << body << "key : " << key << ", value : " << value << "\n";
+    CROW_LOG_INFO << "put body : " << "key : " << key << ", value >> " << value << "\n";
     
     bool ret = false;
     
@@ -136,6 +131,162 @@ bool Core::put(std::string body, std::string& out) {
     
 }
 
+bool Core::get(std::string key, std::string& value){
+    
+    bool ret = false;
+    
+    if (dbStatus.ok()){
+        rocksdb::Status status = db->Get(rocksdb::ReadOptions(), key, &value);
+        
+        if(status.ok()){
+            ret = true;
+        }
+    }
+    
+    return ret;
+    
+}
+
+bool Core::getAll(std::string wild,
+                  std::vector<crow::json::wvalue>& matchedResults,
+                  int skip /*= 0*/, int limit /*= -1*/) {
+    
+    bool ret = true;
+    if (dbStatus.ok()){
+        // create new iterator
+        rocksdb::ReadOptions ro;
+        rocksdb::Iterator* it = db->NewIterator(ro);
+        
+        std::size_t found = wild.find("*");
+        if(found != std::string::npos && found == 0){
+            return false;
+        }
+        
+        std::string pre = wild.substr(0, found);
+        
+        rocksdb::Slice prefix(pre);
+        
+        rocksdb::Slice prefixPrint = prefix;
+        CROW_LOG_INFO << "prefix : " << prefixPrint.ToString();
+        
+        
+        int i  = -1;
+        int count = (limit == -1) ? INT_MAX : limit;
+        
+        int lowerbound  = skip - 1;
+        int upperbound = skip + count;
+
+        for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
+            
+            if(wildcmp(wild.c_str(), it->key().ToString().c_str())){
+                crow::json::wvalue w;
+                
+                try{
+                    auto x = crow::json::load(it->value().ToString());
+                    
+                    if(!x){
+                        w =  crow::json::load(std::string("[\"") +
+                                              it->value().ToString() + std::string("\"]"));
+                        
+                    }else{
+                        w = x;
+                    }
+                    
+                    i++;
+                    
+                    if(i > lowerbound && (i < upperbound || limit == -1)){
+                        CROW_LOG_INFO << "w fwd: " << crow::json::dump(w) << " skip: "
+                        << skip << ", limit: " << limit;
+                        matchedResults.push_back(std::move(w));
+                        
+                    }
+                }catch (const std::runtime_error& error){
+                    CROW_LOG_INFO << "Runtime Error: " << i << it->value().ToString();
+                    
+                    w["error"] =  it->value().ToString();
+                    
+                    matchedResults.push_back(std::move(w));
+                    
+                    ret = false;
+                }
+                
+            }
+        }
+            
+        
+        
+        // do something
+        
+    }
+    
+    return ret && dbStatus.ok();
+}
+
+bool Core::remove(std::string key){
+    bool ret = false;
+    
+    // Delete value
+    if (dbStatus.ok()){
+        rocksdb::Status status = db->Delete(rocksdb::WriteOptions(), key);
+        
+        if(status.ok()){
+            ret = true;
+        }
+    }
+    
+    return ret;
+}
+
+int Core::removeAll(std::string wild,  int skip /*= 0*/, int limit /*= -1*/){
+    int out = 0;
+    if (dbStatus.ok()){
+        // create new iterator
+        rocksdb::ReadOptions ro;
+        rocksdb::Iterator* it = db->NewIterator(ro);
+        
+        std::size_t found = wild.find("*");
+        if(found != std::string::npos && found == 0){
+            return out;
+        }
+        
+        std::string pre = wild.substr(0, found);
+        
+        rocksdb::Slice prefix(pre);
+        
+        rocksdb::Slice prefixPrint = prefix;
+        CROW_LOG_INFO << "prefix : " << prefixPrint.ToString();
+        
+        int i  = -1;
+        int count = (limit == -1) ? INT_MAX : limit;
+        
+        int lowerbound  = skip - 1;
+        int upperbound = skip + count;
+        
+        rocksdb::WriteBatch batch;
+        for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
+            
+            if(wildcmp(wild.c_str(), it->key().ToString().c_str())){
+                i++;
+                
+                if(i > lowerbound && (i < upperbound || limit == -1)){
+                    CROW_LOG_INFO << "w batch del: " << it->key().ToString();
+                    batch.Delete(it->key());
+                    out++;
+                    
+                }
+                
+                
+            }
+            // do something
+        }
+        
+        rocksdb::Status s = db->Write(rocksdb::WriteOptions(), &batch);
+        return out;
+        
+    }
+    
+    return false;
+}
 
 bool Core::putJson(std::string key, crow::json::rvalue& x, crow::json::wvalue& out) {
     
@@ -192,25 +343,10 @@ bool Core::getJson(std::string key, crow::json::wvalue& out){
     
 }
 
-bool Core::get(std::string key, std::string& value){
-    
-    bool ret = false;
-    
-    if (dbStatus.ok()){
-        
-        rocksdb::Status status = db->Get(rocksdb::ReadOptions(), key, &value);
-        
-        if(status.ok()){
-            ret = true;
-        }
-    }
-    
-    return ret;
-    
-}
-
+// to be discarded later
 bool prefixIter(rocksdb::Iterator*& it, std::string wild,
-                std::vector<crow::json::wvalue>& matchedResults){
+                std::vector<crow::json::wvalue>& matchedResults,
+                int skip /*= 0*/, int limit /*= -1*/){
     
     std::size_t found = wild.find("*");
     if(found != std::string::npos && found == 0){
@@ -224,12 +360,13 @@ bool prefixIter(rocksdb::Iterator*& it, std::string wild,
     rocksdb::Slice prefixPrint = prefix;
     CROW_LOG_INFO << "prefix : " << prefixPrint.ToString();
     
-    it->Seek(prefix);
-    
-    CROW_LOG_INFO << "key : " <<  it->key().ToString();
     
     
     // Go Backwards
+    //it->Seek(prefix);
+    
+    //CROW_LOG_INFO << "key : " <<  it->key().ToString();
+    
     /*for ( ; it->Valid() && it->key().starts_with(prefix); it->Prev()) {
      if(wildcmp(wild.c_str(), it->key().ToString().c_str())){
      crow::json::wvalue w;
@@ -253,8 +390,14 @@ bool prefixIter(rocksdb::Iterator*& it, std::string wild,
     
     // Go Forward
     //it->Seek(prefix); // already processed so need to start from next
+    int i  = -1;
+    int count = (limit == -1) ? INT_MAX : limit;
+    
+    int lowerbound  = skip - 1;
+    int upperbound = skip + count;
     
     for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
+        
         if(wildcmp(wild.c_str(), it->key().ToString().c_str())){
             crow::json::wvalue w;
             auto x = crow::json::load(it->value().ToString());
@@ -267,45 +410,42 @@ bool prefixIter(rocksdb::Iterator*& it, std::string wild,
                 w = x;
             }
             
-            CROW_LOG_INFO << "w fwd: " << crow::json::dump(w);
-            
-            matchedResults.push_back(std::move(w));
+            i++;
+            if(i > lowerbound && (i < upperbound || limit == -1)){
+                CROW_LOG_INFO << "w fwd: " << crow::json::dump(w) << " skip: "
+                << skip << ", limit: " << limit;
+                matchedResults.push_back(std::move(w));
+                
+            }
             
         }
         // do something
     }
     
     
-    
-    
     return true;
-    
     
 }
 
-
-
-bool Core::iterJson(std::string wild, std::vector<crow::json::wvalue>& matchedResults) {
+bool Core::iterJson(std::string wild,
+                    std::vector<crow::json::wvalue>& matchedResults,
+                    int skip /*= 0*/, int limit /*= -1*/) {
     
-    /*for (std::map<std::string, crow::json::rvalue>::iterator it = _Core.begin();
-     it != _Core.end(); ++it){
-     if(wildcmp(wild.c_str(), it->first.c_str()) ){
-     crow::json::wvalue w;
-     w = it->second;
-     CROW_LOG_INFO << "w : " << crow::json::dump(w);
-     
-     matchedResults.push_back(std::move(w));
-     }
-     }*/
     
     if (dbStatus.ok()){
         // create new iterator
         rocksdb::ReadOptions ro;
         rocksdb::Iterator* it = db->NewIterator(ro);
         //rocksdb::Iterator* it = db->NewIterator(rocksdb::ReadOptions());
-        if(prefixIter(it, wild, matchedResults)){
+        if(prefixIter(it, wild, matchedResults, skip, limit)){
             return it->status().ok();
         }
+        
+        int i  = -1;
+        int count = (limit == -1) ? INT_MAX : limit;
+        
+        int lowerbound  = skip - 1;
+        int upperbound = skip + count;
         
         // iterate all entries
         for (it->SeekToFirst(); it->Valid(); it->Next()) {
@@ -325,7 +465,13 @@ bool Core::iterJson(std::string wild, std::vector<crow::json::wvalue>& matchedRe
                     w = x;
                 }
                 
-                matchedResults.push_back(std::move(w));
+                i++;
+                if(i > lowerbound && (i < upperbound || limit == -1)){
+                    CROW_LOG_INFO << "w fwd: " << crow::json::dump(w) << " skip: "
+                    << skip << ", limit: " << limit;
+                    matchedResults.push_back(std::move(w));
+                    
+                }
                 
             }
         }
@@ -340,7 +486,8 @@ bool Core::iterJson(std::string wild, std::vector<crow::json::wvalue>& matchedRe
 
 
 bool Core::searchJson(crow::json::rvalue& args,
-                      std::vector<crow::json::wvalue>& matchedResults) {
+                      std::vector<crow::json::wvalue>& matchedResults,
+                      int skip /*= 0*/, int limit /*= -1*/) {
     
     
     if (dbStatus.ok()){
@@ -375,7 +522,7 @@ bool Core::searchJson(crow::json::rvalue& args,
         std::string funcName = filter["filter"].s();
         std::string params = filter["params"].s();
         
-        auto funcOnV8EngineLoaded = [&core, &ve, &wild, &funcName, &params, &mapField, &mapAs, &matchedResults]
+        auto funcOnV8EngineLoaded = [&core, &ve, &wild, &funcName, &params, &mapField, &mapAs, &matchedResults, &skip, &limit]
         (v8Engine::v8Context& v8Ctx) -> int {
             
             // create new iterator
@@ -396,9 +543,16 @@ bool Core::searchJson(crow::json::rvalue& args,
                 it->Seek(prefix);
             }
             
+            int i  = -1;
+            int count = (limit == -1) ? INT_MAX : limit;
+            
+            int lowerbound  = skip - 1;
+            int upperbound = skip + count;
+            
             // iterate all entries
             for (  ; prefixSearch ? (it->Valid() && it->key().starts_with(prefix)) : it->Valid();
                  it->Next()) {
+               
                 
                 std::string elem = it->value().ToString();
                 
@@ -430,7 +584,25 @@ bool Core::searchJson(crow::json::rvalue& args,
                     std::string e = crow::json::dump(w);
                     std::string allow = ve.invoke(v8Ctx, funcName, e, params.c_str());
                     if(atoi(allow.c_str()) == 1){
-                        matchedResults.push_back(std::move(w));
+                        i++;
+                        
+                        ///////////////////////////////////////
+                        
+                        //matchedResults.push_back(std::move(w));
+                        if(skip == 0 && limit == -1){
+                            matchedResults.push_back(std::move(w));
+                            CROW_LOG_INFO << "w fwd: " << crow::json::dump(w);
+                        }else{
+                            if(i > lowerbound && i < upperbound){
+                                matchedResults.push_back(std::move(w));
+                                CROW_LOG_INFO << "w fwd: " << crow::json::dump(w) << " skip: "
+                                << skip << ", limit: " << limit;
+                            }else{
+                                break; // no need to search further
+                            }
+                        }
+                        
+                        ///////////////////////////////////////
                     }
                     
                 }

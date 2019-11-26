@@ -24,20 +24,27 @@ namespace Quarks {
         ~Core();
         
         void setEnvironment(int argc, std::string argv);
-
+        
+        
         bool put(std::string body, std::string& out);
         bool get(std::string key, std::string& value);
-        
+        bool getAll(std::string wild,
+                            std::vector<crow::json::wvalue>& matchedResults,
+                            int skip = 0, int limit = -1);
+        bool remove(std::string key);
+        int removeAll(std::string wild, int skip = 0, int limit = -1);
         
         bool putJson(std::string key, crow::json::rvalue& x, crow::json::wvalue& out);
         bool getJson(std::string key, crow::json::wvalue& out);
         
         
         bool iterJson(std::string wild,
-                      std::vector<crow::json::wvalue>& matchedResults);
+                      std::vector<crow::json::wvalue>& matchedResults,
+                      int skip = 0, int limit = -1);
     
         bool searchJson(crow::json::rvalue& args,
-                        std::vector<crow::json::wvalue>& matchedResults);
+                        std::vector<crow::json::wvalue>& matchedResults,
+                        int skip = 0, int limit = -1);
 
         bool openTCPSocketClient();
         

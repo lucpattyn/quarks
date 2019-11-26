@@ -143,22 +143,111 @@ int main(int argc, char ** argv) {
     {
         crow::json::wvalue out;
         
+        std::vector<crow::json::wvalue> jsonResults;
+        
         try{
             auto x = req.url_params.get("keys");
             std::string wild = (x == nullptr ? "" : x);
-                CROW_LOG_INFO << "wild-card : " << wild;
             
-                std::vector<crow::json::wvalue> jsonResults;
-
+            auto s = req.url_params.get("skip");
+            std::string skip = (s == nullptr ? "0" : s);
+            
+            auto l = req.url_params.get("limit");
+            std::string limit = (l == nullptr ? "-1" : l);
+            
+            
+            CROW_LOG_INFO << "wild: " << wild << ", skip: " << skip << ", limit: " << limit;
+            
+            bool ret = false;
             if(wild.size() > 0){
-                    Quarks::Core::_Instance.iterJson(wild, jsonResults);
+                //Quarks::Core::_Instance.iterJson(wild, jsonResults);
+                ret = Quarks::Core::_Instance.getAll(wild, jsonResults, std::stoi(skip), std::stoi(limit));
+                
             }else{
-            out["error"] = "{\"error\":\"parameter 'keys' missing\"}";
+                out["error"] = "{\"error\":\"parameter 'keys' missing\"}";
 
             }
             
             if(jsonResults.size()){
                 out["result"] = std::move(jsonResults);
+            }
+            
+            if(!ret){
+                out["error"] = R"({"error" : "parsing error"})";
+            }
+            
+        } catch (const std::runtime_error& error){
+            std::string errs = R"([{"error" : "parsing error"},)";
+           
+            for(int i = 0; i < jsonResults.size(); i++){
+                errs += crow::json::dump(jsonResults[i]);
+            }
+            
+            errs += "]";
+            out["error"] = errs;
+        }
+        
+        return out;
+        
+    };
+    
+    auto route_core_removekey_callback =
+    [](const crow::request& req)
+    {
+        std::string out = "";
+        //CROW_LOG_INFO <<"get_key:";
+        //CROW_LOG_INFO<<req.url_params;
+        
+        try{
+            
+            auto x = req.url_params.get("key");
+            std::string key = (x == nullptr ? "" : x);
+            
+            if(key.size() > 0){
+                if(Quarks::Core::_Instance.remove(key)){
+                    out = key;
+                }
+            }else{
+                out = "{\"error\": \"parameter 'key' missing\"}";
+            }
+            
+            
+        } catch (const std::runtime_error& error){
+            out = R"({"error":"key parsing error"})";
+        }
+        
+        return out;
+        
+    };
+    
+    auto route_core_removekeys_callback =
+    [](const crow::request& req)
+    {
+        crow::json::wvalue out;
+        
+        try{
+            auto x = req.url_params.get("keys");
+            std::string wild = (x == nullptr ? "" : x);
+            
+            auto s = req.url_params.get("skip");
+            std::string skip = (s == nullptr ? "0" : s);
+            
+            auto l = req.url_params.get("limit");
+            std::string limit = (l == nullptr ? "-1" : l);
+            
+            
+            CROW_LOG_INFO << "wild: " << wild << ", skip: " << skip << ", limit: " << limit;
+            
+            std::vector<crow::json::wvalue> jsonResults;
+            
+            if(wild.size() > 0){
+                //Quarks::Core::_Instance.iterJson(wild, jsonResults);
+                int ret = Quarks::Core::_Instance.removeAll(wild, std::stoi(skip), std::stoi(limit));
+                out["result"] = std::to_string(ret);
+                
+            }else{
+                out["error"] = "{\"error\":\"parameter 'keys' missing\"}";
+                
             }
             
         } catch (const std::runtime_error& error){
@@ -168,6 +257,7 @@ int main(int argc, char ** argv) {
         return out;
         
     };
+
 
     auto putjson = [](std::string body, crow::json::wvalue& out)
     {	
@@ -366,7 +456,7 @@ int main(int argc, char ** argv) {
     };
 
     // html stuff 
-    
+    /*
     auto uriDecode = [](const std::string& in, std::string& out){
         out.clear();
         out.reserve(in.size());
@@ -405,7 +495,7 @@ int main(int argc, char ** argv) {
         return true;
         
         
-    };
+    };*/
     
     auto route_ai_callback =
     [](const crow::request& req){
@@ -469,7 +559,12 @@ int main(int argc, char ** argv) {
 
     CROW_ROUTE(app, "/getall")
     (route_core_getkeys_callback);
+    
+    CROW_ROUTE(app, "/remove")
+    (route_core_removekey_callback);
   
+    CROW_ROUTE(app, "/removeall")
+    (route_core_removekeys_callback);
 
     CROW_ROUTE(app, "/putjson")
     .methods("POST"_method)(route_core_putjson_callback);
@@ -552,7 +647,7 @@ int main(int argc, char ** argv) {
 
     };
    
-    auto defaultPageLoader = [&resourceLoader, &readFile, &uriDecode](const crow::request& req, std::string defaultPage){
+    auto defaultPageLoader = [&resourceLoader, &readFile/*, &uriDecode*/](const crow::request& req, std::string defaultPage){
         
         std::string result;
         
