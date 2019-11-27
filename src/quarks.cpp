@@ -201,6 +201,11 @@ bool Core::getAll(std::string wild,
                         matchedResults.push_back(std::move(w));
                         
                     }
+                    
+                    if((i == upperbound) && (limit != -1)){
+                        break;
+                    }
+                    
                 }catch (const std::runtime_error& error){
                     CROW_LOG_INFO << "Runtime Error: " << i << it->value().ToString();
                     
@@ -290,6 +295,70 @@ bool Core::getKeys(std::string wild,
                     
                 }
                 
+                if((i == upperbound) && (limit != -1)){
+                    break;
+                }
+                
+            }
+        }
+        
+        
+        
+        // do something after loop
+        
+        delete it;
+        
+    }
+    
+    return ret && dbStatus.ok();
+}
+
+bool Core::getCount(std::string wild,
+                   long& out,
+                   int skip /*= 0*/, int limit /*= -1*/) {
+    
+    bool ret = true;
+    if (dbStatus.ok()){
+        out = 0;
+        
+        std::size_t found = wild.find("*");
+        if(found != std::string::npos && found == 0){
+            return false;
+        }
+        
+        // create new iterator
+        rocksdb::ReadOptions ro;
+        rocksdb::Iterator* it = db->NewIterator(ro);
+        
+        std::string pre = wild.substr(0, found);
+        
+        rocksdb::Slice prefix(pre);
+        
+        rocksdb::Slice prefixPrint = prefix;
+        CROW_LOG_INFO << "prefix : " << prefixPrint.ToString();
+        
+        
+        int i  = -1;
+        int count = (limit == -1) ? INT_MAX : limit;
+        
+        int lowerbound  = skip - 1;
+        int upperbound = skip + count;
+        
+        for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
+            
+            if(wildcmp(wild.c_str(), it->key().ToString().c_str())){
+                
+                i++;
+                
+                if(i > lowerbound && (i < upperbound || limit == -1)){
+                    
+                    out++;
+                }
+                
+                if((i == upperbound) && (limit != -1)){
+                    break;
+                }
+                
             }
         }
         
@@ -356,6 +425,10 @@ int Core::removeAll(std::string wild,  int skip /*= 0*/, int limit /*= -1*/){
                     batch.Delete(it->key());
                     out++;
                     
+                }
+                
+                if((i == upperbound) && (limit != -1)){
+                    break;
                 }
                 
                 
@@ -502,6 +575,10 @@ bool prefixIter(rocksdb::Iterator*& it, std::string wild,
                 << skip << ", limit: " << limit;
                 matchedResults.push_back(std::move(w));
                 
+            }
+            
+            if((i == upperbound) && (limit != -1)){
+                break;
             }
             
         }

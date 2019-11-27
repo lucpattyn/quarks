@@ -244,6 +244,49 @@ int main(int argc, char ** argv) {
         
     };
     
+    auto route_core_getcount_callback =
+    [](const crow::request& req)
+    {
+        std::string out;
+        long count = 0;
+        
+        try{
+            auto x = req.url_params.get("keys");
+            std::string wild = (x == nullptr ? "" : x);
+            
+            auto s = req.url_params.get("skip");
+            std::string skip = (s == nullptr ? "0" : s);
+            
+            auto l = req.url_params.get("limit");
+            std::string limit = (l == nullptr ? "-1" : l);
+            
+            
+            CROW_LOG_INFO << "wild: " << wild << ", skip: " << skip << ", limit: " << limit;
+            
+            bool ret = false;
+            if(wild.size() > 0){
+                //Quarks::Core::_Instance.iterJson(wild, jsonResults);
+                ret = Quarks::Core::_Instance.getCount(wild, count, std::stoi(skip), std::stoi(limit));
+                
+            }else{
+                 out = "{\"error\": \"parameter 'key' missing\"}";
+                
+            }
+            
+            out = std::to_string(count);
+            
+            if(!ret){
+                out = R"({"error" : "parsing error"})";
+            }
+            
+        } catch (const std::runtime_error& error){
+             out = R"({"error" : "parsing error"})";
+        }
+        
+        return out;
+        
+    };
+    
     auto route_core_removekey_callback =
     [](const crow::request& req)
     {
@@ -615,6 +658,9 @@ int main(int argc, char ** argv) {
     
     CROW_ROUTE(app, "/getkeys")
     (route_core_getkeys_callback);
+    
+    CROW_ROUTE(app, "/getcount")
+    (route_core_getcount_callback);
     
     CROW_ROUTE(app, "/remove")
     (route_core_removekey_callback);
