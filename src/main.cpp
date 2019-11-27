@@ -232,7 +232,7 @@ int main(int argc, char ** argv) {
         } catch (const std::runtime_error& error){
             std::string errs = R"([{"error" : "parsing error"},)";
             
-            for(int i = 0; i < jsonResults.size(); i++){
+            for(size_t i = 0; i < jsonResults.size(); i++){
                 errs += crow::json::dump(jsonResults[i]);
             }
             
