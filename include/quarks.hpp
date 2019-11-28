@@ -23,7 +23,7 @@ namespace Quarks {
         Core();
         ~Core();
         
-        void setEnvironment(int argc, std::string argv);
+        void setEnvironment(int argc, char** argv);
         
         
         bool put(std::string body, std::string& out);
@@ -62,8 +62,9 @@ namespace Quarks {
                
         private:
         
-        std::string _argv;
+        
         int _argc;
+        std::vector<std::string> _argv;
         
         //std::map<std::string, crow::json::rvalue> _Core;
         

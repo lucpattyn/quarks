@@ -17,13 +17,11 @@ static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *use
     return size * nmemb;
 }
 
-int main(int argc, char ** argv) {
+int main(int argc, char ** argv) {   
    
-    std::vector<std::string> arguments(argv + 1, argv + argc);
-
     crow::SimpleApp app;
     
-    Quarks::Core::_Instance.setEnvironment(argc, argv[0]);
+    Quarks::Core::_Instance.setEnvironment(argc, argv);
     
     /*v8::V8::InitializeICUDefaultLocation(argv[0]);
     v8::V8::InitializeExternalStartupData(argv[0]);

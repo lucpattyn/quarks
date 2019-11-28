@@ -22,10 +22,10 @@ Matrix Matrix::_Instance;
 rocksdb::DB* db = nullptr;
 rocksdb::Status dbStatus;
 
-void initDB(){
+void openDB(std::string schemaname){
     rocksdb::Options options;
     options.create_if_missing = true;
-    dbStatus = rocksdb::DB::Open(options, "quarks_db", &db);
+    dbStatus = rocksdb::DB::Open(options, schemaname, &db);
     
 }
 
@@ -69,16 +69,37 @@ int wildcmp(const char *wild, const char *str) {
 }
 
 Core::Core(){
-    initDB();
+    
 }
 
 Core::~Core(){
     closeDB();
 }
 
-void Core::setEnvironment(int argc, std::string argv){
-    _argv = argv;
+void Core::setEnvironment(int argc, char** argv){
+    
+    std::vector<std::string> arguments(argv + 1, argv + argc);
+    _argv = std::move(arguments);
     _argc = argc;
+    
+    std::string schemaname = "quarks_db";
+    
+    bool schema = false;
+    for(auto v : _argv){
+        //CROW_LOG_INFO << " v = " << i << " ";
+        if(schema){
+            schemaname = v;
+            schema = false;
+        }
+        
+        if(!v.compare("-schema")){
+            schema = true;
+        }
+    }
+    
+    openDB(schemaname);
+    
+    
 }
 
 bool Core::put(std::string body, std::string& out) {
