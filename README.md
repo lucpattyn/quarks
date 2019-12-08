@@ -48,6 +48,59 @@ After initializing by issuing following command
 ./ocv_microservice_crow
 ```
 
+### GET REQUESTS
+
+Run the following commands to 
+    i) put a key value pair 
+    ii) get value object (json or string) against key 
+    iii) do a wildcard search through keys for values
+    iii) do a wildcard search of keys 
+    iv) get count of keys by wildcard search
+
+i)  Put key vs value 
+
+```
+ http://0.0.0.0:18080/put?body={"key":"g1_u1","value":{"msg":"m1"}}
+```
+ It is recommended to URI encode  the body parameters 
+ Example JS codes:
+
+```
+ jsonobj = {"key":"g1_u1", "value":{"msg":"m1"}}
+ var url = "put?body=" + encodeURIComponent(JSON.stringify(jsonobj));
+
+ $.get(url, function( data ) {
+     $( ".result" ).html( data );    
+ });
+
+```
+ *If request is successful then the key would be returned as result
+
+
+ii) Get value against key
+
+```
+ http://0.0.0.0:18080/get?key=g1_u1
+```
+
+iii) Do a wildcard search through keys for values (you can specifiy skip and limit optionally)
+```
+ http://0.0.0.0:18080/getall?keys=g1_u*&skip=5&limit=10 
+```
+
+iv) Do a wildcard search of keys  for keys vs values list (you can specifiy skip and limit optionally)
+ 
+```
+ http://0.0.0.0:18080/getkeys?keys=g1_u*&skip=5&limit=10 
+```
+
+v) Get count of keys matched by wildcard search 
+```
+http://0.0.0.0:18080/getcount?keys=g1*
+```
+
+### POST REQUESTS
+
 Run the following commands to 
     i) put a json object against key, 
     ii) get that object against key 
