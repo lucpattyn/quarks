@@ -9,7 +9,9 @@
 #include <quarks.hpp>
 #include <v8engine.hpp>
 
+#ifdef _USE_RAPIDAPI
 #include <curl/curl.h>
+#endif 
 
 static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp)
 {
@@ -598,7 +600,8 @@ int main(int argc, char ** argv) {
         //uriDecode(q, params);
         
         CROW_LOG_INFO << "uri params:" << params << q;
-       
+
+#ifdef _USE_RAPIDAPI       
         
         CURL *curl;
         //CURLcode cres;
@@ -636,6 +639,11 @@ int main(int argc, char ** argv) {
         
         std::ostringstream os;
         os << readBuffer;
+#else
+	std::string readBuffer  = "Feature not available";
+        std::ostringstream os;
+	os << readBuffer; 
+#endif 
         
         auto res = crow::response{os.str()};
         res.add_header("Access-Control-Allow-Origin", "*");

@@ -26,7 +26,8 @@ void openDB(std::string schemaname){
     rocksdb::Options options;
     options.create_if_missing = true;
     dbStatus = rocksdb::DB::Open(options, schemaname, &db);
-    
+    CROW_LOG_INFO << "schema name: " << schemaname << "!";
+
 }
 
 void closeDB(){
@@ -86,7 +87,7 @@ void Core::setEnvironment(int argc, char** argv){
     
     bool schema = false;
     for(auto v : _argv){
-        //CROW_LOG_INFO << " v = " << i << " ";
+        CROW_LOG_INFO << " v = " << v << " ";
         if(schema){
             schemaname = v;
             schema = false;
