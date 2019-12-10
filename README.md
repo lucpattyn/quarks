@@ -62,8 +62,7 @@ i)  Put key vs value
 ```
  http://0.0.0.0:18080/put?body={"key":"g1_u1","value":{"msg":"m1"}}
 ```
- It is recommended to URI encode  the body parameters 
- Example JS codes:
+ It is recommended to "URI encode"  the body parameters . Example JS codes:
 
 ```
  jsonobj = {"key":"g1_u1", "value":{"msg":"m1"}}
