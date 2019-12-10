@@ -363,7 +363,7 @@ int main(int argc, char ** argv) {
             CROW_LOG_INFO << body;
             out["error"] = "invalid post body";
 
-	    return;
+            return;
 	
         }
 
@@ -914,11 +914,13 @@ int main(int argc, char ** argv) {
     
     std::cout << "running .." << std::endl;
 
-    app.port(18080).multithreaded().run();
+    app.port(Quarks::Core::_Instance.getPort()).multithreaded().run();
     
 #ifdef _V8_LATEST
     v8EngineShutdownInMain();
 #endif
+    
+    Quarks::Core::_Instance.shutDown();
     
     return 0;
 }

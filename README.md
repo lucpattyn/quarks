@@ -20,6 +20,7 @@ This current example uses a compiled version of RocksDB, OpenCV 4.0.0 and Chrome
 - RocksDB
 - v8 Javascript Engine 
 - OpenCV 4.0.0 (Optional)
+- Curl (Experimental Optional)
 
 ## Docker setup
 To build the docker image:
@@ -51,11 +52,13 @@ After initializing by issuing following command
 ### GET REQUESTS
 
 Run the following commands to 
-    i) put a key value pair 
-    ii) get value object (json or string) against key 
-    iii) do a wildcard search through keys for values
-    iii) do a wildcard search of keys 
-    iv) get count of keys by wildcard search
+    i)    put a key value pair 
+    ii)   get value object (json or string) against key 
+    iii)  do a wildcard search through keys for values
+    iv)  do a wildcard search of keys 
+    v)   get count of keys by wildcard search
+    vi)  remove a key
+    vii) remove keys by wildcard search
 
 i)  Put key vs value 
 
@@ -97,6 +100,16 @@ v) Get count of keys matched by wildcard search
 ```
 http://0.0.0.0:18080/getcount?keys=g1*
 ```
+
+vi)  remove a key
+```
+http://0.0.0.0:18080/remove?key=g1_u1
+```
+
+vii) remove keys by wildcard search
+```
+http://0.0.0.0:18080/removeall?keys=g1_u*
+``` 
 
 ### POST REQUESTS
 

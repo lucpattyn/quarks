@@ -24,6 +24,9 @@ namespace Quarks {
         ~Core();
         
         void setEnvironment(int argc, char** argv);
+        void shutDown();
+        
+        int getPort();
         
         
         bool put(std::string body, std::string& out);
@@ -67,7 +70,7 @@ namespace Quarks {
         std::vector<std::string> _argv;
         
         //std::map<std::string, crow::json::rvalue> _Core;
-        
+        int _portNumber;
         
     };
     

@@ -26,13 +26,17 @@ void openDB(std::string schemaname){
     rocksdb::Options options;
     options.create_if_missing = true;
     dbStatus = rocksdb::DB::Open(options, schemaname, &db);
-    CROW_LOG_INFO << "schema name: " << schemaname << "!";
+    CROW_LOG_INFO << "opening schema: " << schemaname;
 
 }
 
-void closeDB(){
+void closeDB(std::string schemaname){
+   
+    CROW_LOG_INFO << "closing schema: " << schemaname;
+    
     // close the database
-    delete db;
+    delete db; // deleting causes segmentation fault, let the memory leak take over :(
+    
 }
 
 int wildcmp(const char *wild, const char *str) {
@@ -69,12 +73,12 @@ int wildcmp(const char *wild, const char *str) {
     return !*wild;
 }
 
-Core::Core(){
+Core::Core() : _portNumber(18080){
     
 }
 
 Core::~Core(){
-    closeDB();
+    
 }
 
 void Core::setEnvironment(int argc, char** argv){
@@ -86,21 +90,36 @@ void Core::setEnvironment(int argc, char** argv){
     std::string schemaname = "quarks_db";
     
     bool schema = false;
+    bool port = false;
+    
     for(auto v : _argv){
         CROW_LOG_INFO << " v = " << v << " ";
         if(schema){
             schemaname = v;
             schema = false;
+        }else if(port){
+            _portNumber = std::stoi(v);
+            port = false;
         }
         
         if(!v.compare("-schema")){
             schema = true;
+        }else if(!v.compare("-port")){
+            port = true;
         }
     }
     
     openDB(schemaname);
+    _argv.push_back(schemaname);    
     
-    
+}
+
+void Core::shutDown(){
+     closeDB(_argv.back());
+}
+
+int Core::getPort(){
+    return _portNumber;
 }
 
 bool Core::put(std::string body, std::string& out) {
