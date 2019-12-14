@@ -10,14 +10,16 @@
 #include <v8engine.hpp>
 
 #ifdef _USE_RAPIDAPI
-#include <curl/curl.h>
-#endif 
 
+#include <curl/curl.h>
 static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp)
 {
     ((std::string*)userp)->append((char*)contents, size * nmemb);
     return size * nmemb;
 }
+
+#endif
+
 
 int main(int argc, char ** argv) {   
    
@@ -168,16 +170,71 @@ int main(int argc, char ** argv) {
 
             }
             
-            if(jsonResults.size()){
+            if(jsonResults.size() > 0){
                 out["result"] = std::move(jsonResults);
             }
             
             if(!ret){
-                out["error"] = R"({"error" : "parsing error"})";
+                out["error"] = R"({"error" : "query returned 0 results"})";
             }
             
         } catch (const std::runtime_error& error){
-            std::string errs = R"([{"error" : "parsing error"},)";
+            std::string errs = R"([{"error" : "runtime parsing error"},)";
+           
+            for(int i = 0; i < jsonResults.size(); i++){
+                errs += crow::json::dump(jsonResults[i]);
+            }
+            
+            errs += "]";
+            out["error"] = errs;
+        }
+        
+        return out;
+        
+    };
+    
+    auto route_core_getsorted_callback =
+    [](const crow::request& req)
+    {
+        crow::json::wvalue out;
+        
+        std::vector<crow::json::wvalue> jsonResults;
+        
+        try{
+            auto x = req.url_params.get("keys");
+            std::string wild = (x == nullptr ? "" : x);
+            
+            auto s = req.url_params.get("skip");
+            std::string skip = (s == nullptr ? "0" : s);
+            
+            auto l = req.url_params.get("limit");
+            std::string limit = (l == nullptr ? "-1" : l);
+            
+            auto sb = req.url_params.get("sortby");
+            std::string sortby = (sb == nullptr ? "" : sb);
+            
+            CROW_LOG_INFO << "wild: " << wild << ", sortby: " << sortby << ", skip: " << skip << ", limit: " << limit;
+            
+            bool ret = false;
+            if(wild.size() > 0){
+                //Quarks::Core::_Instance.iterJson(wild, jsonResults);
+                ret = Quarks::Core::_Instance.getSorted(wild, sortby, jsonResults, std::stoi(skip), std::stoi(limit));
+                
+            }else{
+                out["error"] = "{\"error\":\"parameter 'keys' missing\"}";
+
+            }
+            
+            if(jsonResults.size() > 0){
+                out["result"] = std::move(jsonResults);
+            }
+            
+            if(!ret){
+                out["error"] = R"({"error" : "query returned 0 results"})";
+            }
+            
+        } catch (const std::runtime_error& error){
+            std::string errs = R"([{"error" : "runtime parsing error"},)";
            
             for(int i = 0; i < jsonResults.size(); i++){
                 errs += crow::json::dump(jsonResults[i]);
@@ -221,16 +278,16 @@ int main(int argc, char ** argv) {
                 
             }
             
-            if(jsonResults.size()){
+            if(jsonResults.size() > 0){
                 out["result"] = std::move(jsonResults);
             }
             
             if(!ret){
-                out["error"] = R"({"error" : "parsing error"})";
+                out["error"] = R"({"error" : "query returned 0 results"})";
             }
             
         } catch (const std::runtime_error& error){
-            std::string errs = R"([{"error" : "parsing error"},)";
+            std::string errs = R"([{"error" : "runtime parsing error"},)";
             
             for(size_t i = 0; i < jsonResults.size(); i++){
                 errs += crow::json::dump(jsonResults[i]);
@@ -661,6 +718,9 @@ int main(int argc, char ** argv) {
 
     CROW_ROUTE(app, "/getall")
     (route_core_getall_callback);
+    
+    CROW_ROUTE(app, "/getsorted")
+    (route_core_getsorted_callback);
     
     CROW_ROUTE(app, "/getkeys")
     (route_core_getkeys_callback);

@@ -2,10 +2,11 @@
 #define SORTER__INCLUDED_
 
 #include <set>
+#include <vector>
 
-namespace Sorted {
+namespace Sorter {
     
-    struct StringValuesWithJson{
+     struct StringValuesWithJson{
         crow::json::wvalue& _value;
         //std::string _value;
         std::string _sortby;
@@ -17,11 +18,11 @@ namespace Sorted {
     };
     
     struct NumberValuesWithJson{
-        crow::json::wvalue _value;
+        crow::json::wvalue& _value;
         double _sortby;
         
         NumberValuesWithJson(crow::json::wvalue& value, double sortby)
-        :  _value(std::move(value)), _sortby(sortby){
+        :  _value(value), _sortby(sortby){
         }
         
     };
@@ -42,11 +43,51 @@ namespace Sorted {
         }
     };
     
+    struct JsonComparerAlpha
+    {
+    	JsonComparerAlpha(std::string sorter):_sorter(sorter){}
+		
+        bool operator () (crow::json::rvalue& lhs, crow::json::rvalue& rhs)
+        {
+        	
+            std::string ls = lhs[_sorter].s();
+            std::string rs = rhs[_sorter].s();
+            
+            bool ret = (ls.compare(rs) < 0) ? true : false;
+            
+            return ret;
+        }
+        
+        std::string _sorter;
+    };
+    
+    struct JsonComparerNumeric
+    {
+    	JsonComparerNumeric(std::string sorter):_sorter(sorter){}
+		
+        bool operator () (crow::json::rvalue& lhs, crow::json::rvalue& rhs)
+        {
+        	
+            double ld = lhs[_sorter].d();
+            double rd = rhs[_sorter].d();
+            
+        	return ld < rd;
+        }
+        
+        std::string _sorter;
+    };
+    
+    
     typedef std::set<StringValuesWithJson, StringComparer> SetAlpha;
     typedef std::set<NumberValuesWithJson, NumberComparer> SetNumeric;
     
     //typedef SetAlpha::const_iterator itAlpha;
     //typedef SetNumeric::const_iterator itNumeric;
+    
+    typedef std::vector<StringValuesWithJson> VectorAlpha;
+    typedef std::vector<NumberValuesWithJson> VectorNumeric;
+    
+    
 }
 
 

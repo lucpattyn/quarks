@@ -10,6 +10,8 @@
 #include <iostream>
 #include <boost/asio.hpp>
 
+#include <algorithm>
+
 using namespace boost::asio;
 using ip::tcp;
 //using std::string;
@@ -239,9 +241,10 @@ bool Core::getAll(std::string wild,
                             w = x;
                         }
                         
-                        CROW_LOG_INFO << "w fwd: " << crow::json::dump(w) << " skip: "
-                        << skip << ", limit: " << limit;
-                        matchedResults.push_back(std::move(w));
+                        //CROW_LOG_INFO << "w fwd: " << crow::json::dump(w) << " skip: "
+                        //<< skip << ", limit: " << limit;
+                        
+						matchedResults.push_back(std::move(w));
                         
                     }
                     
@@ -264,6 +267,144 @@ bool Core::getAll(std::string wild,
         
         // do something after loop
         
+        delete it;
+        
+    }
+    
+    return ret && dbStatus.ok();
+}
+
+bool Core::getSorted(std::string wild, std::string sortby,
+                   std::vector<crow::json::wvalue>& matchedResults,
+                   int skip /*= 0*/, int limit /*= -1*/) {
+    
+    bool ret = true;
+    
+    if (dbStatus.ok()){
+        
+        std::size_t found = wild.find("*");
+        if(found != std::string::npos && found == 0){
+            return false;
+        }
+        
+        // create new iterator
+        rocksdb::ReadOptions ro;
+        rocksdb::Iterator* it = db->NewIterator(ro);
+        
+        std::string pre = wild.substr(0, found);
+        
+        rocksdb::Slice prefix(pre);
+        
+        rocksdb::Slice prefixPrint = prefix;
+        CROW_LOG_INFO << "prefix : " << prefixPrint.ToString();
+        
+        
+        int i  = -1;
+        int count = (limit == -1) ? INT_MAX : limit;
+        
+        int lowerbound  = skip - 1;
+        int upperbound = skip + count;
+        
+        bool isNumber = false;
+        bool isSortable = true;
+        
+        
+        std::vector<crow::json::rvalue> allResults;
+               
+        for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
+            
+            if(wildcmp(wild.c_str(), it->key().ToString().c_str())){                
+                
+                //crow::json::wvalue w;                
+                
+                try{
+                	auto x = crow::json::load(it->value().ToString());
+                
+                    if(!x){
+                        //w["value"] = crow::json::load(std::string("[\"") +
+                        //                	it->value().ToString() + std::string("\"]"));
+                        
+                        isSortable = false;
+                        
+                        
+                    }else{
+                        //w["value"] = x;   
+						
+                        try{
+                        	allResults.push_back(std::move(x));           
+                        
+                      
+                      		if(sortby.size() > 0){
+                      			auto sortValue = x[sortby];
+	                        
+		                        switch (sortValue.t()) {
+		                            case crow::json::type::Number:{
+		                                isNumber = true;
+		                                break;
+		                            }
+		                            case crow::json::type::String:{
+		                                break;
+		                            }
+		                                
+		                            default:;
+		                                
+		                        }
+							}
+	                        
+	                        //w["key"] = it->key().ToString();                    
+                           
+                    	}catch (const std::runtime_error& error){
+                        	CROW_LOG_INFO << "Runtime Error 1: " << error.what();
+                        	isSortable = false;
+                        
+                        	ret = false;
+                        
+                    	};
+                    
+                    }                    
+                	
+                }catch (const std::runtime_error& error){
+                    CROW_LOG_INFO << "Runtime Error 2: " << error.what() << " , " << ++i << " . " << it->value().ToString();                    
+                    //w["error"] =  it->value().ToString();
+                    isSortable = false;
+                    
+                    //matchedResults.push_back(std::move(w));
+                    
+                    ret = false;
+                }
+              
+            }
+        }        
+               
+        // do something after loop   
+		isSortable = isSortable && (sortby.size() > 0);
+		if(isSortable){
+			if(isNumber){
+				Sorter::JsonComparerNumeric cn(sortby);
+				std::sort(allResults.begin(), allResults.end(), cn);
+			
+			}else{
+				Sorter::JsonComparerAlpha ca(sortby);
+				std::sort(allResults.begin(), allResults.end(), ca);
+				
+			}			
+			
+		}
+		
+		i = -1;
+		for(auto& x : allResults){
+			i++;
+			if(i > lowerbound && (i < upperbound || limit == -1)){                
+                crow::json::wvalue w = x;  
+                matchedResults.push_back(std::move(w));
+            }
+            
+            if((i == upperbound) && (limit != -1)){
+                break;
+            }
+		}
+		
+                
         delete it;
         
     }
@@ -310,9 +451,9 @@ bool Core::getKeys(std::string wild,
                 if(i > lowerbound && (i < upperbound || limit == -1)){
                     crow::json::wvalue w;
                     
-                    auto x = crow::json::load(it->value().ToString());
-                    
                     try{
+                    	auto x = crow::json::load(it->value().ToString());
+                    
                         if(!x){
                             w["value"] =  crow::json::load(std::string("[\"") +
                                                   it->value().ToString() + std::string("\"]"));
@@ -320,6 +461,7 @@ bool Core::getKeys(std::string wild,
                         }else{
                             w["value"] = x;
                         }
+                        
                     }catch (const std::runtime_error& error){
                         CROW_LOG_INFO << "Runtime Error: " << i << it->value().ToString();
                         
@@ -332,9 +474,10 @@ bool Core::getKeys(std::string wild,
                     
                     w["key"] = it->key().ToString();
                     
-                    CROW_LOG_INFO << "w key fwd: " << crow::json::dump(w) << " skip: "
-                    << skip << ", limit: " << limit;
-                    matchedResults.push_back(std::move(w));
+                    //CROW_LOG_INFO << "w key fwd: " << crow::json::dump(w) << " skip: "
+                    //<< skip << ", limit: " << limit;
+                    
+					matchedResults.push_back(std::move(w));
                     
                 }
                 
@@ -355,131 +498,6 @@ bool Core::getKeys(std::string wild,
     
     return ret && dbStatus.ok();
 }
-
-bool Core::getKeysSorted(std::string wild, std::string sortby,
-                   std::vector<crow::json::wvalue>& matchedResults,
-                   int skip /*= 0*/, int limit /*= -1*/) {
-    
-    bool ret = true;
-    if (dbStatus.ok()){
-        
-        std::size_t found = wild.find("*");
-        if(found != std::string::npos && found == 0){
-            return false;
-        }
-        
-        // create new iterator
-        rocksdb::ReadOptions ro;
-        rocksdb::Iterator* it = db->NewIterator(ro);
-        
-        std::string pre = wild.substr(0, found);
-        
-        rocksdb::Slice prefix(pre);
-        
-        rocksdb::Slice prefixPrint = prefix;
-        CROW_LOG_INFO << "prefix : " << prefixPrint.ToString();
-        
-        
-        int i  = -1;
-        int count = (limit == -1) ? INT_MAX : limit;
-        
-        int lowerbound  = skip - 1;
-        int upperbound = skip + count;
-        
-        
-        Sorted::SetAlpha sA;
-        Sorted::SetNumeric sN;
-        
-        for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
-            
-            if(wildcmp(wild.c_str(), it->key().ToString().c_str())){
-                
-                i++;
-                
-                if(i > lowerbound && (i < upperbound || limit == -1)){
-                    crow::json::wvalue w;
-                    
-                    auto x = crow::json::load(it->value().ToString());
-                    
-                    bool isNumber = false;
-                    bool isSortable = true;
-                    
-                    try{
-                        if(!x){
-                            w["value"] =  crow::json::load(std::string("[\"") +
-                                                           it->value().ToString() + std::string("\"]"));
-                            
-                        }else{
-                            w["value"] = x;
-                        }
-                        
-                        try{
-                          
-                            auto sortValue = x[sortby];
-                            
-                            switch (sortValue.t()) {
-                                case crow::json::type::Number:{
-                                    isNumber = true;
-                                    break;
-                                }
-                                case crow::json::type::String:{
-                                    break;
-                                }
-                                    
-                                default:;
-                                    
-                            }
-                          
-                            
-                        }catch (const std::runtime_error& error){
-                            CROW_LOG_INFO << "Runtime Error: " << " sortby value not available ";
-                            isSortable = false;
-                            
-                        };
-                        
-                    }catch (const std::runtime_error& error){
-                        CROW_LOG_INFO << "Runtime Error: " << i << it->value().ToString();
-                        
-                        w["error"] =  it->value().ToString();
-                        
-                        matchedResults.push_back(std::move(w));
-                        
-                        isSortable = false;
-                        ret = false;
-                    }
-                    
-                    w["key"] = it->key().ToString();
-                    
-                    CROW_LOG_INFO << "w key fwd: " << crow::json::dump(w) << " skip: "
-                    << skip << ", limit: " << limit;
-                    //matchedResults.push_back(std::move(w));
-                    
-                    if(isSortable){
-                        if(isNumber){
-                            //sN.insert(Sorted::SetNumeric(&w, 1.1));
-                        }else{
-                            sA.insert(Sorted::StringValuesWithJson(w, std::string("alpha")));
-                        }
-                    }
-                    
-                }
-                
-            }
-        }
-        
-        
-        
-        // do something after loop
-        //if((i == upperbound) && (limit != -1)){
-        //    break;
-        //}
-        delete it;
-        
-    }
-    
-    return ret && dbStatus.ok();
-}
-
 
 bool Core::getCount(std::string wild,
                    long& out,
