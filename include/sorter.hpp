@@ -43,50 +43,102 @@ namespace Sorter {
         }
     };
     
-    struct JsonComparerAlpha
+    struct JsonComparer
     {
-    	JsonComparerAlpha(std::string sorter):_sorter(sorter){}
-		
-        bool operator () (crow::json::rvalue& lhs, crow::json::rvalue& rhs)
+        JsonComparer(std::string sorter, bool ascending)
+            :_sorter(sorter), _ascending(ascending){}
+        
+        
+        bool operator () (const crow::json::rvalue& lhs, const crow::json::rvalue& rhs)
         {
-        	
-            std::string ls = lhs[_sorter].s();
-            std::string rs = rhs[_sorter].s();
+            bool ret = false;
+         
+            try{
+                // 0 for string, 1 for numberic
+                int typeLhs = -1;
+                int typeRhs = -2;
+                
+                auto lSorter = lhs[_sorter];
+                auto rSorter = rhs[_sorter];
+                
+                switch (lSorter.t()) {
+                    case crow::json::type::String:{
+                        typeLhs = 0;
+                        break;
+                    }
+                        
+                    case crow::json::type::Number:{
+                        typeLhs = 1;
+                        break;
+                    }
+                    
+                    default:;
+                }
+                
+                switch (rSorter.t()) {
+                    case crow::json::type::String:{
+                        typeRhs = 0;
+                        break;
+                    }
+                        
+                    case crow::json::type::Number:{
+                        typeRhs = 1;
+                        break;
+                    }
+                        
+                    default:;
+                }
+                
+                if(typeLhs == typeRhs){
+                    if(typeLhs == 1){
+                        ret = compareNumeric(lSorter, rSorter);
+                    }else if(typeLhs == 0){
+                        ret = compareAlpha(lSorter, rSorter);
+                    }
+                }
+               
+                
+            }catch (const std::runtime_error& error){
+                CROW_LOG_INFO << "Runtime Error while sorting: " << error.what();
+                
+                ret = false;
+                
+            };
             
-            bool ret = (ls.compare(rs) < 0) ? true : false;
+            
+            if(!_ascending){
+                ret = !ret;
+            }
             
             return ret;
         }
         
-        std::string _sorter;
-    };
-    
-    struct JsonComparerNumeric
-    {
-    	JsonComparerNumeric(std::string sorter):_sorter(sorter){}
-		
-        bool operator () (crow::json::rvalue& lhs, crow::json::rvalue& rhs)
+        bool compareAlpha (const crow::json::rvalue& lhs, const crow::json::rvalue& rhs)
         {
-        	
-            double ld = lhs[_sorter].d();
-            double rd = rhs[_sorter].d();
+            std::string ls = lhs.s();
+            std::string rs = rhs.s();
             
-        	return ld < rd;
+            return (ls.compare(rs) < 0) ? true : false;
+            
+        }
+        
+        bool compareNumeric(const crow::json::rvalue& lhs, const crow::json::rvalue& rhs)
+        {
+            double ld = lhs.d();
+            double rd = rhs.d();
+            
+            return ld < rd;
         }
         
         std::string _sorter;
+        bool _ascending;
     };
-    
     
     typedef std::set<StringValuesWithJson, StringComparer> SetAlpha;
     typedef std::set<NumberValuesWithJson, NumberComparer> SetNumeric;
     
     //typedef SetAlpha::const_iterator itAlpha;
     //typedef SetNumeric::const_iterator itNumeric;
-    
-    typedef std::vector<StringValuesWithJson> VectorAlpha;
-    typedef std::vector<NumberValuesWithJson> VectorNumeric;
-    
     
 }
 

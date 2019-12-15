@@ -274,7 +274,7 @@ bool Core::getAll(std::string wild,
     return ret && dbStatus.ok();
 }
 
-bool Core::getSorted(std::string wild, std::string sortby,
+bool Core::getSorted(std::string wild, std::string sortby, bool ascending,
                    std::vector<crow::json::wvalue>& matchedResults,
                    int skip /*= 0*/, int limit /*= -1*/) {
     
@@ -305,8 +305,8 @@ bool Core::getSorted(std::string wild, std::string sortby,
         int lowerbound  = skip - 1;
         int upperbound = skip + count;
         
-        bool isNumber = false;
-        bool isSortable = true;
+        //bool isNumber = false;
+        bool isSortable = sortby.size() > 0;
         
         
         std::vector<crow::json::rvalue> allResults;
@@ -331,10 +331,10 @@ bool Core::getSorted(std::string wild, std::string sortby,
                         //w["value"] = x;   
 						
                         try{
-                        	allResults.push_back(std::move(x));           
-                        
                       
-                      		if(sortby.size() > 0){
+                      		/*
+                             // already have it inside the comparer
+                             if(sortby.size() > 0){
                       			auto sortValue = x[sortby];
 	                        
 		                        switch (sortValue.t()) {
@@ -349,7 +349,10 @@ bool Core::getSorted(std::string wild, std::string sortby,
 		                            default:;
 		                                
 		                        }
-							}
+							}*/
+                            
+                            allResults.push_back(std::move(x));
+                            
 	                        
 	                        //w["key"] = it->key().ToString();                    
                            
@@ -376,18 +379,12 @@ bool Core::getSorted(std::string wild, std::string sortby,
             }
         }        
                
-        // do something after loop   
-		isSortable = isSortable && (sortby.size() > 0);
+        // do something after loop
+        
 		if(isSortable){
-			if(isNumber){
-				Sorter::JsonComparerNumeric cn(sortby);
-				std::sort(allResults.begin(), allResults.end(), cn);
-			
-			}else{
-				Sorter::JsonComparerAlpha ca(sortby);
-				std::sort(allResults.begin(), allResults.end(), ca);
-				
-			}			
+            //CROW_LOG_INFO << "sorter: " << sortby;
+            //Sorter::JsonComparer c(sortby, ascending);
+			std::sort(allResults.begin(), allResults.end(), Sorter::JsonComparer(sortby, ascending));
 			
 		}
 		

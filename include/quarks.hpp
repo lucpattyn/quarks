@@ -35,7 +35,7 @@ namespace Quarks {
                             std::vector<crow::json::wvalue>& matchedResults,
                             int skip = 0, int limit = -1);
         
-        bool getSorted(std::string wild, std::string sortby,
+        bool getSorted(std::string wild, std::string sortby, bool ascending,
                      std::vector<crow::json::wvalue>& matchedResults,
                      int skip = 0, int limit = -1);
 

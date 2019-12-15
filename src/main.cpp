@@ -20,6 +20,22 @@ static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *use
 
 #endif
 
+static void handle_runtime_error(const std::runtime_error& error, crow::json::wvalue& out,
+   std::vector<crow::json::wvalue>& jsonResults)
+{
+    std::string errs = R"([{"error" : "runtime parsing error"},)";
+    
+    errs += "[";
+    errs += error.what();
+    errs += "],";
+    for(size_t i = 0; i < jsonResults.size(); i++){
+        errs += crow::json::dump(jsonResults[i]);
+    }
+    
+    errs += "]";
+    out["error"] = errs;
+};
+
 
 int main(int argc, char ** argv) {   
    
@@ -133,13 +149,13 @@ int main(int argc, char ** argv) {
                         
             
         } catch (const std::runtime_error& error){
-             out = R"({"error":"key parsing error"})";
+             out = R"({"error":"parsing error"})";
         }
         
         return out;
         
     };
-
+    
     auto route_core_getall_callback =
     [](const crow::request& req)
     {
@@ -157,7 +173,6 @@ int main(int argc, char ** argv) {
             auto l = req.url_params.get("limit");
             std::string limit = (l == nullptr ? "-1" : l);
             
-            
             CROW_LOG_INFO << "wild: " << wild << ", skip: " << skip << ", limit: " << limit;
             
             bool ret = false;
@@ -165,28 +180,18 @@ int main(int argc, char ** argv) {
                 //Quarks::Core::_Instance.iterJson(wild, jsonResults);
                 ret = Quarks::Core::_Instance.getAll(wild, jsonResults, std::stoi(skip), std::stoi(limit));
                 
+                out["result"] = std::move(jsonResults);
+                if(!ret){
+                    out["error"] = R"({"error" : "query returned error"})";
+                }
+                
             }else{
                 out["error"] = "{\"error\":\"parameter 'keys' missing\"}";
 
             }
             
-            if(jsonResults.size() > 0){
-                out["result"] = std::move(jsonResults);
-            }
-            
-            if(!ret){
-                out["error"] = R"({"error" : "query returned 0 results"})";
-            }
-            
         } catch (const std::runtime_error& error){
-            std::string errs = R"([{"error" : "runtime parsing error"},)";
-           
-            for(int i = 0; i < jsonResults.size(); i++){
-                errs += crow::json::dump(jsonResults[i]);
-            }
-            
-            errs += "]";
-            out["error"] = errs;
+            handle_runtime_error(error, out, jsonResults);
         }
         
         return out;
@@ -213,35 +218,30 @@ int main(int argc, char ** argv) {
             auto sb = req.url_params.get("sortby");
             std::string sortby = (sb == nullptr ? "" : sb);
             
-            CROW_LOG_INFO << "wild: " << wild << ", sortby: " << sortby << ", skip: " << skip << ", limit: " << limit;
+            auto des = req.url_params.get("des");
+            std::string descending = (des == nullptr ? "false" : des);
+            CROW_LOG_INFO << "wild: " << wild << ", sortby: " << sortby << ", des: " << descending
+                << ", skip: " << skip << ", limit: " << limit;
             
             bool ret = false;
             if(wild.size() > 0){
                 //Quarks::Core::_Instance.iterJson(wild, jsonResults);
-                ret = Quarks::Core::_Instance.getSorted(wild, sortby, jsonResults, std::stoi(skip), std::stoi(limit));
+                bool ascending = (descending.compare("true") == 0) ? false : true;
+                
+                ret = Quarks::Core::_Instance.getSorted(wild, sortby, ascending, jsonResults, std::stoi(skip), std::stoi(limit));
+                
+                out["result"] = std::move(jsonResults);
+                if(!ret){
+                    out["error"] = R"({"error" : "query returned error"})";
+                }
                 
             }else{
                 out["error"] = "{\"error\":\"parameter 'keys' missing\"}";
 
             }
             
-            if(jsonResults.size() > 0){
-                out["result"] = std::move(jsonResults);
-            }
-            
-            if(!ret){
-                out["error"] = R"({"error" : "query returned 0 results"})";
-            }
-            
         } catch (const std::runtime_error& error){
-            std::string errs = R"([{"error" : "runtime parsing error"},)";
-           
-            for(int i = 0; i < jsonResults.size(); i++){
-                errs += crow::json::dump(jsonResults[i]);
-            }
-            
-            errs += "]";
-            out["error"] = errs;
+            handle_runtime_error(error, out, jsonResults);
         }
         
         return out;
@@ -266,35 +266,25 @@ int main(int argc, char ** argv) {
             std::string limit = (l == nullptr ? "-1" : l);
             
             
-            CROW_LOG_INFO << "wild: " << wild << ", skip: " << skip << ", limit: " << limit;
+            CROW_LOG_INFO << "wild: " << wild << " (size: " << wild.size() << "), skip: " << skip << ", limit: " << limit;
             
             bool ret = false;
             if(wild.size() > 0){
                 //Quarks::Core::_Instance.iterJson(wild, jsonResults);
                 ret = Quarks::Core::_Instance.getKeys(wild, jsonResults, std::stoi(skip), std::stoi(limit));
                 
+                out["result"] = std::move(jsonResults);
+                if(!ret){
+                    out["error"] = R"({"error" : "query returned error"})";
+                }
+                
             }else{
                 out["error"] = "{\"error\":\"parameter 'keys' missing\"}";
                 
             }
             
-            if(jsonResults.size() > 0){
-                out["result"] = std::move(jsonResults);
-            }
-            
-            if(!ret){
-                out["error"] = R"({"error" : "query returned 0 results"})";
-            }
-            
         } catch (const std::runtime_error& error){
-            std::string errs = R"([{"error" : "runtime parsing error"},)";
-            
-            for(size_t i = 0; i < jsonResults.size(); i++){
-                errs += crow::json::dump(jsonResults[i]);
-            }
-            
-            errs += "]";
-            out["error"] = errs;
+            handle_runtime_error(error, out, jsonResults);
         }
         
         return out;
@@ -324,20 +314,18 @@ int main(int argc, char ** argv) {
             if(wild.size() > 0){
                 //Quarks::Core::_Instance.iterJson(wild, jsonResults);
                 ret = Quarks::Core::_Instance.getCount(wild, count, std::stoi(skip), std::stoi(limit));
+                out = std::to_string(count);
                 
             }else{
                  out = "{\"error\": \"parameter 'key' missing\"}";
-                
             }
             
-            out = std::to_string(count);
-            
             if(!ret){
-                out = R"({"error" : "parsing error"})";
+                out = R"({"error" : "counting error"})";
             }
             
         } catch (const std::runtime_error& error){
-             out = R"({"error" : "parsing error"})";
+             out = error.what();
         }
         
         return out;
@@ -366,7 +354,7 @@ int main(int argc, char ** argv) {
             
             
         } catch (const std::runtime_error& error){
-            out = R"({"error":"key parsing error"})";
+            out = error.what();
         }
         
         return out;
@@ -404,7 +392,7 @@ int main(int argc, char ** argv) {
             }
             
         } catch (const std::runtime_error& error){
-            out["error"] = R"({"error" : "parsing error"})";
+            out["error"] = error.what();
         }
         
         return out;
@@ -424,11 +412,17 @@ int main(int argc, char ** argv) {
 	
         }
 
-        std::string s = x["key"].s();
-        crow::json::rvalue v = x["value"];        
-               
-        bool success = Quarks::Core::_Instance.putJson(s, v, out);
-               
+        bool success = false;
+        
+        try{
+            std::string s = x["key"].s();
+            crow::json::rvalue v = x["value"];
+            
+            success = Quarks::Core::_Instance.putJson(s, v, out);
+            
+        } catch (const std::runtime_error& error){
+            out["error"] = error.what();
+        }
        
         /*auto res = crow::response{os.str()};
         res.add_header("Access-Control-Allow-Origin", "*");

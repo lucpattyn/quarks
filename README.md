@@ -52,15 +52,17 @@ After initializing by issuing following command
 ### GET REQUESTS
 
 Run the following commands to 
-    i)    put a key value pair 
-    ii)   get value object (json or string) against key 
-    iii)  do a wildcard search through keys for values
-    iv)  do a wildcard search of keys 
-    v)   get count of keys by wildcard search
-    vi)  remove a key
-    vii) remove keys by wildcard search
+    a)  put a key value pair 
+    b)  get value object (json or string) against key 
+    c)  list values by wildcard search with keys
+    d)  list sorted values by wildcard search with keys
+    e)  List keys vs values by wildcard search with keys
+    f)   get count of keys by wildcard search
+    g)  remove a key
+    h)  remove keys by wildcard search
+        
 
-i)  Put key vs value 
+a)  Put key vs value 
 
 ```
  http://0.0.0.0:18080/put?body={"key":"g1_u1","value":{"msg":"m1"}}
@@ -79,34 +81,44 @@ i)  Put key vs value
  *If request is successful then the key would be returned as result
 
 
-ii) Get value against key
+b) Get value against key
 
 ```
  http://0.0.0.0:18080/get?key=g1_u1
 ```
 
-iii) Do a wildcard search through keys for values (you can specifiy skip and limit optionally)
+c) List values by wildcard search with keys (you can specifiy skip and limit optionally)
 ```
  http://0.0.0.0:18080/getall?keys=g1_u*&skip=5&limit=10 
 ```
+d) List sorted values by wildcard search with keys (you can specifiy skip and limit optionally)
+```
+ http://0.0.0.0:18080/getsorted?keys=g1_u*&sortby=msg&skip=5&limit=10 
 
-iv) Do a wildcard search of keys  for keys vs values list (you can specifiy skip and limit optionally)
- 
+```
+  You can reverse the order by specifying des=true
+```
+ http://0.0.0.0:18080/getsorted?keys=g1_u*&sortby=msg&des=true&skip=5&limit=10 
+
+```
+
+e) List keys vs values by wildcard search with keys (you can specifiy skip and limit optionally)
+
 ```
  http://0.0.0.0:18080/getkeys?keys=g1_u*&skip=5&limit=10 
 ```
 
-v) Get count of keys matched by wildcard search 
+f) Get count of keys matched by wildcard search 
 ```
 http://0.0.0.0:18080/getcount?keys=g1*
 ```
 
-vi)  remove a key
+g)  remove a key
 ```
 http://0.0.0.0:18080/remove?key=g1_u1
 ```
 
-vii) remove keys by wildcard search
+h) remove keys by wildcard search
 ```
 http://0.0.0.0:18080/removeall?keys=g1_u*
 ``` 
