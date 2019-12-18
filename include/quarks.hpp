@@ -31,6 +31,7 @@ namespace Quarks {
         
         bool put(std::string body, std::string& out);
         bool get(std::string key, std::string& value);
+        
         bool getAll(std::string wild,
                             std::vector<crow::json::wvalue>& matchedResults,
                             int skip = 0, int limit = -1);
@@ -47,6 +48,10 @@ namespace Quarks {
         bool getCount(std::string wild,
                      long& out,
                      int skip = 0, int limit = -1);
+        
+        bool iter(std::string wild,
+                  std::vector<std::string>& matchedResults,
+                      int skip = 0, int limit = -1);
         
         bool remove(std::string key);
         int removeAll(std::string wild, int skip = 0, int limit = -1);

@@ -58,7 +58,8 @@ namespace Sorter {
                 int typeLhs = -1;
                 int typeRhs = -2;
                 
-                if(lhs.has(_sorter) && rhs.has(_sorter)){
+                if(lhs.t() == crow::json::type::Object
+                   && rhs.t() == crow::json::type::Object){
                     auto lSorter = lhs[_sorter];
                     auto rSorter = rhs[_sorter];
                     

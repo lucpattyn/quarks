@@ -556,6 +556,64 @@ bool Core::getCount(std::string wild,
     return ret && dbStatus.ok();
 }
 
+bool Core::iter(std::string wild,
+                std::vector<std::string>& matchedResults,
+                    int skip /*= 0*/, int limit /*= -1*/) {
+    
+    bool ret = false;
+    
+    if (dbStatus.ok()){
+        // create new iterator
+        rocksdb::ReadOptions ro;
+        rocksdb::Iterator* it = db->NewIterator(ro);
+       
+        int i  = -1;
+        int count = (limit == -1) ? INT_MAX : limit;
+        
+        int lowerbound  = skip - 1;
+        int upperbound = skip + count;
+        
+        // iterate all entries
+        for (it->SeekToFirst(); it->Valid(); it->Next()) {
+            
+            std::string value = "(null)";
+            rocksdb::Slice slice = it->value();
+            if(slice != nullptr){
+                try{
+                    value = slice.ToString();
+                    CROW_LOG_INFO << "iterate >> " << it->key().ToString()
+                    << ": " << value; //<< endl;
+                }catch(std::exception e){
+                    CROW_LOG_INFO << "exception on iterate >> " << it->key().ToString();
+                }
+            }
+            if(!(wild.size() > 0) || wildcmp(wild.c_str(), it->key().ToString().c_str())){
+                
+                i++;
+                if(i > lowerbound && (i < upperbound || limit == -1)){
+                    //CROW_LOG_INFO << "wild: " << wild << "," << result fwd: " << it->value().ToString() << " skip: "
+                    //<< skip << ", limit: " << limit;
+                     matchedResults.push_back(value);
+                }
+            
+            
+                if((i == upperbound) && (limit != -1)){
+                    break;
+                }
+            }
+        }
+        ret = (it->status().ok());  // check for any errors found during the scan
+        
+        // do something after loop
+        delete it;
+        
+       
+    }
+    
+    return ret;
+    
+}
+
 
 bool Core::remove(std::string key){
     bool ret = false;

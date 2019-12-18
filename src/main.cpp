@@ -34,6 +34,28 @@ static void handle_runtime_error(const std::runtime_error& error, crow::json::wv
     
     errs += "]";
     out["error"] = errs;
+}
+
+struct QueryParams{
+    std::string wild;
+    std::string skip;
+    std::string limit;
+    
+    static QueryParams Parse(const crow::request& req){
+        QueryParams q;
+        auto x = req.url_params.get("keys");
+        q.wild = (x == nullptr || !(std::string(x).size()) ? "" : x);
+        
+        auto s = req.url_params.get("skip");
+        q.skip = (s == nullptr || !(std::string(s).size()) ? "0" : s);
+        
+        auto l = req.url_params.get("limit");
+        CROW_LOG_INFO << "wild: " << q.wild << ", skip: " << q.skip << ", limit: " << l;
+        //q.limit = (l == nullptr || !(std::string(l).size())? "-1" : l);
+        
+        return q;
+    }
+
 };
 
 
@@ -164,21 +186,14 @@ int main(int argc, char ** argv) {
         std::vector<crow::json::wvalue> jsonResults;
         
         try{
-            auto x = req.url_params.get("keys");
-            std::string wild = (x == nullptr ? "" : x);
+            auto q = QueryParams::Parse(req);
             
-            auto s = req.url_params.get("skip");
-            std::string skip = (s == nullptr ? "0" : s);
-            
-            auto l = req.url_params.get("limit");
-            std::string limit = (l == nullptr ? "-1" : l);
-            
-            CROW_LOG_INFO << "wild: " << wild << ", skip: " << skip << ", limit: " << limit;
+            CROW_LOG_INFO << "wild: " << q.wild << ", skip: " << q.skip << ", limit: " << q.limit;
             
             bool ret = false;
-            if(wild.size() > 0){
+            if(q.wild.size() > 0){
                 //Quarks::Core::_Instance.iterJson(wild, jsonResults);
-                ret = Quarks::Core::_Instance.getAll(wild, jsonResults, std::stoi(skip), std::stoi(limit));
+                ret = Quarks::Core::_Instance.getAll(q.wild, jsonResults, std::stoi(q.skip), std::stoi(q.limit));
                 
                 out["result"] = std::move(jsonResults);
                 if(!ret){
@@ -206,29 +221,24 @@ int main(int argc, char ** argv) {
         std::vector<crow::json::wvalue> jsonResults;
         
         try{
-            auto x = req.url_params.get("keys");
-            std::string wild = (x == nullptr ? "" : x);
-            
-            auto s = req.url_params.get("skip");
-            std::string skip = (s == nullptr ? "0" : s);
-            
-            auto l = req.url_params.get("limit");
-            std::string limit = (l == nullptr ? "-1" : l);
+           
+            auto q =  QueryParams::Parse(req);
             
             auto sb = req.url_params.get("sortby");
-            std::string sortby = (sb == nullptr ? "" : sb);
+            std::string sortby = (sb == nullptr || !std::string(sb).size()) ? "" : sb;
             
             auto des = req.url_params.get("des");
-            std::string descending = (des == nullptr ? "false" : des);
-            CROW_LOG_INFO << "wild: " << wild << ", sortby: " << sortby << ", des: " << descending
-                << ", skip: " << skip << ", limit: " << limit;
+            std::string descending = (des == nullptr || !std::string(des).size())  ? "false" : des;
+            
+            CROW_LOG_INFO << "wild: " << q.wild << ", sortby: " << sortby << ", des: " << descending
+                << ", skip: " << q.skip << ", limit: " << q.limit;
             
             bool ret = false;
-            if(wild.size() > 0){
+            if(q.wild.size() > 0){
                 //Quarks::Core::_Instance.iterJson(wild, jsonResults);
                 bool ascending = (descending.compare("true") == 0) ? false : true;
                 
-                ret = Quarks::Core::_Instance.getSorted(wild, sortby, ascending, jsonResults, std::stoi(skip), std::stoi(limit));
+                ret = Quarks::Core::_Instance.getSorted(q.wild, sortby, ascending, jsonResults, std::stoi(q.skip), std::stoi(q.limit));
                 
                 out["result"] = std::move(jsonResults);
                 if(!ret){
@@ -256,22 +266,14 @@ int main(int argc, char ** argv) {
         std::vector<crow::json::wvalue> jsonResults;
         
         try{
-            auto x = req.url_params.get("keys");
-            std::string wild = (x == nullptr ? "" : x);
+            auto q = QueryParams::Parse(req);
             
-            auto s = req.url_params.get("skip");
-            std::string skip = (s == nullptr ? "0" : s);
-            
-            auto l = req.url_params.get("limit");
-            std::string limit = (l == nullptr ? "-1" : l);
-            
-            
-            CROW_LOG_INFO << "wild: " << wild << " (size: " << wild.size() << "), skip: " << skip << ", limit: " << limit;
+            CROW_LOG_INFO << "wild: " << q.wild << " (size: " << q.wild.size() << "), skip: " << q.skip << ", limit: " << q.limit;
             
             bool ret = false;
-            if(wild.size() > 0){
+            if(q.wild.size() > 0){
                 //Quarks::Core::_Instance.iterJson(wild, jsonResults);
-                ret = Quarks::Core::_Instance.getKeys(wild, jsonResults, std::stoi(skip), std::stoi(limit));
+                ret = Quarks::Core::_Instance.getKeys(q.wild, jsonResults, std::stoi(q.skip), std::stoi(q.limit));
                 
                 out["result"] = std::move(jsonResults);
                 if(!ret){
@@ -298,22 +300,13 @@ int main(int argc, char ** argv) {
         long count = 0;
         
         try{
-            auto x = req.url_params.get("keys");
-            std::string wild = (x == nullptr ? "" : x);
-            
-            auto s = req.url_params.get("skip");
-            std::string skip = (s == nullptr ? "0" : s);
-            
-            auto l = req.url_params.get("limit");
-            std::string limit = (l == nullptr ? "-1" : l);
-            
-            
-            CROW_LOG_INFO << "wild: " << wild << ", skip: " << skip << ", limit: " << limit;
-            
+           
+            auto q = QueryParams::Parse(req);
+           
             bool ret = false;
-            if(wild.size() > 0){
+            if(q.wild.size() > 0){
                 //Quarks::Core::_Instance.iterJson(wild, jsonResults);
-                ret = Quarks::Core::_Instance.getCount(wild, count, std::stoi(skip), std::stoi(limit));
+                ret = Quarks::Core::_Instance.getCount(q.wild, count, std::stoi(q.skip), std::stoi(q.limit));
                 out = std::to_string(count);
                 
             }else{
@@ -326,6 +319,34 @@ int main(int argc, char ** argv) {
             
         } catch (const std::runtime_error& error){
              out = error.what();
+        }
+        
+        return out;
+        
+    };
+    
+    
+    auto route_core_iter_callback =
+    [](const crow::request& req)
+    {
+        std::string out = "[";
+        try{
+            auto q = QueryParams::Parse(req);
+            
+            CROW_LOG_INFO << "wild: " << q.wild << ", skip: " << q.skip << ", limit: " << q.limit;
+            
+            std::vector<std::string> strResults;
+            Quarks::Core::_Instance.iter(q.wild, strResults, std::stoi(q.skip), std::stoi(q.limit));
+            
+            for(auto v : strResults){
+                out += v;
+                out += ",";
+            }
+            
+            out[out.size() -1] = ']'; // replace the last ',' with ']'
+            
+        } catch (const std::runtime_error& error){
+            out = "runtime error during iteration";
         }
         
         return out;
@@ -367,23 +388,13 @@ int main(int argc, char ** argv) {
         crow::json::wvalue out;
         
         try{
-            auto x = req.url_params.get("keys");
-            std::string wild = (x == nullptr ? "" : x);
+            auto q = QueryParams::Parse(req);
             
-            auto s = req.url_params.get("skip");
-            std::string skip = (s == nullptr ? "0" : s);
-            
-            auto l = req.url_params.get("limit");
-            std::string limit = (l == nullptr ? "-1" : l);
-            
-            
-            CROW_LOG_INFO << "wild: " << wild << ", skip: " << skip << ", limit: " << limit;
-            
-            std::vector<crow::json::wvalue> jsonResults;
-            
-            if(wild.size() > 0){
+            CROW_LOG_INFO << "wild: " << q.wild << ", skip: " << q.skip << ", limit: " << q.limit;
+           
+            if(q.wild.size() > 0){
                 //Quarks::Core::_Instance.iterJson(wild, jsonResults);
-                int ret = Quarks::Core::_Instance.removeAll(wild, std::stoi(skip), std::stoi(limit));
+                int ret = Quarks::Core::_Instance.removeAll(q.wild, std::stoi(q.skip), std::stoi(q.limit));
                 out["result"] = std::to_string(ret);
                 
             }else{
@@ -519,37 +530,6 @@ int main(int argc, char ** argv) {
         
     };*/
 
-    
-    auto route_core_iterjson_callback =
-    [](const crow::request& req)
-    {
-        crow::json::wvalue out;
-        out["result"] = "";
-        
-        auto x = crow::json::load(req.body);
-        if (!x){
-            out["error"] = "invalid parameters";
-            return out;
-        }        
-        
-        try{
-            std::string wild = x["keys"].s();
-            //CROW_LOG_INFO << "wild-card : " << wild;
-            
-            std::vector<crow::json::wvalue> jsonResults;
-            Quarks::Core::_Instance.iterJson(wild, jsonResults);
-            
-            if(jsonResults.size()){
-                out["result"] = std::move(jsonResults);
-            }
-            
-        } catch (const std::runtime_error& error){
-            out["error"] = "parameter 'keys' missing";
-        }
-        
-        return out;
-        
-    };
     
     auto route_core_searchjson_callback =
     [](const crow::request& req){
@@ -722,6 +702,9 @@ int main(int argc, char ** argv) {
     CROW_ROUTE(app, "/getcount")
     (route_core_getcount_callback);
     
+    CROW_ROUTE(app, "/iter")
+    (route_core_iter_callback);
+    
     CROW_ROUTE(app, "/remove")
     (route_core_removekey_callback);
   
@@ -733,10 +716,6 @@ int main(int argc, char ** argv) {
   
     CROW_ROUTE(app, "/getjson")
     .methods("GET"_method, "POST"_method)(route_core_getjson_callback);
-   
-        
-    CROW_ROUTE(app, "/iterjson")
-    .methods("GET"_method, "POST"_method)(route_core_iterjson_callback);
     
     CROW_ROUTE(app, "/searchjson")
     .methods("GET"_method, "POST"_method)(route_core_searchjson_callback);
