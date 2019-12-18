@@ -54,49 +54,50 @@ namespace Sorter {
             bool ret = false;
          
             try{
-                // 0 for string, 1 for numberic
+                // 0 for string, 1 for numeric
                 int typeLhs = -1;
                 int typeRhs = -2;
                 
                 auto lSorter = lhs[_sorter];
                 auto rSorter = rhs[_sorter];
                 
-                switch (lSorter.t()) {
-                    case crow::json::type::String:{
-                        typeLhs = 0;
-                        break;
-                    }
+                if(lSorter != nullptr && rSorter != nullptr){
+                    switch (lSorter.t()) {
+                        case crow::json::type::String:{
+                            typeLhs = 0;
+                            break;
+                        }
+                            
+                        case crow::json::type::Number:{
+                            typeLhs = 1;
+                            break;
+                        }
                         
-                    case crow::json::type::Number:{
-                        typeLhs = 1;
-                        break;
+                        default:;
                     }
                     
-                    default:;
-                }
-                
-                switch (rSorter.t()) {
-                    case crow::json::type::String:{
-                        typeRhs = 0;
-                        break;
+                    switch (rSorter.t()) {
+                        case crow::json::type::String:{
+                            typeRhs = 0;
+                            break;
+                        }
+                            
+                        case crow::json::type::Number:{
+                            typeRhs = 1;
+                            break;
+                        }
+                            
+                        default:;
                     }
-                        
-                    case crow::json::type::Number:{
-                        typeRhs = 1;
-                        break;
-                    }
-                        
-                    default:;
-                }
-                
-                if(typeLhs == typeRhs){
-                    if(typeLhs == 1){
-                        ret = compareNumeric(lSorter, rSorter);
-                    }else if(typeLhs == 0){
-                        ret = compareAlpha(lSorter, rSorter);
+                    
+                    if(typeLhs == typeRhs){
+                        if(typeLhs == 1){
+                            ret = compareNumeric(lSorter, rSorter);
+                        }else if(typeLhs == 0){
+                            ret = compareAlpha(lSorter, rSorter);
+                        }
                     }
                 }
-               
                 
             }catch (const std::runtime_error& error){
                 CROW_LOG_INFO << "Runtime Error while sorting: " << error.what();
