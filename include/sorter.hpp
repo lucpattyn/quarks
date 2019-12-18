@@ -58,10 +58,10 @@ namespace Sorter {
                 int typeLhs = -1;
                 int typeRhs = -2;
                 
-                auto lSorter = lhs[_sorter];
-                auto rSorter = rhs[_sorter];
-                
-                if(lSorter != nullptr && rSorter != nullptr){
+                if(lhs.has(_sorter) && rhs.has(_sorter)){
+                    auto lSorter = lhs[_sorter];
+                    auto rSorter = rhs[_sorter];
+                    
                     switch (lSorter.t()) {
                         case crow::json::type::String:{
                             typeLhs = 0;
