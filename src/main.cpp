@@ -44,14 +44,16 @@ struct QueryParams{
     static QueryParams Parse(const crow::request& req){
         QueryParams q;
         auto x = req.url_params.get("keys");
-        q.wild = (x == nullptr || !(std::string(x).size()) ? "" : x);
+        q.wild = (x == nullptr || !strlen(x) ? "" : x);
         
         auto s = req.url_params.get("skip");
-        q.skip = (s == nullptr || !(std::string(s).size()) ? "0" : s);
+        q.skip = (s == nullptr || !strlen(s) ? "0" : s);
         
+        q.limit = "10";
         auto l = req.url_params.get("limit");
-        CROW_LOG_INFO << "wild: " << q.wild << ", skip: " << q.skip << ", limit: " << l;
-        //q.limit = (l == nullptr || !(std::string(l).size())? "-1" : l);
+        q.limit = (l == nullptr || !strlen(l)? "-1" : l);
+      
+        //CROW_LOG_INFO << "qp >> wild: " << q.wild << ", skip: " << q.skip << ", limit: " << q.limit;
         
         return q;
     }
@@ -225,17 +227,16 @@ int main(int argc, char ** argv) {
             auto q =  QueryParams::Parse(req);
             
             auto sb = req.url_params.get("sortby");
-            std::string sortby = (sb == nullptr || !std::string(sb).size()) ? "" : sb;
+            std::string sortby = (sb == nullptr || !strlen(sb)) ? "" : sb;
             
             auto des = req.url_params.get("des");
-            std::string descending = (des == nullptr || !std::string(des).size())  ? "false" : des;
+            std::string descending = (des == nullptr || !strlen(des))  ? "false" : des;
             
             CROW_LOG_INFO << "wild: " << q.wild << ", sortby: " << sortby << ", des: " << descending
                 << ", skip: " << q.skip << ", limit: " << q.limit;
             
             bool ret = false;
             if(q.wild.size() > 0){
-                //Quarks::Core::_Instance.iterJson(wild, jsonResults);
                 bool ascending = (descending.compare("true") == 0) ? false : true;
                 
                 ret = Quarks::Core::_Instance.getSorted(q.wild, sortby, ascending, jsonResults, std::stoi(q.skip), std::stoi(q.limit));

@@ -5,6 +5,14 @@
 #include <vector>
 
 namespace Sorter {
+    template <class T>
+    class backwards {
+        T& _obj;
+    public:
+        backwards(T &obj) : _obj(obj) {}
+        auto begin() {return _obj.rbegin();}
+        auto end() {return _obj.rend();}
+    };
     
      struct StringValuesWithJson{
         crow::json::wvalue& _value;
@@ -45,21 +53,21 @@ namespace Sorter {
     
     struct JsonComparer
     {
-        JsonComparer(std::string sorter, bool ascending)
-            :_sorter(sorter), _ascending(ascending){}
+        JsonComparer(std::string sorter)
+            :_sorter(sorter){}
         
         
         bool operator () (const crow::json::rvalue& lhs, const crow::json::rvalue& rhs)
         {
             bool ret = false;
-         
+            
             try{
                 // 0 for string, 1 for numeric
                 int typeLhs = -1;
                 int typeRhs = -2;
                 
-                if(lhs.t() == crow::json::type::Object
-                   && rhs.t() == crow::json::type::Object){
+                if(lhs.t() == crow::json::type::Object && lhs.has(_sorter)
+                   && rhs.t() == crow::json::type::Object && rhs.has(_sorter)){
                     auto lSorter = lhs[_sorter];
                     auto rSorter = rhs[_sorter];
                     
@@ -93,24 +101,23 @@ namespace Sorter {
                     
                     if(typeLhs == typeRhs){
                         if(typeLhs == 1){
-                            ret = compareNumeric(lSorter, rSorter);
+                           ret = compareNumeric(lSorter, rSorter);
                         }else if(typeLhs == 0){
-                            ret = compareAlpha(lSorter, rSorter);
+                           ret = compareAlpha(lSorter, rSorter);
                         }
                     }
                 }
                 
             }catch (const std::runtime_error& error){
                 CROW_LOG_INFO << "Runtime Error while sorting: " << error.what();
+                //CROW_LOG_INFO << "lhs: " << crow::json::dump(lhs) << " rhs: "
+                  //  << crow::json::dump(rhs) ;
                 
                 ret = false;
                 
             };
             
             
-            if(!_ascending){
-                ret = !ret;
-            }
             
             return ret;
         }
@@ -126,14 +133,13 @@ namespace Sorter {
         
         bool compareNumeric(const crow::json::rvalue& lhs, const crow::json::rvalue& rhs)
         {
-            double ld = lhs.d();
-            double rd = rhs.d();
+            int ld = lhs.d();
+            int rd = rhs.d();
             
             return ld < rd;
         }
         
         std::string _sorter;
-        bool _ascending;
     };
     
     typedef std::set<StringValuesWithJson, StringComparer> SetAlpha;

@@ -321,43 +321,20 @@ bool Core::getSorted(std::string wild, std::string sortby, bool ascending,
                 	auto x = crow::json::load(it->value().ToString());
                 
                     if(!x){
-                        //w["value"] = crow::json::load(std::string("[\"") +
-                        //                	it->value().ToString() + std::string("\"]"));
-                        
                         isSortable = false;
-                        
-                        
                     }else{
-                        //w["value"] = x;   
 						
                         try{
-                      
-                      		/*
-                             // already have it inside the comparer
-                             if(sortby.size() > 0){
-                      			auto sortValue = x[sortby];
+                            if(x.t() == crow::json::type::Object){
+                                i++;
+                                //CROW_LOG_INFO << "obj to sort: " << i << ". " << crow::json::dump(x);
+                                //w["value"] = x;
+                                //w["key"] = it->key().ToString();
+                                allResults.push_back(std::move(x));
+                            }
 	                        
-		                        switch (sortValue.t()) {
-		                            case crow::json::type::Number:{
-		                                isNumber = true;
-		                                break;
-		                            }
-		                            case crow::json::type::String:{
-		                                break;
-		                            }
-		                                
-		                            default:;
-		                                
-		                        }
-							}*/
-                            
-                            allResults.push_back(std::move(x));
-                            
-	                        
-	                        //w["key"] = it->key().ToString();                    
-                           
-                    	}catch (const std::runtime_error& error){
-                        	CROW_LOG_INFO << "Runtime Error 1: " << error.what();
+                    	} catch (const std::runtime_error& error){
+                        	CROW_LOG_INFO << "Runtime Sort Error 1: " << error.what();
                         	isSortable = false;
                         
                         	ret = false;
@@ -366,8 +343,8 @@ bool Core::getSorted(std::string wild, std::string sortby, bool ascending,
                     
                     }                    
                 	
-                }catch (const std::runtime_error& error){
-                    CROW_LOG_INFO << "Runtime Error 2: " << error.what() << " , " << ++i << " . " << it->value().ToString();                    
+                } catch (const std::runtime_error& error){
+                    CROW_LOG_INFO << "Runtime Sort Error 2: " << error.what() << " , " << i << " . " << it->value().ToString();
                     //w["error"] =  it->value().ToString();
                     isSortable = false;
                     
@@ -384,22 +361,56 @@ bool Core::getSorted(std::string wild, std::string sortby, bool ascending,
 		if(isSortable){
             //CROW_LOG_INFO << "sorter: " << sortby;
             //Sorter::JsonComparer c(sortby, ascending);
-			std::sort(allResults.begin(), allResults.end(), Sorter::JsonComparer(sortby, ascending));
+            try{
+                std::sort(allResults.begin(), allResults.end(), Sorter::JsonComparer(sortby));
+                
+            } catch (const std::runtime_error& error){
+                CROW_LOG_INFO << "Runtime Sort Error 3: Not Sortable";
+                ret = false;
+            }
 			
 		}
 		
+        
 		i = -1;
-		for(auto& x : allResults){
-			i++;
-			if(i > lowerbound && (i < upperbound || limit == -1)){                
-                crow::json::wvalue w = x;  
-                matchedResults.push_back(std::move(w));
+        if(!ascending){
+            for(auto& x : Sorter::backwards(allResults)){
+                i++;
+                if(i > lowerbound && (i < upperbound || limit == -1)){
+                    try{
+                        crow::json::wvalue w = x;
+                        CROW_LOG_INFO << "sorted object: " << i << ". " << crow::json::dump(w);
+                        matchedResults.push_back(std::move(w));
+                        
+                    }catch (const std::runtime_error& error){
+                        CROW_LOG_INFO << "Runtime Sort Error 4.1: " << error.what() << " , " << i;
+                    }
+                }
+                
+                if((i == upperbound) && (limit != -1)){
+                    break;
+                }
+            }
+        }else{
+            for(auto& x : allResults){
+                i++;
+                if(i > lowerbound && (i < upperbound || limit == -1)){
+                    try{
+                        crow::json::wvalue w = x;
+                        CROW_LOG_INFO << "sorted object: " << i << ". " << crow::json::dump(w);
+                        matchedResults.push_back(std::move(w));
+                        
+                    }catch (const std::runtime_error& error){
+                        CROW_LOG_INFO << "Runtime Sort Error 4.2: " << error.what() << " , " << i;
+                    }
+                }
+                
+                if((i == upperbound) && (limit != -1)){
+                    break;
+                }
             }
             
-            if((i == upperbound) && (limit != -1)){
-                break;
-            }
-		}
+        }
 		
                 
         delete it;
