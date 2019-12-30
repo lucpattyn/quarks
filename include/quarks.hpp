@@ -53,7 +53,7 @@ namespace Quarks {
                   std::vector<std::string>& matchedResults,
                       int skip = 0, int limit = -1);
         
-        bool remove(std::string key);
+        bool remove(std::string key, std::string& out);
         int removeAll(std::string wild, int skip = 0, int limit = -1);
         
         bool putJson(std::string key, crow::json::rvalue& x, crow::json::wvalue& out);

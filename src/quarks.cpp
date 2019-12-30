@@ -151,25 +151,33 @@ bool Core::put(std::string body, std::string& out) {
     
     rocksdb::Slice keySlice = key;
     
+    std::string result = "true";
+    std::string error = "";
     // modify the database
     if (dbStatus.ok()){
         ret = true;
         
         rocksdb::Status status = db->Put(rocksdb::WriteOptions(), keySlice, value);
         if(!status.ok()){
-            key = "{\"error\":\"data failed to save\"}";
+            //result = "{\"error\":\"data failed to save\"}";
+            result = "false";
+            error = ",\"error\":\"data failed to save\"";
             ret = false;
         }
         
     }else{
-        key = "{\"error\":\"db status error\"}";
+        //result = "{\"error\":\"db status error\"}";
+        result = "false";
+        error = ",\"error\":\"db status error\"";
         ret = false;
     }
     
     //std::stringstream ss;
     //ss<< "{" << std::quoted("result") << ":" << std::quoted(key) << "}";
     if(ret){
-        out = std::string("{") + R"("result")" + std::string(":\"")  + key + std::string("\"}");
+        out = std::string("{") + R"("result":)" + result + std::string("}");
+    }else{
+         out = std::string("{") + R"("result":)" + result + error + std::string("}");
     }
     
     return  ret;
@@ -626,16 +634,47 @@ bool Core::iter(std::string wild,
 }
 
 
-bool Core::remove(std::string key){
+bool Core::remove(std::string key, std::string& out){
     bool ret = false;
     
     // Delete value
     if (dbStatus.ok()){
-        rocksdb::Status status = db->Delete(rocksdb::WriteOptions(), key);
+        rocksdb::ReadOptions ro;
+        rocksdb::Iterator* it = db->NewIterator(ro);
         
-        if(status.ok()){
-            ret = true;
+        try{
+            rocksdb::Slice prefix(key);
+            //rocksdb::Slice prefixPrint = prefix;
+            //CROW_LOG_INFO << "prefix : " << prefixPrint.ToString();
+            
+            it->Seek(prefix);
+            if(it->Valid() && it->key().starts_with(prefix)){
+            
+                rocksdb::Status status = db->Delete(rocksdb::WriteOptions(), key);
+                
+                if(status.ok()){
+                    ret = true;
+                    out = R"({"result":1})";
+                    
+                }else{
+                    out = R"({"result":-1})";
+                }
+                
+            }else{
+                out = R"({"result":0})";
+            }
+            
+        }catch (const std::runtime_error& error){
+            CROW_LOG_INFO << "Runtime Error: " <<  it->value().ToString();
+            
+            out = R"({"result":-1})";
+            
         }
+        
+        delete it;
+        
+    }else{
+        out = R"({"result":-1})";
     }
     
     return ret;
@@ -651,7 +690,6 @@ int Core::removeAll(std::string wild,  int skip /*= 0*/, int limit /*= -1*/){
         
         // create new iterator
         rocksdb::ReadOptions ro;
-        rocksdb::Iterator* it = db->NewIterator(ro);
         
         std::string pre = wild.substr(0, found);
         
@@ -666,32 +704,43 @@ int Core::removeAll(std::string wild,  int skip /*= 0*/, int limit /*= -1*/){
         int lowerbound  = skip - 1;
         int upperbound = skip + count;
         
-        rocksdb::WriteBatch batch;
-        for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
+        rocksdb::Iterator* it = db->NewIterator(ro);
+        
+        try{
             
-            if(wildcmp(wild.c_str(), it->key().ToString().c_str())){
-                i++;
+            rocksdb::WriteBatch batch;
+            for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
                 
-                if(i > lowerbound && (i < upperbound || limit == -1)){
-                    CROW_LOG_INFO << "w batch del: " << it->key().ToString();
-                    batch.Delete(it->key());
-                    out++;
+                if(wildcmp(wild.c_str(), it->key().ToString().c_str())){
+                    i++;
+                    
+                    if(i > lowerbound && (i < upperbound || limit == -1)){
+                        CROW_LOG_INFO << "w batch del: " << it->key().ToString();
+                        batch.Delete(it->key());
+                        out++;
+                        
+                    }
+                    
+                    if((i == upperbound) && (limit != -1)){
+                        break;
+                    }
                     
                 }
                 
-                if((i == upperbound) && (limit != -1)){
-                    break;
-                }
-                
-                
             }
+            
+            // do something after loop
+            delete it;
+            
+            rocksdb::Status s = db->Write(rocksdb::WriteOptions(), &batch);
+            
+        }catch (const std::runtime_error& error){
+            CROW_LOG_INFO << "Runtime Error: " << out << it->value().ToString();
+            
+             delete it;
             
         }
         
-        // do something after loop
-        delete it;
-        
-        rocksdb::Status s = db->Write(rocksdb::WriteOptions(), &batch);
         return out;
         
     }

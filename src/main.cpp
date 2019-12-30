@@ -367,9 +367,8 @@ int main(int argc, char ** argv) {
             std::string key = (x == nullptr ? "" : x);
             
             if(key.size() > 0){
-                if(Quarks::Core::_Instance.remove(key)){
-                    out = key;
-                }
+                Quarks::Core::_Instance.remove(key, out);
+                
             }else{
                 out = "{\"error\": \"parameter 'key' missing\"}";
             }
@@ -395,12 +394,11 @@ int main(int argc, char ** argv) {
            
             if(q.wild.size() > 0){
                 //Quarks::Core::_Instance.iterJson(wild, jsonResults);
-                int ret = Quarks::Core::_Instance.removeAll(q.wild, std::stoi(q.skip), std::stoi(q.limit));
-                out["result"] = std::to_string(ret);
+                int removeCount = Quarks::Core::_Instance.removeAll(q.wild, std::stoi(q.skip), std::stoi(q.limit));
+                out["result"] = removeCount;
                 
             }else{
                 out["error"] = "{\"error\":\"parameter 'keys' missing\"}";
-                
             }
             
         } catch (const std::runtime_error& error){
