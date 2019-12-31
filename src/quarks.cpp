@@ -382,7 +382,7 @@ bool Core::getSorted(std::string wild, std::string sortby, bool ascending,
         
 		i = -1;
         if(!ascending){
-            for(auto& x : Sorter::backwards(allResults)){
+            for(auto& x : Sorter::backwards< std::vector<crow::json::rvalue> >(allResults)){
                 i++;
                 if(i > lowerbound && (i < upperbound || limit == -1)){
                     try{
