@@ -451,11 +451,14 @@ int main(int argc, char ** argv) {
     };
 
     auto route_core_putjson_callback =
-    [putjson](const crow::request& req){
+    [put](const crow::request& req){
 
-        crow::json::wvalue out;
-        putjson(req.body, out);
+        //crow::json::wvalue out;
+        //putjson(req.body, out);
 
+        std::string out;
+        put(req.body, out);
+        
         return out;
 
         /*auto x = crow::json::load(req.body);        
