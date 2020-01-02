@@ -28,8 +28,11 @@ namespace Quarks {
         
         int getPort();
         
-        
+        bool insert(bool failIfExists, std::string body, std::string& out);
         bool put(std::string body, std::string& out);
+        bool post(std::string body, std::string& out);
+
+        bool exists(std::string key, std::string& out);
         bool get(std::string key, std::string& value);
         
         bool getAll(std::string wild,
@@ -55,8 +58,8 @@ namespace Quarks {
         
         bool remove(std::string key, std::string& out);
         int removeAll(std::string wild, int skip = 0, int limit = -1);
-        
         bool putJson(std::string key, crow::json::rvalue& x, crow::json::wvalue& out);
+        
         bool getJson(std::string key, crow::json::wvalue& out);
         
         

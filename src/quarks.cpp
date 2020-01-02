@@ -126,10 +126,9 @@ int Core::getPort(){
     return _portNumber;
 }
 
-bool Core::put(std::string body, std::string& out) {
-    
+bool Core::insert(bool failIfExists, std::string body, std::string& out){
     auto x = crow::json::load(body);
-   
+    
     if (!x){
         CROW_LOG_INFO << "invalid put body" << body;
         //out = "invalid put body";
@@ -143,6 +142,20 @@ bool Core::put(std::string body, std::string& out) {
     std::string key = x["key"].s();
     CROW_LOG_INFO << "key found :  " << key;
     
+    std::string result = "true";
+    std::string error = "";
+    
+    if(failIfExists){
+        if(exists(key, out)){
+            result = "false";
+            error = ",\"error\":\"key already exists\"";
+            
+            out = std::string("{") + R"("result":)" + result + error + std::string("}");
+            
+            return false;
+        }
+    }
+    
     std::string value = crow::json::dump(x["value"]);
     
     CROW_LOG_INFO << "put body : " << "key : " << key << ", value >> " << value << "\n";
@@ -150,9 +163,7 @@ bool Core::put(std::string body, std::string& out) {
     bool ret = false;
     
     rocksdb::Slice keySlice = key;
-    
-    std::string result = "true";
-    std::string error = "";
+   
     // modify the database
     if (dbStatus.ok()){
         ret = true;
@@ -177,11 +188,59 @@ bool Core::put(std::string body, std::string& out) {
     if(ret){
         out = std::string("{") + R"("result":)" + result + std::string("}");
     }else{
-         out = std::string("{") + R"("result":)" + result + error + std::string("}");
+        out = std::string("{") + R"("result":)" + result + error + std::string("}");
     }
     
     return  ret;
+}
+
+bool Core::put(std::string body, std::string& out) {
+    return insert(false, body, out);
     
+}
+
+bool Core::post(std::string body, std::string& out) {
+    return insert(true, body, out);
+    
+}
+
+
+bool Core::exists(std::string key, std::string& out){
+    bool ret = false;
+    
+    // Delete value
+    if (dbStatus.ok()){
+        rocksdb::ReadOptions ro;
+        rocksdb::Iterator* it = db->NewIterator(ro);
+        
+        try{
+            rocksdb::Slice prefix(key);
+            //rocksdb::Slice prefixPrint = prefix;
+            //CROW_LOG_INFO << "prefix : " << prefixPrint.ToString();
+            
+            it->Seek(prefix);
+            if(it->Valid() && it->key().starts_with(prefix)){
+               ret = true;
+               out = R"({"result":true})";
+                
+            }else{
+                out = R"({"result":false})";
+            }
+            
+        }catch (const std::runtime_error& error){
+            CROW_LOG_INFO << "Runtime Error: " <<  it->value().ToString();
+            
+            out = R"({"error":"runtime error"})";
+            
+        }
+        
+        delete it;
+        
+    }else{
+         out = R"({"error":"db status error"})";
+    }
+    
+    return ret;
 }
 
 bool Core::get(std::string key, std::string& value){

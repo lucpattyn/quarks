@@ -48,6 +48,8 @@ After initializing by issuing following command
 ```
 ./ocv_microservice_crow
 ```
+In most cases the following apis returns results in Json format
+{"result":true} or {"error":"error description"}
 
 ### GET REQUESTS
 
@@ -60,6 +62,7 @@ Run the following commands to
     f)   get count of keys by wildcard search
     g)  remove a key
     h)  remove keys by wildcard search
+    i)   check if a key already exists
         
 
 a)  Put key vs value 
@@ -79,6 +82,9 @@ a)  Put key vs value
 
 ```
  *If request is successful then the key would be returned as result
+ 
+ However, GET methods have a limitation with parameter lengths and body param cannot be too big.
+ In those cases you have to use the methods in POST section (putjson, postjson etc.)
 
 
 b) Get value against key
@@ -117,10 +123,18 @@ g)  remove a key
 ```
 http://0.0.0.0:18080/remove?key=g1_u1
 ```
+number of keys successfully deleted would be returned
 
 h) remove keys by wildcard search
 ```
 http://0.0.0.0:18080/removeall?keys=g1_u*
+``` 
+
+number of keys successfully deleted would be returned
+
+i) check if a key already exists
+```
+http://0.0.0.0:18080/exists?key=g1_u1
 ``` 
 
 ### POST REQUESTS
@@ -139,6 +153,17 @@ BODY:
 {"key":"g3_u3", "value":{ "msg":"m3"}}
 ```
 Note: In the json body, it is required to have a "key" attribute and a "value" attribute as a part of the json object.  The json object {"msg":"m3"}  under attribute "value" is saved against the key "g3_u3" in the persistent storage
+
+If the intention is to insert only if the key doesn't exist then use the following api:
+
+POST: http://0.0.0.0:18080/quarks/core/postjson
+```
+BODY:
+{"key":"g3_u3", "value":{ "msg":"m3"}}
+```
+If the key already exists then the call fails.
+This is more useful than calling the "exists" api to check if key exists and then call putjson,
+since it's reduces an extra api call
 
 ii) Retrieve the json object by key:
 POST: http://0.0.0.0:18080/quarks/core/getjson

@@ -133,6 +133,29 @@ int main(int argc, char ** argv) {
 
 
     };
+    
+    // core functionalities
+    auto post = [](std::string body, std::string& out)
+    {
+        
+        CROW_LOG_INFO << body;
+        
+        bool success = Quarks::Core::_Instance.post(body, out);
+        
+        
+        /*auto res = crow::response{os.str()};
+         res.add_header("Access-Control-Allow-Origin", "*");
+         res.add_header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
+         res.add_header("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+         
+         
+         return res;*/
+        
+        return success;
+        
+        
+    };
+
 
     auto route_core_put_callback =
     [put](const crow::request& req){
@@ -151,8 +174,44 @@ int main(int argc, char ** argv) {
         return out;
 
     };
+    
+    auto route_core_postjson_callback =
+    [post](const crow::request& req){
+        
+        std::string out;
+        post(req.body, out);
+        
+        return out;
+    };
 
 
+    auto route_core_existkey_callback =
+    [](const crow::request& req)
+    {
+        std::string out = "";
+        //CROW_LOG_INFO <<"get_key:";
+        //CROW_LOG_INFO<<req.url_params;
+        
+        try{
+            
+            auto x = req.url_params.get("key");
+            std::string key = (x == nullptr ? "" : x);
+            
+            if(key.size() > 0){
+                Quarks::Core::_Instance.exists(key, out);
+            }else{
+                out = "{\"error\": \"parameter 'key' missing\"}";
+            }
+            
+            
+        } catch (const std::runtime_error& error){
+            out = R"({"error":"parsing error"})";
+        }
+        
+        return out;
+        
+    };
+    
     auto route_core_getkey_callback =
     [](const crow::request& req)
     {
@@ -410,7 +469,7 @@ int main(int argc, char ** argv) {
     };
 
 
-    auto putjson = [](std::string body, crow::json::wvalue& out)
+    /*auto putjson = [](std::string body, crow::json::wvalue& out)
     {	
 
 	    auto x = crow::json::load(body);
@@ -434,13 +493,13 @@ int main(int argc, char ** argv) {
             out["error"] = error.what();
         }
        
-        /*auto res = crow::response{os.str()};
-        res.add_header("Access-Control-Allow-Origin", "*");
-        res.add_header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
-        res.add_header("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+        //auto res = crow::response{os.str()};
+        //res.add_header("Access-Control-Allow-Origin", "*");
+        //res.add_header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
+        //res.add_header("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
          
 
-        return res;*/
+        //return res;
 
         if(!success){
             out["error"] = "save failed";
@@ -448,7 +507,7 @@ int main(int argc, char ** argv) {
         }
 
 
-    };
+    };*/
 
     auto route_core_putjson_callback =
     [put](const crow::request& req){
@@ -513,24 +572,6 @@ int main(int argc, char ** argv) {
         return out;
         
     };
-
-    
-
-    /*auto route_core_put_callback =
-    [putjson](const crow::request& req)
-    {
-	auto x = req.url_params.get("body");
-	if(x == nullptr){
-	    x = req.body;
-	}
-	
-	crow::json::wvalue out;
-	putjson(x, out);
-
-
-	return out;
-        
-    };*/
 
     
     auto route_core_searchjson_callback =
@@ -689,6 +730,9 @@ int main(int argc, char ** argv) {
     CROW_ROUTE(app, "/put")
     (route_core_put_callback);
 
+    CROW_ROUTE(app, "/exists")
+    (route_core_existkey_callback);
+
     CROW_ROUTE(app, "/get")
     (route_core_getkey_callback);
 
@@ -715,6 +759,9 @@ int main(int argc, char ** argv) {
 
     CROW_ROUTE(app, "/putjson")
     .methods("POST"_method)(route_core_putjson_callback);
+    
+    CROW_ROUTE(app, "/postjson")
+    .methods("POST"_method)(route_core_postjson_callback);
   
     CROW_ROUTE(app, "/getjson")
     .methods("GET"_method, "POST"_method)(route_core_getjson_callback);
