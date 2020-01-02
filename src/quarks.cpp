@@ -219,7 +219,7 @@ bool Core::exists(std::string key, std::string& out){
             //CROW_LOG_INFO << "prefix : " << prefixPrint.ToString();
             
             it->Seek(prefix);
-            if(it->Valid() && it->key().starts_with(prefix)){
+            if(it->Valid() && !key.compare(it->key().ToString())){
                ret = true;
                out = R"({"result":true})";
                 
@@ -707,7 +707,7 @@ bool Core::remove(std::string key, std::string& out){
             //CROW_LOG_INFO << "prefix : " << prefixPrint.ToString();
             
             it->Seek(prefix);
-            if(it->Valid() && it->key().starts_with(prefix)){
+            if(it->Valid() && !key.compare(it->key().ToString())){
             
                 rocksdb::Status status = db->Delete(rocksdb::WriteOptions(), key);
                 
