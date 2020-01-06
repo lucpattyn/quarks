@@ -208,7 +208,6 @@ bool Core::post(std::string body, std::string& out) {
 bool Core::exists(std::string key, std::string& out){
     bool ret = false;
     
-    // Delete value
     if (dbStatus.ok()){
         rocksdb::ReadOptions ro;
         rocksdb::Iterator* it = db->NewIterator(ro);
@@ -1014,6 +1013,55 @@ bool Core::iterJson(std::string wild,
     return false;
     
 }
+
+bool Core::getList(crow::json::rvalue& args,
+                      std::vector<crow::json::wvalue>& matchedResults,
+                      int skip /*= 0*/, int limit /*= -1*/) {
+    
+    
+    bool ret = true;
+    
+    if (dbStatus.ok()){
+        
+        try{
+            int i  = -1;
+            int count = (limit == -1) ? INT_MAX : limit;
+            
+            int lowerbound  = skip - 1;
+            int upperbound = skip + count;
+            
+            crow::json::wvalue out;
+            crow::json::wvalue w;
+            
+            // iterate all entries
+            for (auto key : args) {
+                std::string s = key.s();
+                if(getJson(s, out)){
+                    w["value"] = std::move(out);
+                }else{
+                    w["error"] = i+1; // i is incremented later ..
+                }
+                   
+                w["key"] = s;
+                   
+               i++;
+               if(i > lowerbound && (i < upperbound || limit == -1)){
+                   matchedResults.push_back(std::move(w));
+               }
+                
+            }
+            
+        } catch (const std::runtime_error& error){
+            ret = false;
+            
+        }
+        
+    }
+    
+    return ret;
+    
+}
+
 
 
 bool Core::searchJson(crow::json::rvalue& args,

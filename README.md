@@ -83,7 +83,7 @@ a)  Put key vs value
 ```
  *If request is successful then the key would be returned as result
  
- However, GET methods have a limitation with parameter lengths and body param cannot be too big.
+ However, GET type of requests have a limitation with parameter lengths and body param cannot be too big.
  In those cases you have to use the methods in POST section (putjson, postjson etc.)
 
 
@@ -137,17 +137,24 @@ i) check if a key already exists
 http://0.0.0.0:18080/exists?key=g1_u1
 ``` 
 
+j) get a list of key value pair given a list of keys
+```
+http://0.0.0.0:18080/getlist?body=["g1_u1", "g2_u2"]
+``` 
+(You can specify skip and limit to this as well but should not need it)
+
 ### POST REQUESTS
 
 Run the following commands to 
-    i) put a json object against key, 
-    ii) get that object against key 
+    i)   put a json object against key, 
+    ii)  get that object against key 
     iii) do a wildcard search of keys 
-    iv) apply filters and joins
+    iv) get a list of key value pair given a list of keys
+     v) apply filters and joins
 
 
  i) Put a json object against a key:
- POST: http://0.0.0.0:18080/quarks/core/putjson
+ POST: http://0.0.0.0:18080/putjson
 ```
 BODY:
 {"key":"g3_u3", "value":{ "msg":"m3"}}
@@ -156,7 +163,7 @@ Note: In the json body, it is required to have a "key" attribute and a "value" a
 
 If the intention is to insert only if the key doesn't exist then use the following api:
 
-POST: http://0.0.0.0:18080/quarks/core/postjson
+POST: http://0.0.0.0:18080/postjson
 ```
 BODY:
 {"key":"g3_u3", "value":{ "msg":"m3"}}
@@ -165,49 +172,55 @@ If the key already exists then the call fails.
 This is more useful than calling the "exists" api to check if key exists and then call putjson,
 since it's reduces an extra api call
 
+
 ii) Retrieve the json object by key:
-POST: http://0.0.0.0:18080/quarks/core/getjson
+POST: http://0.0.0.0:18080/getjson
 ```
 BODY: {"key":"g3_u3"}
 ```
 iii) Retrieve an array of json objects by wildcard matching of keys..
-POST: http://0.0.0.0:18080/quarks/core/iterjson
+POST: http://0.0.0.0:18080/iterjson
 ```
 BODY: {"keys":"g3_u*"}
 ```
-
 To test this API,
 You could  post a few values against keys with putjson, for example 
 
 ```
 BODY:
-POST: http://0.0.0.0:18080/quarks/core/putjson
+POST: http://0.0.0.0:18080/putjson
 {"key":"g1_u2", "value":{"msg":"m1"}}
 
-POST: http://0.0.0.0:18080/quarks/core/putjson
+POST: http://0.0.0.0:18080/putjson
 BODY:
 {"key":"g1_u2", "value":{"msg":"m2"}}
 
-POST: http://0.0.0.0:18080/quarks/core/putjson
+POST: http://0.0.0.0:18080/putjson
 BODY:
 {"key":"g3_u3", "value":{"msg":"m3"}}
 
 ```
-
 and then check the results by 
-
 ```
-POST: http://0.0.0.0:18080/quarks/core/iterjson
+POST: http://0.0.0.0:18080/iterjson
 BODY: {"keys":"g3_u*"}
 ```
 
-iv) Filters and Joins: There is also provision to run ORM style queries with searchjson and applying filters
+iv) get a list of key value pair given a list of keys
+```
+POST: http://0.0.0.0:18080/getlist
+BODY: ["g1_u1", "g2_u2"]
+
+```
+(You can specify skip and limit as query parameters but should not need it)
+
+
+v) Filters and Joins: There is also provision to run ORM style queries with searchjson and applying filters
 
 POST: http://0.0.0.0:18080/quarks/core/searchjson
 
 Sample Query Format for
 "querying items which are up for sale with key like item* (i.e item1, item2 etc.) , then find the sellers of such items (items has a seller_id field that contains the user_id of the seller) "
-
 ```
 BODY:
 {
@@ -250,7 +263,7 @@ BODY:
 ```
 
 Finally, check the results by 
-POST: http://0.0.0.0:18080/quarks/core/searchjson
+POST: http://0.0.0.0:18080/searchjson
 BODY:
 ```
 {

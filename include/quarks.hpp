@@ -67,6 +67,10 @@ namespace Quarks {
                       std::vector<crow::json::wvalue>& matchedResults,
                       int skip = 0, int limit = -1);
     
+        bool getList(crow::json::rvalue& args,
+                     std::vector<crow::json::wvalue>& matchedResults,
+                     int skip = 0, int limit = -1);
+        
         bool searchJson(crow::json::rvalue& args,
                         std::vector<crow::json::wvalue>& matchedResults,
                         int skip = 0, int limit = -1);
