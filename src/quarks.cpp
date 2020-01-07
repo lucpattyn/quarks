@@ -126,6 +126,44 @@ int Core::getPort(){
     return _portNumber;
 }
 
+bool getKeyValuePair(std::string key, std::string& value, std::string& out){
+    bool ret = false;
+    
+    if (dbStatus.ok()){
+        rocksdb::ReadOptions ro;
+        rocksdb::Iterator* it = db->NewIterator(ro);
+        
+        try{
+            rocksdb::Slice prefix(key);
+            //rocksdb::Slice prefixPrint = prefix;
+            //CROW_LOG_INFO << "prefix : " << prefixPrint.ToString();
+            
+            it->Seek(prefix);
+            if(it->Valid() && !key.compare(it->key().ToString())){
+                ret = true;
+                value = it->value().ToString();
+                out = R"({"result":true})";
+                
+            }else{
+                out = R"({"result":false})";
+            }
+            
+        }catch (const std::runtime_error& error){
+            CROW_LOG_INFO << "Runtime Error: " <<  it->value().ToString();
+            
+            out = R"({"error":"runtime error"})";
+            
+        }
+        
+        delete it;
+        
+    }else{
+        out = R"({"error":"db status error"})";
+    }
+    
+    return ret;
+}
+
 bool Core::insert(bool failIfExists, std::string body, std::string& out){
     auto x = crow::json::load(body);
     
@@ -145,8 +183,10 @@ bool Core::insert(bool failIfExists, std::string body, std::string& out){
     std::string result = "true";
     std::string error = "";
     
+    std::string readValue;
+    bool foundKey = getKeyValuePair(key, readValue, out);
     if(failIfExists){
-        if(exists(key, out)){
+        if(foundKey){
             result = "false";
             error = ",\"error\":\"key already exists\"";
             
@@ -156,9 +196,38 @@ bool Core::insert(bool failIfExists, std::string body, std::string& out){
         }
     }
     
-    std::string value = crow::json::dump(x["value"]);
+    crow::json::wvalue w;
+    crow::json::wvalue putValue = x["value"];
     
-    CROW_LOG_INFO << "put body : " << "key : " << key << ", value >> " << value << "\n";
+    bool moveValueJson = true;
+    if(foundKey){
+        crow::json::wvalue existingValues = crow::json::load(readValue);
+        
+        std::vector<std::string> putValueKeys = putValue.keys();
+        
+        if(putValueKeys.size() > 0){
+            moveValueJson = false;
+            
+            std::vector<std::string> existingKeys = existingValues.keys();
+            
+            for(auto e : existingKeys){
+                w[e] = std::move(existingValues[e]);
+            }
+            for(auto p : putValueKeys){
+                w[p] = std::move(putValue[p]);
+            }
+            
+        }
+        
+    }
+    
+    if(moveValueJson){
+        w = std::move(putValue);
+    }
+    
+    std::string writeValue = crow::json::dump(w);
+    
+    CROW_LOG_INFO << "put body : " << "key : " << key << ", value >> " << writeValue << "\n";
     
     bool ret = false;
     
@@ -168,7 +237,7 @@ bool Core::insert(bool failIfExists, std::string body, std::string& out){
     if (dbStatus.ok()){
         ret = true;
         
-        rocksdb::Status status = db->Put(rocksdb::WriteOptions(), keySlice, value);
+        rocksdb::Status status = db->Put(rocksdb::WriteOptions(), keySlice, writeValue);
         if(!status.ok()){
             //result = "{\"error\":\"data failed to save\"}";
             result = "false";
@@ -204,42 +273,9 @@ bool Core::post(std::string body, std::string& out) {
     
 }
 
-
 bool Core::exists(std::string key, std::string& out){
-    bool ret = false;
-    
-    if (dbStatus.ok()){
-        rocksdb::ReadOptions ro;
-        rocksdb::Iterator* it = db->NewIterator(ro);
-        
-        try{
-            rocksdb::Slice prefix(key);
-            //rocksdb::Slice prefixPrint = prefix;
-            //CROW_LOG_INFO << "prefix : " << prefixPrint.ToString();
-            
-            it->Seek(prefix);
-            if(it->Valid() && !key.compare(it->key().ToString())){
-               ret = true;
-               out = R"({"result":true})";
-                
-            }else{
-                out = R"({"result":false})";
-            }
-            
-        }catch (const std::runtime_error& error){
-            CROW_LOG_INFO << "Runtime Error: " <<  it->value().ToString();
-            
-            out = R"({"error":"runtime error"})";
-            
-        }
-        
-        delete it;
-        
-    }else{
-         out = R"({"error":"db status error"})";
-    }
-    
-    return ret;
+    std::string value;
+    return getKeyValuePair(key, value, out);
 }
 
 bool Core::get(std::string key, std::string& value){
@@ -806,7 +842,7 @@ int Core::removeAll(std::string wild,  int skip /*= 0*/, int limit /*= -1*/){
     return false;
 }
 
-bool Core::putJson(std::string key, crow::json::rvalue& x, crow::json::wvalue& out) {
+/*bool Core::putJson(std::string key, crow::json::rvalue& x, crow::json::wvalue& out) {
     
     bool ret = true;
     
@@ -830,13 +866,14 @@ bool Core::putJson(std::string key, crow::json::rvalue& x, crow::json::wvalue& o
     }
     
     std::stringstream ss;
-    ss<< "{" << std::quoted("result") << ":" << std::quoted(key) << "}";
+    std::string result = ret?"true" : "false";
+    ss<< "{" << std::quoted("result") << ":" << std::quoted(result) << "}";
     
     out = crow::json::load(ss.str());
     
     return  ret;
     
-}
+}*/
 
 bool Core::getJson(std::string key, crow::json::wvalue& out){
     
