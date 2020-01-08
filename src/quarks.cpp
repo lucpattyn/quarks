@@ -164,18 +164,7 @@ bool getKeyValuePair(std::string key, std::string& value, std::string& out){
     return ret;
 }
 
-bool Core::insert(bool failIfExists, std::string body, std::string& out){
-    auto x = crow::json::load(body);
-    
-    if (!x){
-        CROW_LOG_INFO << "invalid put body" << body;
-        //out = "invalid put body";
-        
-        out = "{\"error\": \"Invalid put body\"}";
-        
-        return false;
-        
-    }
+bool insertKeyValuePair(bool failIfExists, crow::json::rvalue& x, std::string& out){
     
     std::string key = x["key"].s();
     CROW_LOG_INFO << "key found :  " << key;
@@ -232,7 +221,7 @@ bool Core::insert(bool failIfExists, std::string body, std::string& out){
     bool ret = false;
     
     rocksdb::Slice keySlice = key;
-   
+    
     // modify the database
     if (dbStatus.ok()){
         ret = true;
@@ -263,15 +252,64 @@ bool Core::insert(bool failIfExists, std::string body, std::string& out){
     return  ret;
 }
 
+bool Core::insert(bool failIfExists, std::string body, std::string& out){
+    auto x = crow::json::load(body);
+    
+    if (!x){
+        CROW_LOG_INFO << "invalid put body" << body;
+        //out = "invalid put body";
+        
+        out = "{\"error\": \"Invalid put body\"}";
+        
+        return false;
+        
+    }
+    
+    return insertKeyValuePair(failIfExists, x, out);
+}
+
+bool Core::post(std::string body, std::string& out) {
+    return insert(true, body, out);
+   
+}
+
 bool Core::put(std::string body, std::string& out) {
     return insert(false, body, out);
     
 }
 
-bool Core::post(std::string body, std::string& out) {
-    return insert(true, body, out);
+bool Core::putAtom(crow::json::rvalue& x, std::string& out){
+    out = std::string("{") + R"("result":false)" + std::string("}");
+    
+    bool ret = true;
+    
+    for(auto v : x){
+        ret &= insertKeyValuePair(false, v, out);
+        if(!ret){
+            break;
+        }
+    }
+    
+    return ret;
+}
+
+bool Core::putAtom(std::string body, std::string& out) {
+    auto x = crow::json::load(body);
+    CROW_LOG_INFO << "put body" << body;
+    if (!x){
+        CROW_LOG_INFO << "invalid put body" << body;
+        //out = "invalid put body";
+        
+        out = "{\"error\": \"Invalid put body\"}";
+        
+        return false;
+        
+    }
+    
+    return putAtom(x, out);
     
 }
+
 
 bool Core::exists(std::string key, std::string& out){
     std::string value;
@@ -609,6 +647,103 @@ bool Core::getKeys(std::string wild,
     return ret && dbStatus.ok();
 }
 
+bool Core::getKeysReversed(std::string wild,
+                   std::vector<crow::json::wvalue>& matchedResults,
+                   int skip /*= 0*/, int limit /*= -1*/) {
+    
+    bool ret = true;
+    if (dbStatus.ok()){
+        
+        std::size_t found = wild.find("*");
+        if(found != std::string::npos && found == 0){
+            return false;
+        }
+        
+        // create new iterator
+        rocksdb::ReadOptions ro;
+        rocksdb::Iterator* it = db->NewIterator(ro);
+        
+        std::string pre = wild.substr(0, found);
+        
+        rocksdb::Slice prefix(pre);
+        
+        rocksdb::Slice prefixPrint = prefix;
+        CROW_LOG_INFO << "prefix : " << prefixPrint.ToString();
+        
+        
+        int i  = -1;
+        int count = (limit == -1) ? INT_MAX : limit;
+        
+        int lowerbound  = skip - 1;
+        int upperbound = skip + count;
+        
+        std::vector<crow::json::wvalue> allResults;
+        
+        for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
+            
+            if(wildcmp(wild.c_str(), it->key().ToString().c_str())){
+                
+                crow::json::wvalue w;
+                try{
+                    auto x = crow::json::load(it->value().ToString());
+                    
+                    if(!x){
+                        w["value"] =  crow::json::load(std::string("[\"") +
+                                                       it->value().ToString() + std::string("\"]"));
+                        
+                    }else{
+                        w["value"] = x;
+                    }
+                    
+                }catch (const std::runtime_error& error){
+                    CROW_LOG_INFO << "Runtime Error: " << i << it->value().ToString();
+                    
+                    w["error"] =  it->value().ToString();
+                    
+                    allResults.push_back(std::move(w));
+                    
+                    ret = false;
+                }
+                
+                w["key"] = it->key().ToString();
+                
+                //CROW_LOG_INFO << "w key fwd: " << crow::json::dump(w) << " skip: "
+                //<< skip << ", limit: " << limit;
+                
+                allResults.push_back(std::move(w));
+                
+                
+            }
+        }
+        
+        for(auto& x : Sorter::backwards< std::vector<crow::json::wvalue> >(allResults)){
+            i++;
+            if(i > lowerbound && (i < upperbound || limit == -1)){
+                try{
+                    //crow::json::wvalue wb = x;
+                    //CROW_LOG_INFO << "sorted object: " << i << ". " << crow::json::dump(w);
+                    matchedResults.push_back(std::move(x));
+                    
+                }catch (const std::runtime_error& error){
+                    CROW_LOG_INFO << "Runtime Sort Error 4.1: " << error.what() << " , " << i;
+                }
+            }
+            
+            if((i == upperbound) && (limit != -1)){
+                break;
+            }
+        }
+        
+        
+        // do something after loop
+        
+        delete it;
+        
+    }
+    
+    return ret && dbStatus.ok();
+}
+
 bool Core::getCount(std::string wild,
                    long& out,
                    int skip /*= 0*/, int limit /*= -1*/) {
@@ -772,6 +907,7 @@ bool Core::remove(std::string key, std::string& out){
     }
     
     return ret;
+    
 }
 
 int Core::removeAll(std::string wild,  int skip /*= 0*/, int limit /*= -1*/){
@@ -841,6 +977,49 @@ int Core::removeAll(std::string wild,  int skip /*= 0*/, int limit /*= -1*/){
     
     return false;
 }
+
+bool Core::removeAtom(crow::json::rvalue& x, std::string& out) {
+    
+    bool ret = true;
+    
+    int i = 0;
+    for(auto v : x){
+        ret &= remove(v.s(), out);
+        if(!ret){
+            break;
+        }
+        
+        i++;
+    }
+    if(ret){
+        out = std::string("{") + R"("result":)" + std::to_string(i) + std::string("}");
+    
+    }else{
+        std::string error = ",\"error\":\"could not remove all keys\"";
+        out = std::string("{") + R"("result":)" + std::to_string(i) + error + std::string("}");
+    }
+        
+    return ret;
+    
+}
+
+bool Core::removeAtom(std::string body, std::string& out) {
+    auto x = crow::json::load(body);
+    
+    if (!x){
+        CROW_LOG_INFO << "invalid put body" << body;
+        //out = "invalid put body";
+        
+        out = "{\"error\": \"Invalid put body\"}";
+        
+        return false;
+        
+    }
+    
+    return removeAtom(x, out);
+    
+}
+
 
 /*bool Core::putJson(std::string key, crow::json::rvalue& x, crow::json::wvalue& out) {
     
@@ -1241,6 +1420,32 @@ bool Core::searchJson(crow::json::rvalue& args,
     
 }
 
+bool Core::atom(std::string body, std::string& out) {
+    auto x = crow::json::load(body);
+    
+    if (!x){
+        CROW_LOG_INFO << "invalid put body" << body;
+        //out = "invalid put body";
+        
+        out = "{\"error\": \"Invalid put body\"}";
+        
+        return false;
+        
+    }
+    
+    out = std::string("{") + R"("result":false)" + std::string("}");
+    
+    bool ret = true;
+    
+    auto put = x["put"];
+    auto rem = x["remove"];
+    
+    ret &= putAtom(put, out);
+    ret &= removeAtom(rem, out);
+    
+    return ret;
+    
+}
 
 
 bool Core::fileTransfer(std::string moduleName, std::string funcName, std::string channelName,

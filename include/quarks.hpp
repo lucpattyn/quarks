@@ -29,8 +29,10 @@ namespace Quarks {
         int getPort();
         
         bool insert(bool failIfExists, std::string body, std::string& out);
-        bool put(std::string body, std::string& out);
         bool post(std::string body, std::string& out);
+        bool put(std::string body, std::string& out);
+        bool putAtom(crow::json::rvalue& x, std::string& out);
+        bool putAtom(std::string body, std::string& out);
 
         bool exists(std::string key, std::string& out);
         bool get(std::string key, std::string& value);
@@ -47,6 +49,9 @@ namespace Quarks {
                     std::vector<crow::json::wvalue>& matchedResults,
                     int skip = 0, int limit = -1);
         
+        bool getKeysReversed(std::string wild,
+                     std::vector<crow::json::wvalue>& matchedResults,
+                     int skip = 0, int limit = -1);
         
         bool getCount(std::string wild,
                      long& out,
@@ -58,6 +63,8 @@ namespace Quarks {
         
         bool remove(std::string key, std::string& out);
         int removeAll(std::string wild, int skip = 0, int limit = -1);
+        bool removeAtom(crow::json::rvalue& x, std::string& out);
+        bool removeAtom(std::string body, std::string& out);
         
         //bool putJson(std::string key, crow::json::rvalue& x, crow::json::wvalue& out);
         
@@ -75,6 +82,10 @@ namespace Quarks {
         bool searchJson(crow::json::rvalue& args,
                         std::vector<crow::json::wvalue>& matchedResults,
                         int skip = 0, int limit = -1);
+        
+        bool atom(std::string body, std::string& out);
+        
+        /////// r&d ////////////////
 
         bool openTCPSocketClient();
         

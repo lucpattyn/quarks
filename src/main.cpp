@@ -109,39 +109,13 @@ int main(int argc, char ** argv) {
     
 #endif
     
-    
-    
-
-    // core functionalities
-    auto put = [](std::string body, std::string& out)
-    {	
-	
-        CROW_LOG_INFO << body;
-	
-        bool success = Quarks::Core::_Instance.put(body, out);
-               
-       
-        /*auto res = crow::response{os.str()};
-        res.add_header("Access-Control-Allow-Origin", "*");
-        res.add_header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
-        res.add_header("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
-        
-
-        return res;*/
-
-    	return success;
-
-
-    };
-    
-    // core functionalities
+///////////////////////////////////////////
+/////////// core functionalities //////////
+///////////////////////////////////////////
     auto post = [](std::string body, std::string& out)
     {
         
         CROW_LOG_INFO << body;
-        
-        bool success = Quarks::Core::_Instance.post(body, out);
-        
         
         /*auto res = crow::response{os.str()};
          res.add_header("Access-Control-Allow-Origin", "*");
@@ -150,13 +124,68 @@ int main(int argc, char ** argv) {
          
          
          return res;*/
+
+        
+        bool success = Quarks::Core::_Instance.post(body, out);
         
         return success;
         
         
     };
+    
+    auto put = [](std::string body, std::string& out)
+    {
+        CROW_LOG_INFO << body;
+	
+        bool success = Quarks::Core::_Instance.put(body, out);
+       
+        
+    	return success;
 
 
+    };
+   
+    auto putatom = [](std::string body, std::string& out)
+    {
+        CROW_LOG_INFO << body;
+        
+        bool success = Quarks::Core::_Instance.putAtom(body, out);
+        
+        return success;
+        
+    };
+    
+    auto removeatom = [](std::string body, std::string& out)
+    {
+        CROW_LOG_INFO << body;
+        
+        bool success = Quarks::Core::_Instance.removeAtom(body, out);
+        
+        return success;
+        
+    };
+    
+    auto atom = [](std::string body, std::string& out)
+    {
+        CROW_LOG_INFO << body;
+        
+        bool success = Quarks::Core::_Instance.atom(body, out);
+        
+        return success;
+        
+    };
+
+
+    auto route_core_postjson_callback =
+    [post](const crow::request& req){
+        
+        std::string out;
+        post(req.body, out);
+        
+        return out;
+    };
+
+    
     auto route_core_put_callback =
     [put](const crow::request& req){
 
@@ -175,15 +204,23 @@ int main(int argc, char ** argv) {
 
     };
     
-    auto route_core_postjson_callback =
-    [post](const crow::request& req){
+    auto route_core_putatom_callback =
+    [putatom](const crow::request& req){
         
         std::string out;
-        post(req.body, out);
+        
+        std::string body = req.body;
+        
+        auto x = req.url_params.get("body");
+        if(x != nullptr){
+            body = x;
+        }
+        
+        putatom(body, out);
         
         return out;
+        
     };
-
 
     auto route_core_existkey_callback =
     [](const crow::request& req)
@@ -332,8 +369,16 @@ int main(int argc, char ** argv) {
             
             bool ret = false;
             if(q.wild.size() > 0){
-                //Quarks::Core::_Instance.iterJson(wild, jsonResults);
-                ret = Quarks::Core::_Instance.getKeys(q.wild, jsonResults, std::stoi(q.skip), std::stoi(q.limit));
+                auto rev = req.url_params.get("reverse");
+                std::string reverse = (rev == nullptr || !strlen(rev))  ? "false" : rev;
+                
+                if(!reverse.compare("true")){
+                    ret = Quarks::Core::_Instance.getKeysReversed(q.wild, jsonResults,
+                                                          std::stoi(q.skip), std::stoi(q.limit));
+                }else{
+                    ret = Quarks::Core::_Instance.getKeys(q.wild, jsonResults,
+                                                          std::stoi(q.skip), std::stoi(q.limit));
+                }
                 
                 out["result"] = std::move(jsonResults);
                 if(!ret){
@@ -467,7 +512,24 @@ int main(int argc, char ** argv) {
         return out;
         
     };
-
+    
+    auto route_core_removeatom_callback =
+    [removeatom](const crow::request& req){
+        
+        std::string out;
+        
+        std::string body = req.body;
+        
+        auto x = req.url_params.get("body");
+        if(x != nullptr){
+            body = x;
+        }
+        
+        removeatom(body, out);
+        
+        return out;
+        
+    };
 
     /*auto putjson = [](std::string body, crow::json::wvalue& out)
     {	
@@ -551,6 +613,8 @@ int main(int argc, char ** argv) {
 
     };
     
+   
+    
     auto route_core_getjson_callback =
     [](const crow::request& req)
     {
@@ -611,7 +675,7 @@ int main(int argc, char ** argv) {
         return w;
         
     };
-
+   
     
     auto route_core_searchjson_callback =
     [](const crow::request& req){
@@ -640,7 +704,25 @@ int main(int argc, char ** argv) {
         
         return w;
         
-    };   
+    };
+    
+    auto route_core_atom_callback =
+    [atom](const crow::request& req){
+        
+        std::string out;
+        
+        std::string body = req.body;
+        
+        auto x = req.url_params.get("body");
+        if(x != nullptr){
+            body = x;
+        }
+        
+        atom(body, out);
+        
+        return out;
+        
+    };
 
     auto route_core_filetransfer_callback=
     [](/*const crow::request& req*/){
@@ -782,7 +864,7 @@ int main(int argc, char ** argv) {
     
     CROW_ROUTE(app, "/getsorted")
     (route_core_getsorted_callback);
-    
+   
     CROW_ROUTE(app, "/getkeys")
     (route_core_getkeys_callback);
     
@@ -797,12 +879,21 @@ int main(int argc, char ** argv) {
   
     CROW_ROUTE(app, "/removeall")
     (route_core_removekeys_callback);
+    
+    CROW_ROUTE(app, "/remove/atom")
+    .methods("GET"_method, "POST"_method)(route_core_removeatom_callback);
 
     CROW_ROUTE(app, "/putjson")
     .methods("POST"_method)(route_core_putjson_callback);
     
     CROW_ROUTE(app, "/postjson")
     .methods("POST"_method)(route_core_postjson_callback);
+    
+    CROW_ROUTE(app, "/put/atom")
+    .methods("GET"_method, "POST"_method)(route_core_putatom_callback);
+    
+    CROW_ROUTE(app, "/atom")
+     .methods("GET"_method, "POST"_method)(route_core_atom_callback);
   
     CROW_ROUTE(app, "/getjson")
     .methods("GET"_method, "POST"_method)(route_core_getjson_callback);
@@ -812,6 +903,7 @@ int main(int argc, char ** argv) {
     
     CROW_ROUTE(app, "/searchjson")
     .methods("GET"_method, "POST"_method)(route_core_searchjson_callback);
+    
     
     CROW_ROUTE(app, "/opentcpsocket")
     .methods("GET"_method, "POST"_method)(route_core_opentcpsocket_callback);
