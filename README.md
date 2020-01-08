@@ -193,7 +193,7 @@ POST: http://0.0.0.0:18080/putjson
 
 POST: http://0.0.0.0:18080/putjson
 BODY:
-{"key":"g1_u2", "value":{"msg":"m2"}}
+{"key":"g2_u2", "value":{"msg":"m2"}}
 
 POST: http://0.0.0.0:18080/putjson
 BODY:
@@ -206,7 +206,7 @@ POST: http://0.0.0.0:18080/iterjson
 BODY: {"keys":"g3_u*"}
 ```
 
-iv) get a list of key value pair given a list of keys
+iv) Get a list of key value pair given a list of keys
 ```
 POST: http://0.0.0.0:18080/getlist
 BODY: ["g1_u1", "g2_u2"]
@@ -215,7 +215,50 @@ BODY: ["g1_u1", "g2_u2"]
 (You can specify skip and limit as query parameters but should not need it)
 
 
-v) Filters and Joins: There is also provision to run ORM style queries with searchjson and applying filters
+v) Atoms: Atoms are set of Put and Remote operations which can be executed in a single API call
+
+To run a set of put operations together, run:
+
+```
+POST: http://0.0.0.0:18080/put/atom
+
+BODY:
+[
+    {"key":"g1_u2", "value":{"msg":"m1"}},
+    {"key":"g2_u2", "value":{"msg":"m2"}},
+    {"key":"g3_u3", "value":{"msg":"m3"}}
+]
+
+```
+
+To run a set of remove operations together, run:
+```
+POST: http://0.0.0.0:18080/remove/atom
+
+BODY:
+["g1_u1","g1_u2", "g3_u3"]
+
+```
+
+To run a set of remove operations followed by a set of put operations, run:
+```
+POST: http://0.0.0.0:18080/atom
+
+BODY:
+{
+put:[
+    {"key":"g1_u2", "value":{"msg":"m1"}},
+    {"key":"g2_u2", "value":{"msg":"m2"}},
+    {"key":"g3_u3", "value":{"msg":"m3"}}
+    }],
+remove:["g1_u1","g1_u2", "g3_u3"]   
+
+}
+
+```
+* Note, remove operations will always be executed before put
+
+vi) Filters and joins: There is also provision to run ORM style queries with searchjson and applying filters
 
 POST: http://0.0.0.0:18080/quarks/core/searchjson
 

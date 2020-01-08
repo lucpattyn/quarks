@@ -998,7 +998,7 @@ bool Core::removeAtom(crow::json::rvalue& x, std::string& out) {
         std::string error = ",\"error\":\"could not remove all keys\"";
         out = std::string("{") + R"("result":)" + std::to_string(i) + error + std::string("}");
     }
-        
+    
     return ret;
     
 }
@@ -1437,11 +1437,13 @@ bool Core::atom(std::string body, std::string& out) {
     
     bool ret = true;
     
-    auto put = x["put"];
     auto rem = x["remove"];
+    auto put = x["put"];
     
-    ret &= putAtom(put, out);
     ret &= removeAtom(rem, out);
+    if(ret){
+        ret &= putAtom(put, out);
+    }
     
     return ret;
     
