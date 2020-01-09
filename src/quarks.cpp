@@ -283,7 +283,8 @@ bool Core::putAtom(crow::json::rvalue& x, std::string& out){
     
     bool ret = true;
     
-    for(auto v : x){
+    for(auto& v : x){
+        CROW_LOG_INFO << ".. put: " << crow::json::dump(v);
         ret &= insertKeyValuePair(false, v, out);
         if(!ret){
             break;
@@ -890,6 +891,7 @@ bool Core::remove(std::string key, std::string& out){
                 }
                 
             }else{
+                ret = true;
                 out = R"({"result":0})";
             }
             
@@ -983,7 +985,7 @@ bool Core::removeAtom(crow::json::rvalue& x, std::string& out) {
     bool ret = true;
     
     int i = 0;
-    for(auto v : x){
+    for(auto& v : x){
         ret &= remove(v.s(), out);
         if(!ret){
             break;
@@ -1437,12 +1439,10 @@ bool Core::atom(std::string body, std::string& out) {
     
     bool ret = true;
     
-    auto rem = x["remove"];
-    auto put = x["put"];
-    
-    ret &= removeAtom(rem, out);
+    //CROW_LOG_INFO << ".. atom: " << crow::json::dump(x);    
+    ret &= removeAtom(crow::json::dump(x["rem"]), out);
     if(ret){
-        ret &= putAtom(put, out);
+        ret &= putAtom(crow::json::dump(x["put"]), out);
     }
     
     return ret;

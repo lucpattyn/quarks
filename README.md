@@ -53,17 +53,19 @@ In most cases the following apis returns results in Json format
 
 ### GET REQUESTS
 
-Run the following commands to 
-    a)  put a key value pair 
-    b)  get value object (json or string) against key 
-    c)  list values by wildcard search with keys
-    d)  list sorted values by wildcard search with keys
+Available features:
+    a)  Put a key value pair 
+    b)  Get value object (json or string) against key 
+    c)  List values by wildcard search with keys
+    d)  List sorted values by wildcard search with keys
     e)  List keys vs values by wildcard search with keys
-    f)   get count of keys by wildcard search
-    g)  remove a key
-    h)  remove keys by wildcard search
-    i)   check if a key already exists
-        
+    f)   Get count of keys by wildcard search
+    g)  Remove a key
+    h)  Remove keys by wildcard search
+    i)   Check if a key already exists  
+    k)  Execute Atoms: atoms are set of Put and Remove operations which can be executed in a single API call
+
+### Description
 
 a)  Put key vs value 
 
@@ -143,15 +145,56 @@ http://0.0.0.0:18080/getlist?body=["g1_u1", "g2_u2"]
 ``` 
 (You can specify skip and limit to this as well but should not need it)
 
+
+k) Execute Atoms: Atoms are set of Put and Remove operations which can be executed in a single API call
+
+To run a set of put operations together, run:
+
+```
+POST: http://0.0.0.0:18080/put/atom?body=
+[
+{"key":"g1_u2", "value":{"msg":"m1"}},
+{"key":"g2_u2", "value":{"msg":"m2"}},
+{"key":"g3_u3", "value":{"msg":"m3"}}
+]
+
+```
+
+To run a set of remove operations together, run:
+```
+POST: http://0.0.0.0:18080/remove/atom?body=
+["g1_u1","g1_u2", "g3_u3"]
+
+```
+
+To run a set of remove operations followed by a set of put operations, run:
+```
+POST: http://0.0.0.0:18080/atom?body=
+{
+put:[
+{"key":"g1_u2", "value":{"msg":"m1"}},
+{"key":"g2_u2", "value":{"msg":"m2"}},
+{"key":"g3_u3", "value":{"msg":"m3"}}
+}],
+remove:["g1_u1","g1_u2", "g3_u3"]   
+
+}
+
+```
+* Note, remove operations will always be executed before put
+
+
 ### POST REQUESTS
 
-Run the following commands to 
-    i)   put a json object against key, 
-    ii)  get that object against key 
-    iii) do a wildcard search of keys 
-    iv) get a list of key value pair given a list of keys
-     v) apply filters and joins
+Available features:
+    i)   Put a json object against key, 
+    ii)  Get that object against key 
+    iii) Do a wildcard search of keys 
+    iv) Get a list of key value pair given a list of keys
+    v)  Execute atoms: atoms are set of Put and Remote operations which can be executed in a single API call
+    vi) Apply filters and joins
 
+### Description
 
  i) Put a json object against a key:
  POST: http://0.0.0.0:18080/putjson
@@ -215,7 +258,7 @@ BODY: ["g1_u1", "g2_u2"]
 (You can specify skip and limit as query parameters but should not need it)
 
 
-v) Atoms: Atoms are set of Put and Remote operations which can be executed in a single API call
+v) Execute Atoms: Atoms are set of Put and Remove operations which can be executed in a single API call
 
 To run a set of put operations together, run:
 
@@ -260,7 +303,7 @@ remove:["g1_u1","g1_u2", "g3_u3"]
 
 vi) Filters and joins: There is also provision to run ORM style queries with searchjson and applying filters
 
-POST: http://0.0.0.0:18080/quarks/core/searchjson
+POST: http://0.0.0.0:18080/searchjson
 
 Sample Query Format for
 "querying items which are up for sale with key like item* (i.e item1, item2 etc.) , then find the sellers of such items (items has a seller_id field that contains the user_id of the seller) "
@@ -275,7 +318,7 @@ BODY:
 To test it out,
 First insert some users->
 
-POST: http://0.0.0.0:18080/quarks/core/putjson
+POST: http://0.0.0.0:18080/putjson
 BODY:
 ```
 {"key":"user1", "value":{"name":"u1", "age":34}}
@@ -283,7 +326,7 @@ BODY:
 ```
 
 then insert some items->
-POST: http://0.0.0.0:18080/quarks/core/putjson
+POST: http://0.0.0.0:18080/putjson
 BODY:
 ```
 {
