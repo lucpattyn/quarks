@@ -115,6 +115,10 @@ e) List keys vs values by wildcard search with keys (you can specifiy skip and l
 ```
  http://0.0.0.0:18080/getkeys?keys=g1_u*&skip=5&limit=10 
 ```
+To get the keys in reverse order run 
+```
+http://0.0.0.0:18080/getkeys?keys=g1_u*&skip=5&limit=10&reverse=true 
+```
 
 f) Get count of keys matched by wildcard search 
 ```
