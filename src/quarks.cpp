@@ -1520,3 +1520,13 @@ bool Core::openTCPSocketClient(){
     return ret;
 }
 
+void Core::onSocketMessage(crow::websocket::connection& conn,
+                           std::unordered_set<crow::websocket::connection*>& users,
+                           const std::string& data, bool is_binary){
+    for(auto u:users)
+        if (is_binary)
+            u->send_binary(data);
+        else
+            u->send_text(data);
+
+}

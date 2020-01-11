@@ -9,6 +9,9 @@
 #include <quarks.hpp>
 #include <v8engine.hpp>
 
+#include <mutex>
+
+
 #ifdef _USE_RAPIDAPI
 
 #include <curl/curl.h>
@@ -60,6 +63,100 @@ struct QueryParams{
 
 };
 
+class HackWebSocketRule : public crow::BaseRule
+{
+    using self_t = HackWebSocketRule;
+public:
+    HackWebSocketRule(std::string rule)
+    : BaseRule(std::move(rule))
+    {
+        
+    }
+    
+    void validate() override
+    {
+    }
+    
+    void handle(const crow::request&, crow::response& res, const crow::routing_params&) override
+    {
+        res = crow::response(404);
+        res.end();
+    }
+    
+    void handle_upgrade(const crow::request& req, crow::response&, crow::SocketAdaptor&& adaptor) override
+    {
+        CROW_LOG_INFO << "custom upgrade ";
+        
+        crow::websocket::Connection<crow::SocketAdaptor>* conn =
+            new crow::websocket::Connection<crow::SocketAdaptor>(req, std::move(adaptor), open_handler_, message_handler_, close_handler_, error_handler_, accept_handler_);
+        
+        conn->userdata((void*)&req);
+    }
+#ifdef CROW_ENABLE_SSL
+    void handle_upgrade(const crow::request& req, crow::response&, crow::SSLAdaptor&& adaptor) override
+    {
+        new crow::websocket::Connection<SSLAdaptor>(req, std::move(adaptor), open_handler_, message_handler_, close_handler_, error_handler_, accept_handler_);
+    }
+#endif
+    
+    template <typename Func>
+    self_t& onopen(Func f)
+    {
+        open_handler_ = f;
+        return *this;
+    }
+    
+    template <typename Func>
+    self_t& onmessage(Func f)
+    {
+        message_handler_ = f;
+        return *this;
+    }
+    
+    template <typename Func>
+    self_t& onclose(Func f)
+    {
+        close_handler_ = f;
+        return *this;
+    }
+    
+    template <typename Func>
+    self_t& onerror(Func f)
+    {
+        error_handler_ = f;
+        return *this;
+    }
+    
+    template <typename Func>
+    self_t& onaccept(Func f)
+    {
+        accept_handler_ = f;
+        return *this;
+    }
+    
+    
+protected:
+    std::function<void(crow::websocket::connection&)> open_handler_;
+    std::function<void(crow::websocket::connection&, const std::string&, bool)> message_handler_;
+    std::function<void(crow::websocket::connection&, const std::string&)> close_handler_;
+    std::function<void(crow::websocket::connection&)> error_handler_;
+    std::function<bool(const crow::request&)> accept_handler_;
+    
+public:
+    void reset(HackWebSocketRule* p){
+        rule_to_upgrade_.reset(p);
+    }
+    
+};
+
+struct HackTraits : public crow::RuleParameterTraits<crow::TaggedRule<>>{
+    crow::WebSocketRule& hackwebsocket() {
+        using self_t = crow::TaggedRule<>;
+        auto p =new crow::WebSocketRule("/ws");
+        //((self_t*)this)->rule_to_upgrade_.reset(p);
+        return *p;
+    }
+};
 
 int main(int argc, char ** argv) {   
    
@@ -72,6 +169,7 @@ int main(int argc, char ** argv) {
     std::unique_ptr<v8::Platform> platform = v8::platform::NewDefaultPlatform();
     v8::V8::InitializePlatform(platform.get());
     v8::V8::Initialize();*/
+    
     
 #ifdef _V8_LATEST
     v8EngineInitializeInMain(argc, argv);
@@ -108,6 +206,30 @@ int main(int argc, char ** argv) {
     };
     
 #endif
+    
+    std::mutex mtx;
+    std::unordered_set<crow::websocket::connection*> users;
+    
+    crow::RuleParameterTraits<crow::TaggedRule<>>& traits = CROW_ROUTE(app, "/ws");
+    ((HackTraits*)&traits)->websocket()
+    .onopen([&](crow::websocket::connection& conn){
+        CROW_LOG_INFO << "new websocket connection";
+        std::lock_guard<std::mutex> _(mtx);
+        users.insert(&conn);
+    })
+    .onclose([&](crow::websocket::connection& conn, const std::string& reason){
+        CROW_LOG_INFO << "websocket connection closed: " << reason;
+        std::lock_guard<std::mutex> _(mtx);
+        users.erase(&conn);
+    })
+    .onmessage([&](crow::websocket::connection& /*conn*/, const std::string& data, bool is_binary){
+        std::lock_guard<std::mutex> _(mtx);
+        for(auto u:users)
+            if (is_binary)
+                u->send_binary(data);
+            else
+                u->send_text(data);
+    });
     
 ///////////////////////////////////////////
 /////////// core functionalities //////////
@@ -909,7 +1031,7 @@ int main(int argc, char ** argv) {
     .methods("GET"_method, "POST"_method)(route_core_opentcpsocket_callback);
 
     CROW_ROUTE(app, "/filetransfer")
-    .methods("GET"_method, "POST"_method)(route_core_filetransfer_callback);   
+    .methods("GET"_method, "POST"_method)(route_core_filetransfer_callback);
     
     
     //auto& v = Quarks::Matrix::_Instance; // we will work with the matrix data struct
@@ -1086,6 +1208,13 @@ int main(int argc, char ** argv) {
     ([&resourceLoader](){
         crow::mustache::context x;
         auto page = resourceLoader(x, "home.html");
+        return page.render(x);
+    });
+    
+    CROW_ROUTE(app, "/chat")
+    ([&resourceLoader](){
+        crow::mustache::context x;
+        auto page = resourceLoader(x, "ws.html");
         return page.render(x);
     });
 

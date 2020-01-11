@@ -3,6 +3,7 @@
 
 #include <string>
 #include <map>
+#include <unordered_set>
 
 #include <crow.h>
 
@@ -92,7 +93,15 @@ namespace Quarks {
         bool fileTransfer(std::string moduleName, std::string funcName,
 			std::string channelName, std::string remoteDescription);
         
-               
+        
+        ////////////////////////////
+        
+        /////// sockets ./........
+        void onSocketMessage(crow::websocket::connection& conn,
+                             std::unordered_set<crow::websocket::connection*>& users,
+                             const std::string& data, bool is_binary);
+        
+        //////////////////////////////////////////////////////
         private:
         
         
