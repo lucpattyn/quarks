@@ -1439,9 +1439,13 @@ bool Core::atom(std::string body, std::string& out) {
     
     bool ret = true;
     
-    ret &= removeAtom(crow::json::dump(x["remove"]), out);
+    if(x.has("remove")){
+        ret &= removeAtom(crow::json::dump(x["remove"]), out);
+    }
     if(ret){
-        ret &= putAtom(crow::json::dump(x["put"]), out);
+        if(x.has("put")){
+            ret &= putAtom(crow::json::dump(x["put"]), out);
+        }
     }
     
     return ret;
