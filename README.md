@@ -193,12 +193,12 @@ remove:["g1_u1","g1_u2", "g3_u3"]
    3) If you have a number of put operations and no removes then use  ../put/atom (and not  ../atom)
    4) If you have a number of remove operations and no puts then use  ../remove/atom (and not ../atom)
   
-  m) Autogenerate key with prefix and value provided
+m) Autogenerate key with prefix and value provided
 
 ``` 
  http://0.0.0.0:18080/make?body={"prefix":"dev_","value":"101"}
 ```
-*returns the key value pair as json object; if "key" is specified along with prefix 
+* returns the key value pair as json object; if "key" is specified along with prefix 
  then a key is formed with prefix+key and no key generation occurs
 
   
@@ -333,7 +333,7 @@ BODY:
 {"prefix":"MSGID_","value":"101"}
 
 ```
-*returns the key value pair as json object; if "key" is specified along with prefix 
+* returns the key value pair as json object; if "key" is specified along with prefix 
 then a key is formed with prefix+key and no key generation occurs
 
 
