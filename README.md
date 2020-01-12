@@ -185,8 +185,13 @@ remove:["g1_u1","g1_u2", "g3_u3"]
 }
 
 ```
-* Note, remove operations will always be executed before put
-
+* Notes about Atoms,
+  1) Remove operations will always be executed before put in ../atom call
+  2) Atoms should be used sparingly - if you have only a single put/remove operation then,
+      use the put/remove apis, not atomic ones
+  3) If you have a number of put operations and no removes then use the ../put/atom (and not  ../atom)
+  4) If you have a number of remove operations and no puts then use the ../remove/atom (and not ../atom)
+  
 
 ### POST REQUESTS
 
@@ -303,7 +308,14 @@ remove:["g1_u1","g1_u2", "g3_u3"]
 }
 
 ```
-* Note, remove operations will always be executed before put
+* Notes about Atoms,
+1) Remove operations will always be executed before put in ../atom call
+2) Atoms should be used sparingly - if you have only a single put/remove operation then,
+    use the put/remove apis, not atomic ones
+3) If you have a number of put operations and no removes then use the ../put/atom (and not  ../atom)
+4) If you have a number of remove operations and no puts then use the ../remove/atom (and not ../atom)
+
+
 
 vi) Filters and joins: There is also provision to run ORM style queries with searchjson and applying filters
 
@@ -413,6 +425,8 @@ Quarks will allow minimum usage of scripting to ensure the server side codes rem
 
 After v8 engine integration and scripting support,
 the next target is to allow listener support through zero mq to communicate with other processes and services.
+
+Websocket support has been added too.
 
 For those interested in testing OpenCV as plugin,
 you should submit a POST request to http://localhost:18080/filters/gausian. 
