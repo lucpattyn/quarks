@@ -11,7 +11,6 @@
 
 #include <mutex>
 
-
 #ifdef _USE_RAPIDAPI
 
 #include <curl/curl.h>
@@ -67,6 +66,7 @@ class HackWebSocketRule : public crow::BaseRule
 {
     using self_t = HackWebSocketRule;
 public:
+    
     HackWebSocketRule(std::string rule)
     : BaseRule(std::move(rule))
     {
@@ -85,12 +85,21 @@ public:
     
     void handle_upgrade(const crow::request& req, crow::response&, crow::SocketAdaptor&& adaptor) override
     {
-        CROW_LOG_INFO << "custom upgrade ";
+        CROW_LOG_INFO << "custom upgrade << ";
+        
+        auto x = req.url_params.get("key");
+        auto k = (x == nullptr || !strlen(x) ? "" : x);
+        CROW_LOG_INFO << k;
         
         crow::websocket::Connection<crow::SocketAdaptor>* conn =
             new crow::websocket::Connection<crow::SocketAdaptor>(req, std::move(adaptor), open_handler_, message_handler_, close_handler_, error_handler_, accept_handler_);
         
-        conn->userdata((void*)&req);
+        char* key = new char [strlen(k) + 1];
+        strcpy(key, k);
+        
+        conn->userdata(key);
+        
+        
     }
 #ifdef CROW_ENABLE_SSL
     void handle_upgrade(const crow::request& req, crow::response&, crow::SSLAdaptor&& adaptor) override
@@ -143,18 +152,20 @@ protected:
     std::function<bool(const crow::request&)> accept_handler_;
     
 public:
-    void reset(HackWebSocketRule* p){
-        rule_to_upgrade_.reset(p);
+    static HackWebSocketRule& Create(void* obj){
+        auto p =new HackWebSocketRule(((self_t*)obj)->rule_);
+        ((self_t*)obj)->rule_to_upgrade_.reset(p);
+        return *p;
     }
     
 };
 
 struct HackTraits : public crow::RuleParameterTraits<crow::TaggedRule<>>{
-    crow::WebSocketRule& hackwebsocket() {
-        using self_t = crow::TaggedRule<>;
-        auto p =new crow::WebSocketRule("/ws");
-        //((self_t*)this)->rule_to_upgrade_.reset(p);
-        return *p;
+    
+    HackWebSocketRule& hackwebsocket() {
+        //auto& ws = websocket();
+        auto& ws = HackWebSocketRule::Create(this);
+        return ws;
     }
 };
 
@@ -211,18 +222,24 @@ int main(int argc, char ** argv) {
     std::unordered_set<crow::websocket::connection*> users;
     
     crow::RuleParameterTraits<crow::TaggedRule<>>& traits = CROW_ROUTE(app, "/ws");
-    ((HackTraits*)&traits)->websocket()
+    ((HackTraits*)&traits)->hackwebsocket()
     .onopen([&](crow::websocket::connection& conn){
         CROW_LOG_INFO << "new websocket connection";
+        
         std::lock_guard<std::mutex> _(mtx);
         users.insert(&conn);
     })
     .onclose([&](crow::websocket::connection& conn, const std::string& reason){
         CROW_LOG_INFO << "websocket connection closed: " << reason;
+        delete [] (char*)conn.userdata();
+        
         std::lock_guard<std::mutex> _(mtx);
         users.erase(&conn);
     })
-    .onmessage([&](crow::websocket::connection& /*conn*/, const std::string& data, bool is_binary){
+    .onmessage([&](crow::websocket::connection& conn, const std::string& data, bool is_binary){
+        std::string key = (char*)conn.userdata();
+        CROW_LOG_INFO << "websocket msg for key : " << key;
+        
         std::lock_guard<std::mutex> _(mtx);
         for(auto u:users)
             if (is_binary)
@@ -736,6 +753,25 @@ int main(int argc, char ** argv) {
     };
     
    
+    auto route_core_make_callback =
+    [](const crow::request& req)
+    {
+        crow::json::wvalue out;
+        try{
+            std::string body = req.body;
+            auto p = req.url_params.get("body");
+            if(p != nullptr){
+                body = p;
+            }
+            Quarks::Core::_Instance.makePair(body, out);
+            
+        } catch (const std::runtime_error& error){
+            out["error"] = "runtime error";
+        }
+        
+        return out;
+        
+    };
     
     auto route_core_getjson_callback =
     [](const crow::request& req)
@@ -1015,8 +1051,11 @@ int main(int argc, char ** argv) {
     .methods("GET"_method, "POST"_method)(route_core_putatom_callback);
     
     CROW_ROUTE(app, "/atom")
-     .methods("GET"_method, "POST"_method)(route_core_atom_callback);
+    .methods("GET"_method, "POST"_method)(route_core_atom_callback);
   
+    CROW_ROUTE(app, "/make")
+    .methods("GET"_method, "POST"_method)(route_core_make_callback);
+    
     CROW_ROUTE(app, "/getjson")
     .methods("GET"_method, "POST"_method)(route_core_getjson_callback);
     
@@ -1026,13 +1065,11 @@ int main(int argc, char ** argv) {
     CROW_ROUTE(app, "/searchjson")
     .methods("GET"_method, "POST"_method)(route_core_searchjson_callback);
     
-    
     CROW_ROUTE(app, "/opentcpsocket")
     .methods("GET"_method, "POST"_method)(route_core_opentcpsocket_callback);
 
     CROW_ROUTE(app, "/filetransfer")
     .methods("GET"_method, "POST"_method)(route_core_filetransfer_callback);
-    
     
     //auto& v = Quarks::Matrix::_Instance; // we will work with the matrix data struct
                                             // in later api calls

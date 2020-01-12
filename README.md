@@ -64,6 +64,7 @@ Available features:
     h)  Remove keys by wildcard search
     i)   Check if a key already exists  
     k)  Execute Atoms: atoms are set of Put and Remove operations which can be executed in a single API call
+    m) Autogenerate key and make a key value pair given a key-prefix and value 
 
 ### Description
 
@@ -186,22 +187,31 @@ remove:["g1_u1","g1_u2", "g3_u3"]
 
 ```
 * Notes about Atoms,
-  1) "Remove" operations will always be executed before "Put" in ../atom call
-  2) Atoms should be used sparingly - if you have only a single put/remove operation then,
+   1) "Remove" operations will always be executed before "Put" in ../atom call
+   2) Atoms should be used sparingly - if you have only a single put/remove operation then,
       use the put/remove apis provided for the specific purpose, not atomic ones
-  3) If you have a number of put operations and no removes then use  ../put/atom (and not  ../atom)
-  4) If you have a number of remove operations and no puts then use  ../remove/atom (and not ../atom)
+   3) If you have a number of put operations and no removes then use  ../put/atom (and not  ../atom)
+   4) If you have a number of remove operations and no puts then use  ../remove/atom (and not ../atom)
   
+  m) Autogenerate key with prefix and value provided
 
+``` 
+ http://0.0.0.0:18080/make?body={"prefix":"dev_","value":"101"}
+```
+*returns the key value pair as json object; if "key" is specified along with prefix 
+ then a key is formed with prefix+key and no key generation occurs
+
+  
 ### POST REQUESTS
 
 Available features:
-    i)   Put a json object against key, 
-    ii)  Get that object against key 
-    iii) Do a wildcard search of keys 
-    iv) Get a list of key value pair given a list of keys
-    v)  Execute atoms: atoms are set of Put and Remote operations which can be executed in a single API call
-    vi) Apply filters and joins
+    i)    Put a json object against key, 
+    ii)   Get that object against key 
+    iii)  Do a wildcard search of keys 
+    iv)  Get a list of key value pair given a list of keys
+    v)   Execute atoms: atoms are set of Put and Remote operations which can be executed in a single API call
+    vi)  Autogenerate key and make a key value pair given a key-prefix and value 
+    vii) Apply filters and joins
 
 ### Description
 
@@ -309,15 +319,25 @@ remove:["g1_u1","g1_u2", "g3_u3"]
 
 ```
 * Notes about Atoms,
-1) "Remove" operations will always be executed before "Put" in ../atom call
-2) Atoms should be used sparingly - if you have only a single put/remove operation then,
-use the put/remove apis provided for the specific purpose, not atomic ones
-3) If you have a number of put operations and no removes then use  ../put/atom (and not  ../atom)
-4) If you have a number of remove operations and no puts then use  ../remove/atom (and not ../atom)
+ 1) "Remove" operations will always be executed before "Put" in ../atom call
+ 2) Atoms should be used sparingly - if you have only a single put/remove operation then,
+     use the put/remove apis provided for the specific purpose, not atomic ones
+ 3) If you have a number of put operations and no removes then use  ../put/atom (and not  ../atom)
+ 4) If you have a number of remove operations and no puts then use  ../remove/atom (and not ../atom)
 
 
+vi) Autogenerate key and make a key value pair given a key-prefix and value 
+``` 
+POST: http://0.0.0.0:18080/make
+BODY:
+{"prefix":"MSGID_","value":"101"}
 
-vi) Filters and joins: There is also provision to run ORM style queries with searchjson and applying filters
+```
+*returns the key value pair as json object; if "key" is specified along with prefix 
+then a key is formed with prefix+key and no key generation occurs
+
+
+vii) Filters and joins: There is also provision to run ORM style queries with searchjson and applying filters
 
 POST: http://0.0.0.0:18080/searchjson
 

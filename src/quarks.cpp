@@ -10,6 +10,10 @@
 #include <iostream>
 #include <boost/asio.hpp>
 
+#include <boost/uuid/uuid.hpp>            // uuid class
+#include <boost/uuid/uuid_generators.hpp> // generators
+#include <boost/uuid/uuid_io.hpp>         // streaming operators etc.
+
 #include <algorithm>
 
 using namespace boost::asio;
@@ -1055,6 +1059,82 @@ bool Core::removeAtom(std::string body, std::string& out) {
     return  ret;
     
 }*/
+
+bool Core::makePair(std::string body, crow::json::wvalue& out){
+    
+    auto x = crow::json::load(body);
+    
+    if (!x){
+        CROW_LOG_INFO << "invalid make body" << body;
+        //out = "invalid put body";
+        
+        out = "{\"error\": \"Invalid make body\"}";
+        
+        return false;
+        
+    }
+    
+    
+    std::string key = "";
+    std::string writeValue = "";
+    
+    std::string tmpkey = "";
+    
+    if(x.has("key")){
+        key = x["key"].s();
+    }else{
+        boost::uuids::uuid uuid = boost::uuids::random_generator()();
+        std::cout << uuid << std::endl;
+        key = boost::lexical_cast<std::string>(uuid);
+        
+    }
+    tmpkey = key;
+    
+    if(x.has("prefix")){
+        std::string prefix = x["prefix"].s();
+        
+        key = prefix + tmpkey;
+    }
+    if(x.has("value")){
+        writeValue = x["value"].s();
+    }
+    
+    out["value"] = writeValue;
+    out["key"] = key;
+    
+    CROW_LOG_INFO << "put body : " << "key : " << key << ", value >> " << writeValue << "\n";
+    
+    bool ret = false;
+    
+    rocksdb::Slice keySlice = key;
+    
+    std::string error;
+    // modify the database
+    if (dbStatus.ok()){
+        ret = true;
+        
+        rocksdb::Status status = db->Put(rocksdb::WriteOptions(), keySlice, writeValue);
+        if(!status.ok()){
+           error = "data failed to save";
+           ret = false;
+        }
+        
+    }else{
+        //result = "{\"error\":\"db status error\"}";
+        error = "db status error";
+        ret = false;
+    }
+    
+    //std::stringstream ss;
+    //ss<< "{" << std::quoted("result") << ":" << std::quoted(key) << "}";
+    if(!ret){
+        out["error"] = error;
+    }
+    
+    
+    return true;
+    
+}
 
 bool Core::getJson(std::string key, crow::json::wvalue& out){
     

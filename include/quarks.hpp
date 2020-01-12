@@ -68,6 +68,7 @@ namespace Quarks {
         bool removeAtom(std::string body, std::string& out);
         
         //bool putJson(std::string key, crow::json::rvalue& x, crow::json::wvalue& out);
+        bool makePair(std::string body, crow::json::wvalue& out);
         
         bool getJson(std::string key, crow::json::wvalue& out);
         
