@@ -1205,17 +1205,15 @@ int main(int argc, char ** argv) {
     });
     
     CROW_ROUTE(app, "/home")
-    ([&resourceLoader](){
-        crow::mustache::context x;
-        auto page = resourceLoader(x, "home.html");
-        return page.render(x);
+    ([&defaultPageLoader](const crow::request& req){
+        auto res = defaultPageLoader(req, "home.html");
+        return res;
     });
     
     CROW_ROUTE(app, "/chat")
-    ([&resourceLoader](){
-        crow::mustache::context x;
-        auto page = resourceLoader(x, "ws.html");
-        return page.render(x);
+    ([&defaultPageLoader](const crow::request& req){
+        auto res = defaultPageLoader(req, "ws.html");
+        return res;
     });
 
         
