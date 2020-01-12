@@ -1439,10 +1439,16 @@ bool Core::atom(std::string body, std::string& out) {
     
     bool ret = true;
     
-    //CROW_LOG_INFO << ".. atom: " << crow::json::dump(x);    
-    ret &= removeAtom(crow::json::dump(x["rem"]), out);
-    if(ret){
-        ret &= putAtom(crow::json::dump(x["put"]), out);
+    auto rem = x["remove"];
+    auto put = x["put"];
+    
+    //CROW_LOG_INFO << ".. atom: " << crow::json::dump(x);
+    
+    if(rem){
+          ret &= removeAtom(crow::json::dump(rem), out);
+    }
+    if(put && ret){
+        ret &= putAtom(crow::json::dump(put), out);
     }
     
     return ret;
