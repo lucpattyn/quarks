@@ -11,7 +11,9 @@
     <textarea id="log" cols=100 rows=50>
     </textarea>
     <script>
-var sock = new WebSocket("ws://{{servername}}:40080/ws");
+        
+var sock = new WebSocket("ws://0.0.0.0:18080/ws?_id="
+                                 + Math.round(Math.random()*1000000));
 
 sock.onopen = ()=>{
     console.log('open')

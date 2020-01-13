@@ -96,9 +96,11 @@ void Core::setEnvironment(int argc, char** argv){
     _argc = argc;
     
     std::string schemaname = "quarks_db";
+    _hooksocket = true;
     
     bool schema = false;
     bool port = false;
+    bool interceptsocket = false;
     
     for(auto v : _argv){
         CROW_LOG_INFO << " v = " << v << " ";
@@ -108,12 +110,17 @@ void Core::setEnvironment(int argc, char** argv){
         }else if(port){
             _portNumber = std::stoi(v);
             port = false;
+        }else if(interceptsocket){
+             _hooksocket = false;
+            interceptsocket = false;
         }
         
         if(!v.compare("-schema")){
             schema = true;
         }else if(!v.compare("-port")){
             port = true;
+        }else if(!v.compare("-nohooksocket")){
+            interceptsocket = true;
         }
     }
     
@@ -128,6 +135,10 @@ void Core::shutDown(){
 
 int Core::getPort(){
     return _portNumber;
+}
+
+bool Core::shouldHookSocket(){
+    return _hooksocket;
 }
 
 bool getKeyValuePair(std::string key, std::string& value, std::string& out){
@@ -981,7 +992,7 @@ int Core::removeAll(std::string wild,  int skip /*= 0*/, int limit /*= -1*/){
         
     }
     
-    return false;
+    return out;
 }
 
 bool Core::removeAtom(crow::json::rvalue& x, std::string& out) {
@@ -1522,6 +1533,10 @@ bool Core::atom(std::string body, std::string& out) {
     if(x.has("remove")){
         ret &= removeAtom(crow::json::dump(x["remove"]), out);
     }
+    if(x.has("removeall")){
+        int removed = removeAll(x["removeall"].s());
+        out = std::string("{") + R"("result":)" + std::to_string(removed) + std::string("}");
+    }
     if(ret){
         if(x.has("put")){
             ret &= putAtom(crow::json::dump(x["put"]), out);
@@ -1603,13 +1618,3 @@ bool Core::openTCPSocketClient(){
     return ret;
 }
 
-void Core::onSocketMessage(crow::websocket::connection& conn,
-                           std::unordered_set<crow::websocket::connection*>& users,
-                           const std::string& data, bool is_binary){
-    for(auto u:users)
-        if (is_binary)
-            u->send_binary(data);
-        else
-            u->send_text(data);
-
-}

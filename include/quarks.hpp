@@ -3,7 +3,6 @@
 
 #include <string>
 #include <map>
-#include <unordered_set>
 
 #include <crow.h>
 
@@ -18,16 +17,18 @@ namespace Quarks {
      * 
      */
     class Core {
-        public:
+    public:
         static Core _Instance;
         
         Core();
         ~Core();
         
         void setEnvironment(int argc, char** argv);
+        
         void shutDown();
         
         int getPort();
+        bool shouldHookSocket();
         
         bool insert(bool failIfExists, std::string body, std::string& out);
         bool post(std::string body, std::string& out);
@@ -98,19 +99,18 @@ namespace Quarks {
         ////////////////////////////
         
         /////// sockets ./........
-        void onSocketMessage(crow::websocket::connection& conn,
-                             std::unordered_set<crow::websocket::connection*>& users,
-                             const std::string& data, bool is_binary);
         
         //////////////////////////////////////////////////////
-        private:
-        
+    
+    private:
         
         int _argc;
         std::vector<std::string> _argv;
         
         //std::map<std::string, crow::json::rvalue> _Core;
         int _portNumber;
+        
+        bool _hooksocket;
         
     };
     

@@ -9,7 +9,7 @@
 #include <quarks.hpp>
 #include <v8engine.hpp>
 
-#include <mutex>
+#include <qsocket.hpp>
 
 #ifdef _USE_RAPIDAPI
 
@@ -62,112 +62,7 @@ struct QueryParams{
 
 };
 
-class HackWebSocketRule : public crow::BaseRule
-{
-    using self_t = HackWebSocketRule;
-public:
-    
-    HackWebSocketRule(std::string rule)
-    : BaseRule(std::move(rule))
-    {
-        
-    }
-    
-    void validate() override
-    {
-    }
-    
-    void handle(const crow::request&, crow::response& res, const crow::routing_params&) override
-    {
-        res = crow::response(404);
-        res.end();
-    }
-    
-    void handle_upgrade(const crow::request& req, crow::response&, crow::SocketAdaptor&& adaptor) override
-    {
-        CROW_LOG_INFO << "custom upgrade << ";
-        
-        auto x = req.url_params.get("key");
-        auto k = (x == nullptr || !strlen(x) ? "" : x);
-        CROW_LOG_INFO << k;
-        
-        crow::websocket::Connection<crow::SocketAdaptor>* conn =
-            new crow::websocket::Connection<crow::SocketAdaptor>(req, std::move(adaptor), open_handler_, message_handler_, close_handler_, error_handler_, accept_handler_);
-        
-        char* key = new char [strlen(k) + 1];
-        strcpy(key, k);
-        
-        conn->userdata(key);
-        
-        
-    }
-#ifdef CROW_ENABLE_SSL
-    void handle_upgrade(const crow::request& req, crow::response&, crow::SSLAdaptor&& adaptor) override
-    {
-        new crow::websocket::Connection<SSLAdaptor>(req, std::move(adaptor), open_handler_, message_handler_, close_handler_, error_handler_, accept_handler_);
-    }
-#endif
-    
-    template <typename Func>
-    self_t& onopen(Func f)
-    {
-        open_handler_ = f;
-        return *this;
-    }
-    
-    template <typename Func>
-    self_t& onmessage(Func f)
-    {
-        message_handler_ = f;
-        return *this;
-    }
-    
-    template <typename Func>
-    self_t& onclose(Func f)
-    {
-        close_handler_ = f;
-        return *this;
-    }
-    
-    template <typename Func>
-    self_t& onerror(Func f)
-    {
-        error_handler_ = f;
-        return *this;
-    }
-    
-    template <typename Func>
-    self_t& onaccept(Func f)
-    {
-        accept_handler_ = f;
-        return *this;
-    }
-    
-    
-protected:
-    std::function<void(crow::websocket::connection&)> open_handler_;
-    std::function<void(crow::websocket::connection&, const std::string&, bool)> message_handler_;
-    std::function<void(crow::websocket::connection&, const std::string&)> close_handler_;
-    std::function<void(crow::websocket::connection&)> error_handler_;
-    std::function<bool(const crow::request&)> accept_handler_;
-    
-public:
-    static HackWebSocketRule& Create(void* obj){
-        auto p =new HackWebSocketRule(((self_t*)obj)->rule_);
-        ((self_t*)obj)->rule_to_upgrade_.reset(p);
-        return *p;
-    }
-    
-};
 
-struct HackTraits : public crow::RuleParameterTraits<crow::TaggedRule<>>{
-    
-    HackWebSocketRule& hackwebsocket() {
-        //auto& ws = websocket();
-        auto& ws = HackWebSocketRule::Create(this);
-        return ws;
-    }
-};
 
 int main(int argc, char ** argv) {   
    
@@ -218,7 +113,9 @@ int main(int argc, char ** argv) {
     
 #endif
     
-    std::mutex mtx;
+    // SOCKET FUNCTIONALITIES
+    
+    /*std::mutex mtx;
     std::unordered_set<crow::websocket::connection*> users;
     
     crow::RuleParameterTraits<crow::TaggedRule<>>& traits = CROW_ROUTE(app, "/ws");
@@ -246,7 +143,9 @@ int main(int argc, char ** argv) {
                 u->send_binary(data);
             else
                 u->send_text(data);
-    });
+    });*/   
+
+   QSocket qs(CROW_ROUTE(app, "/ws"));
     
 ///////////////////////////////////////////
 /////////// core functionalities //////////
