@@ -113,44 +113,55 @@ struct HackTraits : public crow::RuleParameterTraits<crow::TaggedRule<>>{
     }
 };
 
-class QSocketInterceptor {
-
-public:
-    QSocketInterceptor(){
-        
-    }
-    
-    virtual void onOpen(crow::websocket::connection&){
-    
-    }
-    
-    virtual void onClose(crow::websocket::connection&){
-    
-    }
-    
-    virtual bool onMessage(crow::websocket::connection&,
-                           std::map<std::string,crow::websocket::connection*>&,
-                           const std::string&, bool /*is_binary*/){
-        return false;
-    
-    }
-     
-    
-};
-
-QSocketInterceptor qsockDefaultInterceptor;
-
 class QSocket {
    
 public:
+    class Interceptor {
+        
+    public:
+        ////////////////////////
+        Interceptor(){
+            
+        }
+        
+        virtual void onOpen(crow::websocket::connection&){
+            
+        }
+        
+        virtual void onClose(crow::websocket::connection&){
+            
+        }
+        
+        virtual bool onMessage(crow::websocket::connection&,
+                               const std::string&, bool /*is_binary*/){
+            return false;
+            
+        }
+        
+        std::unordered_set<crow::websocket::connection*>& getUsers(){
+            return *_users;
+        }
+        std::map<std::string, crow::websocket::connection*>& getConnectionMap(){
+            return *_connMap;
+        }
+        
+    private:
+        std::unordered_set<crow::websocket::connection*>* _users;
+        std::map<std::string, crow::websocket::connection*>* _connMap;
+        
+        
+    };
+    //////////////////////////////
+    
+    
     QSocket(crow::RuleParameterTraits<crow::TaggedRule<>>& traits,
-            QSocketInterceptor& interceptor = qsockDefaultInterceptor)
+            QSocket::Interceptor& interceptor = DefaultInterceptor())
     : qsockInterceptor(interceptor){
         connect(traits, interceptor);
     }
     
     void connect(crow::RuleParameterTraits<crow::TaggedRule<>>& traits,
-                 QSocketInterceptor& interceptor){
+                 QSocket::Interceptor& interceptor){
         
         qsockInterceptor = interceptor;
         
@@ -171,11 +182,6 @@ public:
             
             qsockInterceptor.onClose(conn);
             
-            char* _id = (char*)conn.userdata();
-            if(_id != nullptr){
-                connMap.erase(_id);
-            }
-            
             delete [] (char*)conn.userdata();
             users.erase(&conn);
             
@@ -186,15 +192,9 @@ public:
             //CROW_LOG_INFO << "websocket msg for _id : " << (_id != nullptr)? _id : "";
             
             std::lock_guard<std::mutex> _(mtx);
-            
-            char* _id = (char*)conn.userdata();
-            if(_id != nullptr){
-                connMap[_id] = &conn;
-            }
-            
-            bool preventDefault = qsockInterceptor.onMessage(conn, connMap,
-                                                       data, is_binary);
-            
+          
+            bool preventDefault = qsockInterceptor.onMessage(conn, data, is_binary);
+                
             if(!preventDefault){
                 for(auto u:users)
                     if (is_binary)
@@ -202,18 +202,28 @@ public:
                     else
                         u->send_text(data);
             }
+        
         });
         
     }
+    
+    static QSocket::Interceptor& DefaultInterceptor(){
+        static QSocket::Interceptor defaultInterceptor;
+        return defaultInterceptor;
+        
+    }
+    
+    void broadcast(std::string room, std::string data);
+    
     
 private:
     
     std::mutex mtx;
 
     std::unordered_set<crow::websocket::connection*> users;
-    std::map<std::string, crow::websocket::connection*> connMap;
     
-    QSocketInterceptor& qsockInterceptor;
+    QSocket::Interceptor& qsockInterceptor;
+    
     
 };
 

@@ -4,7 +4,7 @@
 #include <set>
 #include <vector>
 
-namespace Sorter {
+namespace QSorter {
     template <class T>
     class backwards {
         T& _obj;

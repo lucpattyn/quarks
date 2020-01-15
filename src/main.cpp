@@ -145,7 +145,12 @@ int main(int argc, char ** argv) {
                 u->send_text(data);
     });*/   
 
-   QSocket qs(CROW_ROUTE(app, "/ws"));
+ 
+   QSocket::Interceptor& interceptor = Quarks::Core::_Instance.shouldHookSocket()
+    ? Quarks::SocketInterceptor::getInstance(Quarks::Core::_Instance, true)
+    : QSocket::DefaultInterceptor();
+    
+   QSocket qsock(CROW_ROUTE(app, "/ws"), interceptor);
     
 ///////////////////////////////////////////
 /////////// core functionalities //////////
@@ -153,7 +158,7 @@ int main(int argc, char ** argv) {
     auto post = [](std::string body, std::string& out)
     {
         
-        CROW_LOG_INFO << body;
+        CROW_LOG_INFO << "post: " << body;
         
         /*auto res = crow::response{os.str()};
          res.add_header("Access-Control-Allow-Origin", "*");
@@ -173,7 +178,7 @@ int main(int argc, char ** argv) {
     
     auto put = [](std::string body, std::string& out)
     {
-        CROW_LOG_INFO << body;
+        CROW_LOG_INFO << "put: " << body;
 	
         bool success = Quarks::Core::_Instance.put(body, out);
        

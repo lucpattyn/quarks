@@ -1,7 +1,7 @@
 #include <quarks.hpp>
 #include <v8engine.hpp>
 
-#include <sorter.hpp>
+#include <qsorter.hpp>
 
 #include "rocksdb/db.h"
 
@@ -23,6 +23,7 @@ using ip::tcp;
 //using std::endl;
 
 using namespace Quarks;
+
 
 Core Core::_Instance;
 Matrix Matrix::_Instance;
@@ -293,6 +294,15 @@ bool Core::put(std::string body, std::string& out) {
     
 }
 
+bool Core::put(std::string key, std::string value, std::string& out){
+    crow::json::wvalue w;
+    w["key"] = key;
+    w["value"] = value;
+    
+    return put(crow::json::dump(w), out);
+    
+}
+
 bool Core::putAtom(crow::json::rvalue& x, std::string& out){
     out = std::string("{") + R"("result":false)" + std::string("}");
     
@@ -518,7 +528,7 @@ bool Core::getSorted(std::string wild, std::string sortby, bool ascending,
             //CROW_LOG_INFO << "sorter: " << sortby;
             //Sorter::JsonComparer c(sortby, ascending);
             try{
-                std::sort(allResults.begin(), allResults.end(), Sorter::JsonComparer(sortby));
+                std::sort(allResults.begin(), allResults.end(), QSorter::JsonComparer(sortby));
                 
             } catch (const std::runtime_error& error){
                 CROW_LOG_INFO << "Runtime Sort Error 3: Not Sortable";
@@ -530,7 +540,7 @@ bool Core::getSorted(std::string wild, std::string sortby, bool ascending,
         
 		i = -1;
         if(!ascending){
-            for(auto& x : Sorter::backwards< std::vector<crow::json::rvalue> >(allResults)){
+            for(auto& x : QSorter::backwards< std::vector<crow::json::rvalue> >(allResults)){
                 i++;
                 if(i > lowerbound && (i < upperbound || limit == -1)){
                     try{
@@ -732,7 +742,7 @@ bool Core::getKeysReversed(std::string wild,
             }
         }
         
-        for(auto& x : Sorter::backwards< std::vector<crow::json::wvalue> >(allResults)){
+        for(auto& x : QSorter::backwards< std::vector<crow::json::wvalue> >(allResults)){
             i++;
             if(i > lowerbound && (i < upperbound || limit == -1)){
                 try{
@@ -1115,35 +1125,43 @@ bool Core::makePair(std::string body, crow::json::wvalue& out){
     
     CROW_LOG_INFO << "put body : " << "key : " << key << ", value >> " << writeValue << "\n";
     
-    bool ret = false;
     
-    rocksdb::Slice keySlice = key;
+    bool save = false;
+    if(x.has("save")){
+        save = x["save"].b();
+    }
     
-    std::string error;
-    // modify the database
-    if (dbStatus.ok()){
-        ret = true;
+    bool ret = !save;
+    
+    if(save){
+        rocksdb::Slice keySlice = key;
         
-        rocksdb::Status status = db->Put(rocksdb::WriteOptions(), keySlice, writeValue);
-        if(!status.ok()){
-           error = "data failed to save";
-           ret = false;
+        std::string error;
+        // modify the database
+        if (dbStatus.ok()){
+            ret = true;
+            
+            rocksdb::Status status = db->Put(rocksdb::WriteOptions(), keySlice, writeValue);
+            if(!status.ok()){
+               error = "data failed to save";
+               ret = false;
+            }
+            
+        }else{
+            //result = "{\"error\":\"db status error\"}";
+            error = "db status error";
+            ret = false;
         }
         
-    }else{
-        //result = "{\"error\":\"db status error\"}";
-        error = "db status error";
-        ret = false;
-    }
-    
-    //std::stringstream ss;
-    //ss<< "{" << std::quoted("result") << ":" << std::quoted(key) << "}";
-    if(!ret){
-        out["error"] = error;
+        //std::stringstream ss;
+        //ss<< "{" << std::quoted("result") << ":" << std::quoted(key) << "}";
+        if(!ret){
+            out["error"] = error;
+        }
     }
     
     
-    return true;
+    return ret;
     
 }
 
@@ -1618,3 +1636,156 @@ bool Core::openTCPSocketClient(){
     return ret;
 }
 
+/// Socket Interceptor //////////
+
+SocketInterceptor::SocketInterceptor(Core& quarksCore, bool notifyAllOnClose/*= true*/) {
+    _core = &quarksCore;
+    _notifyAllOnClose = notifyAllOnClose;
+}
+
+SocketInterceptor& SocketInterceptor::getInstance(Core& quarksCore, bool notifyAllOnClose/*= true*/){
+    static SocketInterceptor instance(quarksCore, notifyAllOnClose);
+    return instance;
+}
+
+void SocketInterceptor::broadcast(std::string to, std::string data){
+    
+    for (auto it=_connMap.begin(); it!=_connMap.end(); ++it){
+        if(wildcmp(to.c_str(), it->first.c_str())){
+            auto u = it->second;
+            u->send_text(data);
+        }
+    }
+}
+
+void SocketInterceptor::onOpen(crow::websocket::connection& conn){
+     CROW_LOG_INFO << "QuarksSCIR: " << conn.userdata();
+    
+}
+
+void SocketInterceptor::onClose(crow::websocket::connection& conn){
+    char* _id = (char*)conn.userdata();
+    if(_id != nullptr){
+        
+        std::string leaveId = _id;
+        std::string key =std::string("*_") + std::string(_id);
+        
+        std::vector<std::string> rooms;
+        for (auto it=_connMap.begin(); it!=_connMap.end(); ++it){
+            if(wildcmp(key.c_str(), it->first.c_str())){
+                std::size_t found = it->first.find("_");
+                std::string room = it->first.substr(0, found);
+                rooms.push_back(room);
+                
+                _connMap.erase(it->first);
+                
+            }
+        }
+        if(_notifyAllOnClose){
+            std::string data = R"({"leave":")";
+            data += leaveId;
+            data += R"("})";
+            for(auto& v : rooms){
+                std::string to = v + std::string("_*");
+                broadcast(v, data);
+            }
+        
+        }
+    
+    }
+}
+
+bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
+                                  const std::string& data, bool is_binary){
+    
+    if(data.size() == 0){
+        CROW_LOG_INFO << "empty data" << data;
+        return true;
+        
+    }
+    
+    auto x = crow::json::load(data);
+    if (!x){
+        CROW_LOG_INFO << "invalid message body: " << data;
+        return true;
+        
+    }
+    
+    try{
+        if(x.has("join")){
+            std::string room = x["join"].s();
+            
+            char* _id = (char*)conn.userdata();
+            if(_id != nullptr){
+                std::string key = room + std::string("_") + _id;
+                
+                if(x.has("broadcast")){
+                    std::string data = x["broadcast"].s();
+                    broadcast(room + std::string("_*"), data);
+                }
+                
+                _connMap[key] = &conn;
+                
+            }
+            
+        }else if(x.has("list")){
+            std::string room = x["list"].s();
+            std::string key = room + std::string("_*");
+            
+            std::string list ="[";
+            for (auto it=_connMap.begin(); it!=_connMap.end(); ++it){
+                if(wildcmp(key.c_str(), it->first.c_str())){
+                    list += it->first + std::string(",");
+                }
+            }
+            
+            list[list.size() - 1] = ']';
+            
+            conn.send_text(list);
+            
+            
+        }else if(x.has("broadcast")){
+            std::string room = x["room"].s();
+            std::string data = x["broadcast"].s();
+            
+            broadcast(room + std::string("_*"), data);
+            
+        }else if(x.has("payload")){
+            std::string room = x["payload"]["room"].s();
+            std::string to  = x["payload"]["to"].s();
+            std::string msg = x["payload"]["data"].s();
+            
+            std::string key = room + std::string("_") + to;
+            
+            if(!to.compare("*")){
+                for (auto it=_connMap.begin(); it!=_connMap.end(); ++it){
+                    if(wildcmp(key.c_str(), it->first.c_str())){
+                        auto u = it->second;
+                        if (is_binary)
+                            u->send_binary(msg);
+                        else
+                            u->send_text(msg);
+                    }
+                }
+            
+            }else{
+                auto u = _connMap[key];
+                if(u){
+                    if (is_binary)
+                        u->send_binary(msg);
+                    else
+                        u->send_text(msg);
+                    
+                }
+                
+                    
+            }
+           
+        }
+    }catch (const std::runtime_error& error){
+        CROW_LOG_INFO << "runtime error : invalid data parameters - " << data;
+    }
+    
+    return true;
+}
+    

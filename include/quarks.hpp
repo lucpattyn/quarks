@@ -6,14 +6,16 @@
 
 #include <crow.h>
 
+#include <qsocket.hpp>
+
 /**
  * @brief This namespace refers to implementation of core functionalities from the service
  * 
  */
 namespace Quarks {
-
+    
     /**
-     * @brief Solves the shortcomings of Redis - Sort, Expiry, Serialize
+     * @brief Solves the shortcomings of Redis - Sort, Expiry(?!), Serialize
      * 
      */
     class Core {
@@ -33,6 +35,7 @@ namespace Quarks {
         bool insert(bool failIfExists, std::string body, std::string& out);
         bool post(std::string body, std::string& out);
         bool put(std::string body, std::string& out);
+        bool put(std::string key, std::string value, std::string& out);
         bool putAtom(crow::json::rvalue& x, std::string& out);
         bool putAtom(std::string body, std::string& out);
 
@@ -111,6 +114,35 @@ namespace Quarks {
         int _portNumber;
         
         bool _hooksocket;
+        
+    };
+    
+    class SocketInterceptor : public QSocket::Interceptor {
+        
+    public:
+        static SocketInterceptor& getInstance(Core& quarksCore,
+                                              bool notifyAllOnClose = true);
+        
+        SocketInterceptor(Core& quarksCore, bool notifyAllOnClose = true);
+        
+        void broadcast(std::string room, std::string data);
+        
+        void onOpen(crow::websocket::connection& conn);
+        void onClose(crow::websocket::connection& conn);
+        bool onMessage(crow::websocket::connection& conn,
+                       const std::string& data, bool is_binary);
+        
+        
+        Core& Quarks(){
+            return *_core;
+        }
+        
+        std::map<std::string, crow::websocket::connection*> _connMap;
+        
+        
+    private:
+        Core* _core;
+        bool _notifyAllOnClose;
         
     };
     
