@@ -1648,10 +1648,30 @@ SocketInterceptor& SocketInterceptor::getInstance(Core& quarksCore, bool notifyA
     return instance;
 }
 
-void SocketInterceptor::broadcast(std::string to, std::string data){
+auto SocketInterceptor::lookup(const items& items, const std::string& key)
+-> std::pair<items::const_iterator, items::const_iterator>
+{
+    auto p = items.lower_bound(key);
+    auto q = items.end();
+    if (p != q && p->first == key) {
+        return std::make_pair(p, std::next(p));
+    } else {
+        auto r = p;
+        while (r != q && r->first.compare(0, key.size(), key) == 0) {
+            ++r;
+        }
+        return std::make_pair(p, r);
+    }
+}
+
+void SocketInterceptor::broadcast(std::string room, std::string data){
     
-    for (auto it=_connMap.begin(); it!=_connMap.end(); ++it){
-        if(wildcmp(to.c_str(), it->first.c_str())){
+    auto items = lookup(_connMap, room);
+    auto itBegin = items.first;
+    auto itEnd = items.second;
+    
+    if(_connMap.size() > 0){
+        for (auto it=itBegin; it!=itEnd; ++it){
             auto u = it->second;
             u->send_text(data);
         }
@@ -1667,6 +1687,7 @@ void SocketInterceptor::onClose(crow::websocket::connection& conn){
     char* _id = (char*)conn.userdata();
     if(_id != nullptr){
         
+        // Needs real improvement to find the rooms.
         std::string leaveId = _id;
         std::string key =std::string("*_") + std::string(_id);
         
@@ -1675,9 +1696,10 @@ void SocketInterceptor::onClose(crow::websocket::connection& conn){
             if(wildcmp(key.c_str(), it->first.c_str())){
                 std::size_t found = it->first.find("_");
                 std::string room = it->first.substr(0, found);
-                rooms.push_back(room);
-                
-                _connMap.erase(it->first);
+                 _connMap.erase(it->first);
+                if(_connMap.size() > 0){
+                    rooms.push_back(room);
+                }
                 
             }
         }
@@ -1686,7 +1708,6 @@ void SocketInterceptor::onClose(crow::websocket::connection& conn){
             data += leaveId;
             data += R"("})";
             for(auto& v : rooms){
-                std::string to = v + std::string("_*");
                 broadcast(v, data);
             }
         
@@ -1721,7 +1742,7 @@ bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
                 
                 if(x.has("broadcast")){
                     std::string data = x["broadcast"].s();
-                    broadcast(room + std::string("_*"), data);
+                    broadcast(room, data);
                 }
                 
                 _connMap[key] = &conn;
@@ -1730,15 +1751,16 @@ bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
             
         }else if(x.has("list")){
             std::string room = x["list"].s();
-            std::string key = room + std::string("_*");
+            std::string list ="[ ";
             
-            std::string list ="[";
-            for (auto it=_connMap.begin(); it!=_connMap.end(); ++it){
-                if(wildcmp(key.c_str(), it->first.c_str())){
-                    list += it->first + std::string(",");
-                }
+            auto items = lookup(_connMap, room);
+            auto itBegin = items.first;
+            auto itEnd = items.second;
+            
+            for (auto it=itBegin; it!=itEnd; ++it){
+                 list += it->first + std::string(",");
             }
-            
+           
             list[list.size() - 1] = ']';
             
             conn.send_text(list);
@@ -1748,40 +1770,30 @@ bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
             std::string room = x["room"].s();
             std::string data = x["broadcast"].s();
             
-            broadcast(room + std::string("_*"), data);
+            broadcast(room, data);
             
         }else if(x.has("payload")){
             std::string room = x["payload"]["room"].s();
             std::string to  = x["payload"]["to"].s();
-            std::string msg = x["payload"]["data"].s();
+            std::string data = x["data"].s();
             
             std::string key = room + std::string("_") + to;
             
             if(!to.compare("*")){
-                for (auto it=_connMap.begin(); it!=_connMap.end(); ++it){
-                    if(wildcmp(key.c_str(), it->first.c_str())){
-                        auto u = it->second;
-                        if (is_binary)
-                            u->send_binary(msg);
-                        else
-                            u->send_text(msg);
-                    }
-                }
-            
+                broadcast(room, data);
             }else{
                 auto u = _connMap[key];
                 if(u){
                     if (is_binary)
-                        u->send_binary(msg);
+                        u->send_binary(data);
                     else
-                        u->send_text(msg);
+                        u->send_text(data);
                     
                 }
-                
-                    
             }
            
         }
+        
     }catch (const std::runtime_error& error){
         CROW_LOG_INFO << "runtime error : invalid data parameters - " << data;
     }

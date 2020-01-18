@@ -139,6 +139,10 @@ namespace Quarks {
         
         std::map<std::string, crow::websocket::connection*> _connMap;
         
+        using items = std::map<std::string, crow::websocket::connection*>;
+        auto lookup(const items& items, const std::string& key)->
+            std::pair<items::const_iterator, items::const_iterator>;
+        
         
     private:
         Core* _core;
