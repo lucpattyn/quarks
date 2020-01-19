@@ -147,7 +147,7 @@ int main(int argc, char ** argv) {
 
  
    QSocket::Interceptor& interceptor = Quarks::Core::_Instance.shouldHookSocket()
-    ? Quarks::SocketInterceptor::getInstance(Quarks::Core::_Instance, true)
+    ? Quarks::SocketInterceptor::getInstance(Quarks::Core::_Instance)
     : QSocket::DefaultInterceptor();
     
    QSocket qsock(CROW_ROUTE(app, "/ws"), interceptor);

@@ -1664,6 +1664,22 @@ auto SocketInterceptor::lookup(const items& items, const std::string& key)
     }
 }
 
+auto SocketInterceptor::lookup(const pairs& items, const std::string& key)
+-> std::pair<pairs::const_iterator, pairs::const_iterator>
+{
+    auto p = items.lower_bound(key);
+    auto q = items.end();
+    if (p != q && p->first == key) {
+        return std::make_pair(p, std::next(p));
+    } else {
+        auto r = p;
+        while (r != q && r->first.compare(0, key.size(), key) == 0) {
+            ++r;
+        }
+        return std::make_pair(p, r);
+    }
+}
+
 void SocketInterceptor::broadcast(std::string room, std::string data){
     
     auto items = lookup(_connMap, room);
@@ -1679,7 +1695,7 @@ void SocketInterceptor::broadcast(std::string room, std::string data){
 }
 
 void SocketInterceptor::onOpen(crow::websocket::connection& conn){
-     CROW_LOG_INFO << "QuarksSCIR: " << conn.userdata();
+    CROW_LOG_INFO << "QuarksSCIR::Open << " << conn.userdata();
     
 }
 
@@ -1689,29 +1705,31 @@ void SocketInterceptor::onClose(crow::websocket::connection& conn){
         
         // Needs real improvement to find the rooms.
         std::string leaveId = _id;
-        std::string key =std::string("*_") + std::string(_id);
+        std::string userKey = leaveId + std::string("_");
         
-        std::vector<std::string> rooms;
-        for (auto it=_connMap.begin(); it!=_connMap.end(); ++it){
-            if(wildcmp(key.c_str(), it->first.c_str())){
-                std::size_t found = it->first.find("_");
-                std::string room = it->first.substr(0, found);
-                 _connMap.erase(it->first);
-                if(_connMap.size() > 0){
-                    rooms.push_back(room);
-                }
-                
-            }
-        }
+        auto rooms = lookup(_userRoomsMap, userKey);
+        auto itBegin = rooms.first;
+        auto itEnd = rooms.second;
+        
         if(_notifyAllOnClose){
             std::string data = R"({"leave":")";
             data += leaveId;
             data += R"("})";
-            for(auto& v : rooms){
-                broadcast(v, data);
+        
+            for (auto it=itBegin; it!=itEnd; ++it){
+                auto room = it->second;
+                broadcast(room, data);
+                
+                std::string roomKey = room + std::string("_") + _id;
+                _connMap.erase(roomKey);
+                
             }
         
         }
+    
+        _userRoomsMap.erase(itBegin, itEnd);
+    
+        CROW_LOG_INFO << "QuarksSCIR::Close << " << _connMap.size() << " " << _userRoomsMap.size();
     
     }
 }
@@ -1738,14 +1756,21 @@ bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
             
             char* _id = (char*)conn.userdata();
             if(_id != nullptr){
-                std::string key = room + std::string("_") + _id;
+                std::string roomKey = room + std::string("_") + _id;
                 
                 if(x.has("broadcast")){
                     std::string data = x["broadcast"].s();
                     broadcast(room, data);
                 }
                 
-                _connMap[key] = &conn;
+                if(x.has("notifyOnLeave")){
+                    _notifyAllOnClose = x["notifyOnLeave"].b();
+                }
+                
+                _connMap[roomKey] = &conn;
+                
+                std::string userKey = std::string(_id) + std::string("_") + room;
+                _userRoomsMap[userKey] = room;
                 
             }
             

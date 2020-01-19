@@ -137,16 +137,22 @@ namespace Quarks {
             return *_core;
         }
         
-        std::map<std::string, crow::websocket::connection*> _connMap;
-        
         using items = std::map<std::string, crow::websocket::connection*>;
         auto lookup(const items& items, const std::string& key)->
             std::pair<items::const_iterator, items::const_iterator>;
         
+        using pairs = std::map<std::string, std::string>;
+        auto lookup(const pairs& p, const std::string& key)->
+        std::pair<pairs::const_iterator, pairs::const_iterator>;
         
     private:
         Core* _core;
+        std::map<std::string, crow::websocket::connection*> _connMap;
+        std::map<std::string, std::string> _userRoomsMap;
+        
         bool _notifyAllOnClose;
+        
+        std::string leaveMessage;
         
     };
     

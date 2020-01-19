@@ -446,7 +446,98 @@ Quarks will allow minimum usage of scripting to ensure the server side codes rem
 After v8 engine integration and scripting support,
 the next target is to allow listener support through zero mq to communicate with other processes and services.
 
-Websocket support has been added too. Examples will be provided later.
+Websocket support has been added too.
+
+### WEBSOCKETS
+
+#Initiate a socket:
+```
+var sock = new WebSocket("ws://0.0.0.0:18080/ws?_id=" + userId );
+```
+*Here userId is the id which would be used to uniquely identify a user, otherwise socket chat fails
+Usually this id would be used by the other party (i.e a messege sender) to send messages to this user
+
+
+#Room join  (must join a room to initiate chat):
+```
+sock.onopen = ()=>{
+    console.log('open')
+    var joinData = {"join":"defaultroom"};
+    sock.send(JSON.stringify(joinData));
+    
+    // if needed to broadcast to the room about joining/presence and leave (optional)
+    // add broadcast attribute.
+    // ex. var joinData = {"join":"defaultroom", "broadcast":"online", "notifyOnLeave":"true"};
+}
+
+```
+#Error Handling
+
+```
+sock.onerror = (e)=>{
+    console.log('error',e)
+}
+sock.onclose = ()=>{
+    console.log('close')
+}
+
+```
+
+#Message Sending:
+
+```
+$("#send").click(()=>{
+    var msgbody = $("#msg").val();
+
+    var dataToSend = {"payload": 
+                        {
+                            "room":"defaultroom",
+                            "to":""+friendId                        
+                        },
+                      "data":"" + msgBody
+                  };
+
+    sock.send(JSON.stringify(dataToSend));
+    $("#msg").val("");
+    
+});
+
+$("#msg").keypress(function(e){
+    if (e.which == 13)
+    {
+        $("#send").click();
+    }
+});
+
+```
+
+#Message Handling:
+
+```
+sock.onmessage = (e)=>{
+    $("#log").val(
+    e.data +"\n" + $("#log").val());
+}
+
+```
+
+#List Users in a Room :
+
+```
+sock.send(JSON.stringify({"list":""+roomname}));
+sock.onmessage = (e)=>{
+    $("#log").val(
+    "Userlist in room " + roomname + " : " + e.data +"\n" + $("#log").val());
+}
+
+```
+
+
+
+
+### PLUGINS
+
+Currently, only OpenCV is provided as a plugin.
 
 For those interested in testing OpenCV as plugin,
 you should submit a POST request to http://localhost:18080/filters/gausian. 
