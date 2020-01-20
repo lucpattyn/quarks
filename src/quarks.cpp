@@ -1735,7 +1735,7 @@ void SocketInterceptor::onClose(crow::websocket::connection& conn){
         auto itEnd = rooms.second;
         
         if(_notifyAllOnClose){
-            std::string data = R"({"roomleave":")";
+            std::string data = R"({"offline":")";
             data += leaveId;
             data += R"("})";
         
@@ -1785,7 +1785,7 @@ bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
                 
                 if(x.has("broadcast")){
 		    std::string joinData = crow::json::dump(x["broadcast"]);
-		    std::string data = R"({"roomjoin":")";
+		    std::string data = R"({"online":")";
            	    data += std::string(_id);
             	    data += R"(", "data":)";
 		    data += joinData;
