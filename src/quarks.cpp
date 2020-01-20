@@ -303,6 +303,12 @@ bool Core::put(std::string key, std::string value, std::string& out){
     
 }
 
+bool Core::putPair(crow::json::rvalue& pair,  std::string& out) {
+
+   return insertKeyValuePair(false, pair, out);
+	
+}
+
 bool Core::putAtom(crow::json::rvalue& x, std::string& out){
     out = std::string("{") + R"("result":false)" + std::string("}");
     
@@ -1694,6 +1700,23 @@ void SocketInterceptor::broadcast(std::string room, std::string data){
     }
 }
 
+void SocketInterceptor::broadcast(std::string room, std::string data, 
+				crow::websocket::connection& conn){
+    
+    auto items = lookup(_connMap, room);
+    auto itBegin = items.first;
+    auto itEnd = items.second;
+    
+    if(_connMap.size() > 0){
+        for (auto it=itBegin; it!=itEnd; ++it){
+            auto u = it->second;
+	    if(u != &conn){
+            	u->send_text(data);
+	    }
+        }
+    }
+}
+
 void SocketInterceptor::onOpen(crow::websocket::connection& conn){
     CROW_LOG_INFO << "QuarksSCIR::Open << " << conn.userdata();
     
@@ -1712,7 +1735,7 @@ void SocketInterceptor::onClose(crow::websocket::connection& conn){
         auto itEnd = rooms.second;
         
         if(_notifyAllOnClose){
-            std::string data = R"({"leave":")";
+            std::string data = R"({"roomleave":")";
             data += leaveId;
             data += R"("})";
         
@@ -1751,15 +1774,23 @@ bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
     }
     
     try{
+	
+	char* _id = (char*)conn.userdata();
+            
         if(x.has("join")){
             std::string room = x["join"].s();
             
-            char* _id = (char*)conn.userdata();
             if(_id != nullptr){
                 std::string roomKey = room + std::string("_") + _id;
                 
                 if(x.has("broadcast")){
-                    std::string data = x["broadcast"].s();
+		    std::string joinData = crow::json::dump(x["broadcast"]);
+		    std::string data = R"({"roomjoin":")";
+           	    data += std::string(_id);
+            	    data += R"(", "data":)";
+		    data += joinData;
+		    data += R"(})";
+
                     broadcast(room, data);
                 }
                 
@@ -1775,8 +1806,8 @@ bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
             }
             
         }else if(x.has("list")){
-            std::string room = x["list"].s();
-            std::string list ="[ ";
+            std::string room = std::string(x["list"].s()) + "_";
+            std::string list ="[";
             
             auto items = lookup(_connMap, room);
             auto itBegin = items.first;
@@ -1785,28 +1816,56 @@ bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
             for (auto it=itBegin; it!=itEnd; ++it){
                  list += it->first + std::string(",");
             }
-           
-            list[list.size() - 1] = ']';
+	
+	    if(list.size() > 0){           
+            	list[list.size() - 1] = ']';
+	    }else{
+		list = "[]";
+	    }
             
             conn.send_text(list);
             
             
         }else if(x.has("broadcast")){
             std::string room = x["room"].s();
-            std::string data = x["broadcast"].s();
+            std::string data = crow::json::dump(x["broadcast"]);
             
-            broadcast(room, data);
+            broadcast(room, data, conn); // broadcast shouldn't send to broadcaster
             
         }else if(x.has("payload")){
             std::string room = x["payload"]["room"].s();
-            std::string to  = x["payload"]["to"].s();
-            std::string data = x["data"].s();
-            
-            std::string key = room + std::string("_") + to;
-            
+            std::string to  = "*";
+	    if(x["payload"].has("to")){
+		to = x["payload"]["to"].s();
+	    }
+	
+	    
+	    if(x.has("key")){
+
+	        std::string out;
+
+	    	if(!Quarks().putPair(x, out)){
+		    crow::json::wvalue err;
+		    err["error"] = out;
+		    err["object"] = x;
+		    conn.send_text(crow::json::dump(err));
+
+		    return true;
+		}	
+	    }
+
+	    crow::json::wvalue w = std::move(x);    
+	   
+            if(_id != nullptr){
+            	w["payload"]["from"] = std::string(_id);
+	    }
+            std::string data = crow::json::dump(w); 
+	
             if(!to.compare("*")){
                 broadcast(room, data);
             }else{
+		std::string key = room + std::string("_") + to;
+            
                 auto u = _connMap[key];
                 if(u){
                     if (is_binary)
@@ -1818,6 +1877,7 @@ bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
             }
            
         }
+	
         
     }catch (const std::runtime_error& error){
         CROW_LOG_INFO << "runtime error : invalid data parameters - " << data;
