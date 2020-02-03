@@ -348,12 +348,20 @@ POST: http://0.0.0.0:18080/searchjson
 
 Sample Query Format for
 "querying items which are up for sale with key like item* (i.e item1, item2 etc.) , then find the sellers of such items (items has a seller_id field that contains the user_id of the seller) "
+
 ```
-BODY:
 {
-"keys":"item*",
-"filter":{"map": {"as":"seller", "field":"seller_id"}}
-}      
+    "keys":"item*",
+    "include":{
+        "map": {"field":"seller_id", "as":"seller"},
+        "module":"main",
+        "filter":"jsFilter",
+        "params":"{\"approved\":1}"
+    }
+
+}
+
+ 
 ```
 
 To test it out,
@@ -391,13 +399,7 @@ BODY:
 
 Finally, check the results by 
 POST: http://0.0.0.0:18080/searchjson
-BODY:
-```
-{
-"keys":"item*",
-"filter":{"map": {"field":"seller_id", "as":"seller"}}
-}    
-```
+
 So we are able to iterate items (by "keys":"item*") and then run a join operation with the filter attribute ("filter":...) through the keyword map ({"map": {"field":"seller_id", "as":"seller"}})
 
 v8 engine has been integrated to support scripting in server side to further filter/sort queried results. 
