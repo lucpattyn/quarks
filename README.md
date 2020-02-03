@@ -102,12 +102,17 @@ c) List values by wildcard search with keys (you can specifiy skip and limit opt
 ```
 d) List sorted values by wildcard search with keys (you can specifiy skip and limit optionally)
 ```
- http://0.0.0.0:18080/getsorted?keys=g1_u*&sortby=msg&skip=5&limit=10 
+ http://0.0.0.0:18080/getsorted?keys=g1_u*&sortby=msg&skip=5&limit=10   
 
 ```
   You can reverse the order by specifying des=true
 ```
  http://0.0.0.0:18080/getsorted?keys=g1_u*&sortby=msg&des=true&skip=5&limit=10 
+
+```
+It is possible to apply equal-to filter on a value :
+```
+http://0.0.0.0:18080/getsorted?keys=g1_u*&skip=0&limit=10&filter={"where":{"messageTo":{"eq":"u2"}}}
 
 ```
 

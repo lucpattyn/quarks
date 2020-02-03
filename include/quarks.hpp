@@ -34,10 +34,10 @@ namespace Quarks {
         
         bool insert(bool failIfExists, std::string body, std::string& out);
         bool post(std::string body, std::string& out);
-	bool put(std::string body, std::string& out);	
+        bool put(std::string body, std::string& out);
         bool put(std::string key, std::string value, std::string& out);
 
-	bool putPair(crow::json::rvalue& pair, std::string& out);
+        bool putPair(crow::json::rvalue& pair, std::string& out);
         
         bool putAtom(crow::json::rvalue& x, std::string& out);
         bool putAtom(std::string body, std::string& out);
@@ -51,7 +51,7 @@ namespace Quarks {
         
         bool getSorted(std::string wild, std::string sortby, bool ascending,
                      std::vector<crow::json::wvalue>& matchedResults,
-                     int skip = 0, int limit = -1);
+                       int skip = 0, int limit = -1, std::string filter = "");
 
 		bool getKeys(std::string wild,
                     std::vector<crow::json::wvalue>& matchedResults,
@@ -94,12 +94,18 @@ namespace Quarks {
         
         bool atom(std::string body, std::string& out);
         
+        
+        /// counting stuff
+        std::mutex mtx;
+        bool increment(std::string key, int stepBy, std::string& out);
+        
         /////// r&d ////////////////
+        bool fileTransfer(std::string moduleName, std::string funcName,
+                          std::string channelName, std::string remoteDescription);
 
         bool openTCPSocketClient();
         
-        bool fileTransfer(std::string moduleName, std::string funcName,
-			std::string channelName, std::string remoteDescription);
+       
         
         
         ////////////////////////////
@@ -129,7 +135,7 @@ namespace Quarks {
         SocketInterceptor(Core& quarksCore, bool notifyAllOnClose = true);
         
         void broadcast(std::string room, std::string data);
-	void broadcast(std::string room, std::string data, 
+        void broadcast(std::string room, std::string data,
 				crow::websocket::connection& conn);
         
         void onOpen(crow::websocket::connection& conn);
@@ -156,8 +162,6 @@ namespace Quarks {
         std::map<std::string, std::string> _userRoomsMap;
         
         bool _notifyAllOnClose;
-        
-        std::string leaveMessage;
         
     };
     

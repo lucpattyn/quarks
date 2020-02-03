@@ -158,7 +158,7 @@ int main(int argc, char ** argv) {
     auto post = [](std::string body, std::string& out)
     {
         
-        CROW_LOG_INFO << "post: " << body;
+        //CROW_LOG_INFO << "post: " << body;
         
         /*auto res = crow::response{os.str()};
          res.add_header("Access-Control-Allow-Origin", "*");
@@ -178,7 +178,7 @@ int main(int argc, char ** argv) {
     
     auto put = [](std::string body, std::string& out)
     {
-        CROW_LOG_INFO << "put: " << body;
+        //CROW_LOG_INFO << "put: " << body;
 	
         bool success = Quarks::Core::_Instance.put(body, out);
        
@@ -190,7 +190,7 @@ int main(int argc, char ** argv) {
    
     auto putatom = [](std::string body, std::string& out)
     {
-        CROW_LOG_INFO << body;
+        //CROW_LOG_INFO << body;
         
         bool success = Quarks::Core::_Instance.putAtom(body, out);
         
@@ -200,7 +200,7 @@ int main(int argc, char ** argv) {
     
     auto removeatom = [](std::string body, std::string& out)
     {
-        CROW_LOG_INFO << body;
+        //CROW_LOG_INFO << body;
         
         bool success = Quarks::Core::_Instance.removeAtom(body, out);
         
@@ -210,7 +210,7 @@ int main(int argc, char ** argv) {
     
     auto atom = [](std::string body, std::string& out)
     {
-        CROW_LOG_INFO << body;
+        //CROW_LOG_INFO << body;
         
         bool success = Quarks::Core::_Instance.atom(body, out);
         
@@ -329,7 +329,7 @@ int main(int argc, char ** argv) {
         try{
             auto q = QueryParams::Parse(req);
             
-            CROW_LOG_INFO << "wild: " << q.wild << ", skip: " << q.skip << ", limit: " << q.limit;
+            //CROW_LOG_INFO << "wild: " << q.wild << ", skip: " << q.skip << ", limit: " << q.limit;
             
             bool ret = false;
             if(q.wild.size() > 0){
@@ -368,17 +368,20 @@ int main(int argc, char ** argv) {
             auto sb = req.url_params.get("sortby");
             std::string sortby = (sb == nullptr || !strlen(sb)) ? "" : sb;
             
+            auto f = req.url_params.get("filter");
+            std::string filterBy = (f == nullptr || !strlen(f)) ? "" : f;
+            
             auto des = req.url_params.get("des");
             std::string descending = (des == nullptr || !strlen(des))  ? "false" : des;
             
-            CROW_LOG_INFO << "wild: " << q.wild << ", sortby: " << sortby << ", des: " << descending
-                << ", skip: " << q.skip << ", limit: " << q.limit;
+            //CROW_LOG_INFO << "wild: " << q.wild << ", sortby: " << sortby << ", des: " << descending
+            //    << ", skip: " << q.skip << ", limit: " << q.limit;
             
             bool ret = false;
             if(q.wild.size() > 0){
                 bool ascending = (descending.compare("true") == 0) ? false : true;
                 
-                ret = Quarks::Core::_Instance.getSorted(q.wild, sortby, ascending, jsonResults, std::stoi(q.skip), std::stoi(q.limit));
+                ret = Quarks::Core::_Instance.getSorted(q.wild, sortby, ascending, jsonResults, std::stoi(q.skip), std::stoi(q.limit), filterBy);
                 
                 out["result"] = std::move(jsonResults);
                 if(!ret){
@@ -408,7 +411,7 @@ int main(int argc, char ** argv) {
         try{
             auto q = QueryParams::Parse(req);
             
-            CROW_LOG_INFO << "wild: " << q.wild << " (size: " << q.wild.size() << "), skip: " << q.skip << ", limit: " << q.limit;
+            //CROW_LOG_INFO << "wild: " << q.wild << " (size: " << q.wild.size() << "), skip: " << q.skip << ", /limit: " << q.limit;
             
             bool ret = false;
             if(q.wild.size() > 0){
@@ -481,7 +484,7 @@ int main(int argc, char ** argv) {
         try{
             auto q = QueryParams::Parse(req);
             
-            CROW_LOG_INFO << "wild: " << q.wild << ", skip: " << q.skip << ", limit: " << q.limit;
+            //CROW_LOG_INFO << "wild: " << q.wild << ", skip: " << q.skip << ", limit: " << q.limit;
             
             std::vector<std::string> strResults;
             Quarks::Core::_Instance.iter(q.wild, strResults, std::stoi(q.skip), std::stoi(q.limit));
@@ -537,7 +540,7 @@ int main(int argc, char ** argv) {
         try{
             auto q = QueryParams::Parse(req);
             
-            CROW_LOG_INFO << "wild: " << q.wild << ", skip: " << q.skip << ", limit: " << q.limit;
+            //CROW_LOG_INFO << "wild: " << q.wild << ", skip: " << q.skip << ", limit: " << q.limit;
            
             if(q.wild.size() > 0){
                 //Quarks::Core::_Instance.iterJson(wild, jsonResults);
@@ -858,7 +861,7 @@ int main(int argc, char ** argv) {
         std::string params;
         //uriDecode(q, params);
         
-        CROW_LOG_INFO << "uri params:" << params << q;
+        //CROW_LOG_INFO << "uri params:" << params << q;
 
 #ifdef _USE_RAPIDAPI       
         
