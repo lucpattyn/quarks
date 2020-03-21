@@ -6,6 +6,7 @@
 #endif
 
 #include <main.hpp>
+
 #include <quarks.hpp>
 #include <v8engine.hpp>
 
@@ -1203,13 +1204,20 @@ int main(int argc, char ** argv) {
     
     std::cout << "running .." << std::endl;
 
-    app.port(Quarks::Core::_Instance.getPort()).multithreaded().run();
+	std::thread t([&app](){
+		app.port(Quarks::Core::_Instance.getPort()).multithreaded().run();	
+	});
+
+	Quarks::Core::_Instance.run();
     
+
 #ifdef _V8_LATEST
     v8EngineShutdownInMain();
 #endif
-    
+
     Quarks::Core::_Instance.shutDown();
+
+	exit(-1);
     
     return 0;
 }

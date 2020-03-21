@@ -3,6 +3,8 @@
 
 #include <qsorter.hpp>
 
+#include <pubsub.hpp>
+
 #include "rocksdb/db.h"
 
 #include <iomanip>
@@ -128,7 +130,12 @@ void Core::setEnvironment(int argc, char** argv){
     
     openDB(schemaname);
     _argv.push_back(schemaname);
-    
+
+}
+
+void Core::run(){
+	
+    runPublisher();
 }
 
 void Core::shutDown(){
@@ -1655,6 +1662,12 @@ bool Core::fileTransfer(std::string moduleName, std::string funcName, std::strin
 
 
 bool Core::openTCPSocketClient(){
+
+	std::cout << "running subscriber..\n";
+	runSubscriber();
+    
+	return true;
+
     bool ret = false;
     
     boost::asio::io_service io_service;

@@ -27,6 +27,7 @@ namespace Quarks {
         
         void setEnvironment(int argc, char** argv);
         
+		void run();
         void shutDown();
         
         int getPort();
