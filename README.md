@@ -11,14 +11,15 @@ We will provide OpenCV as a readily available plugin.
 Thanks Arthur de Araújo Farias for providing a good example of using CROW with OpenCV.
 [arthurafarias/microservice-opencv-filter-gausian]
 
-This current example uses a compiled version of RocksDB, OpenCV 4.0.0 and Chrome v8 Engine and requires the following packages:
+This current example uses a compiled version of RocksDB, Chrome v8 Engine and ZeroMQ and requires the following packages:
 
 - Crow Library v0.1
 - GCC with support to C++17
 - Cmake 1.13
 - Boost::System
 - RocksDB
-- v8 Javascript Engine 
+- v8 Javascript Engine
+- ZeroMQ 
 - OpenCV 4.0.0 (Optional)
 - Curl (Experimental Optional)
 
@@ -553,4 +554,17 @@ The response should be a gausian filtered image from the submited image.
 
 OpenCV however is a plugin (an additional feature) and not the main purpose behind Quarks.
 Currently it is turned off by using #ifdef _USE_PLUGIN in the codes and if (_USE_PLUGINS) in CMakeLists.txt
+
+
+### Ubuntu 18.04 dependencies install instructions
+
+$ sudo apt-get install build-essential #Install if not available already
+
+#main dependency libraries:
+
+$ sudo apt-get install libboost-system-dev
+$ sudo apt-get install libv8-dev
+$ sudo apt-get install librocksdb-dev
+$ sudo apt-get install libzmq3-dev
+
 
