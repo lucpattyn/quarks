@@ -556,15 +556,21 @@ OpenCV however is a plugin (an additional feature) and not the main purpose behi
 Currently it is turned off by using #ifdef _USE_PLUGIN in the codes and if (_USE_PLUGINS) in CMakeLists.txt
 
 
-### Ubuntu 18.04 dependencies install instructions
+### Dependencies installation for Ubuntu 18.04 
 
-$ sudo apt-get install build-essential #Install if not available already
+ #environment and compiler setup
 
-#main dependency libraries:
+ -$ sudo apt-get install build-essential 
+ -$ sudo apt-get install ninja-build
 
-$ sudo apt-get install libboost-system-dev
-$ sudo apt-get install libv8-dev
-$ sudo apt-get install librocksdb-dev
-$ sudo apt-get install libzmq3-dev
+ #main dependency libraries installation:
+
+ -$ sudo apt-get install libboost-system-dev
+ -$ sudo apt-get install libv8-dev
+ -$ sudo apt-get install librocksdb-dev
+ -$ sudo apt-get install libzmq3-dev
+
+  
+  Check #How to Build section for compilation and binary creation
 
 

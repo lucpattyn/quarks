@@ -791,8 +791,14 @@ int main(int argc, char ** argv) {
     };
 
     auto route_core_filetransfer_callback=
-    [](/*const crow::request& req*/){
-        bool ret = Quarks::Core::_Instance.fileTransfer("filetransfer", "transfer", "sendfile", "remotedes");
+    [](const crow::request& req){
+        //bool ret = Quarks::Core::_Instance.fileTransfer("filetransfer", "transfer", "sendfile", "remotedes");
+	FILE* fp = fopen("transferred.data", "wb");
+	if(fp == NULL) return R"({"error":"not transferred"})";
+        
+	bool ret = fwrite(req.body.c_str(), sizeof(char), req.body.size(), fp) > 0;
+
+	fclose(fp);
 
         if(ret){
             return R"({"result":"transferred"})";
