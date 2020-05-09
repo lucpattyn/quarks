@@ -138,28 +138,116 @@ public:
             
         }
         
-        std::unordered_set<crow::websocket::connection*>& getUsers(){
-            return *_users;
-        }
+       
         std::map<std::string, crow::websocket::connection*>& getConnectionMap(){
-            return *_connMap;
+            return _connMap;
+        }
+
+	protected:		
+ 		std::map<std::string, crow::websocket::connection*> _connMap;
+        
+    
+    };
+
+
+	/////////File Interceptor///////////////////
+	class InterceptorFile : public Interceptor {
+        
+    public:
+        ////////////////////////
+        InterceptorFile(std::string mode){
+            _mode = mode;
         }
         
-    private:
-        std::unordered_set<crow::websocket::connection*>* _users;
-        std::map<std::string, crow::websocket::connection*>* _connMap;
+        virtual void onOpen(crow::websocket::connection&){
+            
+        }
         
+        virtual void onClose(crow::websocket::connection&){
+            
+        }
         
-    };
-    //////////////////////////////
+        virtual bool onMessage(crow::websocket::connection&,
+                               const std::string& msg, bool /*is_binary*/){
+			
+			auto x = crow::json::load(msg);
+    		if (!x){
+        		CROW_LOG_INFO << "invalid message body: " << data;
+        		return true;
+        
+    		}
     
+			try{
+				
+				char* _id = (char*)conn.userdata();
+				
+				if(x.has("cmd")){
+				    int cmd = x["cmd"].i();
+
+					switch(cmd){
+						case 1: 
+							FILE* fp = fopen(x["data"], "wb");
+							mFiles[conn] = fp;
+
+						break;
+
+						case 2:
+							fclose(mFiles[conn]);
+						break;
+					}
+				    
+				}else{
+					
+				}
+ 		
+			}catch (const std::runtime_error& error){
+		    	CROW_LOG_INFO << "runtime error : invalid data parameters - " << data;
+			}
+
+			return true;
+            
+        }
+
+		auto getMode(){
+			return _mode;
+		}
+
+	private:       
+        std::string _mode;
+
+		std::map<crow::websocket::connection*, FILE*> mFiles;
+    };
+
+
+	/////////////////End of Interceptors//////////////////////////
+
+
+///////////////////////////QSocket //////////////////////////////////
+    
+public:
     
     QSocket(crow::RuleParameterTraits<crow::TaggedRule<>>& traits,
             QSocket::Interceptor& interceptor = DefaultInterceptor())
     : qsockInterceptor(interceptor){
         connect(traits, interceptor);
     }
+
+ 	static QSocket::Interceptor& DefaultInterceptor(){
+        static QSocket::Interceptor defaultInterceptor;
+        return defaultInterceptor;
+        
+    }
+
+ 	static QSocket::Interceptor& FileInterceptor(std::string mode){
+        static QSocket::InterceptorFile fileInterceptor(mode);
+        return fileInterceptor;
+        
+    }
     
+    //void broadcast(std::string room, std::string data);
+    
+
+private:    
     void connect(crow::RuleParameterTraits<crow::TaggedRule<>>& traits,
                  QSocket::Interceptor& interceptor){
         
@@ -207,14 +295,7 @@ public:
         
     }
     
-    static QSocket::Interceptor& DefaultInterceptor(){
-        static QSocket::Interceptor defaultInterceptor;
-        return defaultInterceptor;
-        
-    }
-    
-    void broadcast(std::string room, std::string data);
-    
+   
     
 private:
     

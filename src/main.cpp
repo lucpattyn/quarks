@@ -113,45 +113,15 @@ int main(int argc, char ** argv) {
     };
     
 #endif
-    
-    // SOCKET FUNCTIONALITIES
-    
-    /*std::mutex mtx;
-    std::unordered_set<crow::websocket::connection*> users;
-    
-    crow::RuleParameterTraits<crow::TaggedRule<>>& traits = CROW_ROUTE(app, "/ws");
-    ((HackTraits*)&traits)->hackwebsocket()
-    .onopen([&](crow::websocket::connection& conn){
-        CROW_LOG_INFO << "new websocket connection";
-        
-        std::lock_guard<std::mutex> _(mtx);
-        users.insert(&conn);
-    })
-    .onclose([&](crow::websocket::connection& conn, const std::string& reason){
-        CROW_LOG_INFO << "websocket connection closed: " << reason;
-        delete [] (char*)conn.userdata();
-        
-        std::lock_guard<std::mutex> _(mtx);
-        users.erase(&conn);
-    })
-    .onmessage([&](crow::websocket::connection& conn, const std::string& data, bool is_binary){
-        std::string key = (char*)conn.userdata();
-        CROW_LOG_INFO << "websocket msg for key : " << key;
-        
-        std::lock_guard<std::mutex> _(mtx);
-        for(auto u:users)
-            if (is_binary)
-                u->send_binary(data);
-            else
-                u->send_text(data);
-    });*/   
-
+     
  
    QSocket::Interceptor& interceptor = Quarks::Core::_Instance.shouldHookSocket()
     ? Quarks::SocketInterceptor::getInstance(Quarks::Core::_Instance)
     : QSocket::DefaultInterceptor();
     
    QSocket qsock(CROW_ROUTE(app, "/ws"), interceptor);
+
+   QSocket qsockFileUploader(CROW_ROUTE(app, "/ws/files/upload"), QSocket::FileInterceptor("upload"));
     
 ///////////////////////////////////////////
 /////////// core functionalities //////////

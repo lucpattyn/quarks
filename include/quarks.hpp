@@ -159,7 +159,7 @@ namespace Quarks {
         
     private:
         Core* _core;
-        std::map<std::string, crow::websocket::connection*> _connMap;
+        //std::map<std::string, crow::websocket::connection*> _connMap;
         std::map<std::string, std::string> _userRoomsMap;
         
         bool _notifyAllOnClose;
