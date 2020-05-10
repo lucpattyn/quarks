@@ -170,52 +170,58 @@ public:
         virtual bool onMessage(crow::websocket::connection& conn,
                                const std::string& msg, bool is_binary){
 			
-			bool jsonData = true;			
+			bool jsonData = !is_binary;		
+
+			CROW_LOG_INFO << "is binary: " << is_binary;	
 			
-			auto x = crow::json::load(msg);
-    		if (!x){
-        		//CROW_LOG_INFO << "invalid message body: " << msg;
-        		//return true;
-				jsonData = false;
-        
-    		}
-    
-			try{
-				
-				//char* _id = (char*)conn.userdata();
-				
-				if(jsonData && x.has("cmd")){
+			if(jsonData){
 
-					CROW_LOG_INFO << "message body: " << msg ;
-
-				    int cmd = x["cmd"].i();
-					std::string fileName(x["data"].s());							
-
-					FILE* fp = nullptr;
-
-					switch(cmd){
-						case 1: 		
-							fp = fopen(fileName.c_str(), "wb");
-							mFiles[&conn] = fp;
-
-						break;
-
-						case 2:
-							fclose(mFiles[&conn]);
-
-						break;
-					}
-				    
-				}else{
-					FILE* fp = mFiles[&conn];
-					if(fp){
-						bool ret = fwrite(msg.c_str(), sizeof(char), msg.size(), fp) > 0;
-					}
-					
+				auto x = crow::json::load(msg);
+				if (!x){
+		    		CROW_LOG_INFO << "invalid message body: " << msg;
+		    		//return true;
+					jsonData = false;
+		    
 				}
- 		
-			}catch (const std::runtime_error& error){
-		    	CROW_LOG_INFO << "runtime error : invalid message parameters - " << msg;
+		
+				try{
+					
+					//char* _id = (char*)conn.userdata();
+					
+					if(x.has("cmd")){
+
+						CROW_LOG_INFO << "message body: " << msg ;
+
+						int cmd = x["cmd"].i();
+						std::string fileName(x["data"].s());							
+
+						FILE* fp = nullptr;
+
+						switch(cmd){
+							case 1: 		
+								fp = fopen(fileName.c_str(), "wb");
+								mFiles[&conn] = fp;
+
+							break;
+
+							case 2:
+								fclose(mFiles[&conn]);
+
+							break;
+						}
+						
+					}
+	 		
+				}catch (const std::runtime_error& error){
+					CROW_LOG_INFO << "runtime error : invalid message parameters - " << msg;
+				}
+			
+			}else{
+				FILE* fp = mFiles[&conn];
+				if(fp){
+					bool ret = fwrite(msg.c_str(), sizeof(char), msg.size(), fp) > 0;
+				}
+						
 			}
 
 			return true;
@@ -292,13 +298,11 @@ private:
         .onmessage([&](crow::websocket::connection& conn, const std::string& data, bool is_binary){
             //std::string _id = (char*)conn.userdata();
             //CROW_LOG_INFO << "websocket msg for _id : " << (_id != nullptr)? _id : "";
-            
-            
+            std::lock_guard<std::mutex> _(mtx);
+                      
             bool preventDefault = qsockInterceptor.onMessage(conn, data, is_binary);
                 
-            if(!preventDefault){
-				std::lock_guard<std::mutex> _(mtx);
-          
+            if(!preventDefault){				
                 for(auto u:users)
                     if (is_binary)
                         u->send_binary(data);
