@@ -119,7 +119,7 @@ int main(int argc, char ** argv) {
     ? Quarks::SocketInterceptor::getInstance(Quarks::Core::_Instance)
     : QSocket::DefaultInterceptor();
     
-   //QSocket qsock(CROW_ROUTE(app, "/ws"), interceptor);
+   QSocket qsock(CROW_ROUTE(app, "/ws"), interceptor);
 
    QSocket qsockFileUploader(CROW_ROUTE(app, "/ws/files/upload"), QSocket::FileInterceptor("upload"));
 
