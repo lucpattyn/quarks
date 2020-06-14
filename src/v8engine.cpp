@@ -12,7 +12,6 @@
 using namespace v8;
 
 
-
 /*class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
 public:
     virtual void *Allocate(size_t length) {
@@ -178,8 +177,16 @@ v8::Handle<v8::String> v8Engine::_ReadFile(const char* name)
 int v8Engine::load(std::string fileName, std::function<int (v8Engine::v8Context&)> onLoad){
     int ret = 0;
     
-    v8::HandleScope handle_scope;
-    v8::Persistent<v8::Context> context = v8::Context::New();
+     v8::Isolate* isolate = v8::Isolate::GetCurrent();
+     if(!isolate) {
+    	isolate = v8::Isolate::New();
+    	isolate->Enter();
+     }
+
+  // Create a stack-allocated handle scope.
+     v8::HandleScope handle_scope;
+
+     v8::Persistent<v8::Context> context = v8::Context::New();
     v8::Context::Scope context_scope(context);
     
     //context->AllowCodeGenerationFromStrings(true);
@@ -205,6 +212,9 @@ int v8Engine::load(std::string fileName, std::function<int (v8Engine::v8Context&
    
     v8Context v8Ctx(context->Global(), context);
     ret = onLoad(v8Ctx);
+
+    //isolate->Exit();
+    
     
     return ret;
     

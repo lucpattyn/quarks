@@ -1,0 +1,192 @@
+<html>
+<body>
+<style>
+h2 {
+color: #f90;
+}
+h2 {
+    font-size: 29px;
+    font-weight: 200;
+}
+body {
+    margin:20px;
+}
+</style>
+<center><h1>Quarks</h1></center><br/>
+<h2>Introduction</h2>
+
+<p>With the advent of new decade, as hardware gets modern (like Flash disk instead of magnetic ones), the concept of database and web-services needs to be modernised as well.</p>
+
+<p>So, what&#39;s the problem with traditional systems and databases?</p>
+
+<p>Relational Database representation compared to client side (usually Object Oriented) representation are completely different. To overcome this No-SQL was introduced like mongo, couchdb etc were introduced. However, even then they were developed keeping in mind the magnetic disks and were not tuned for optimal usage for new hard disk systems like flash disks. One such optimized store for new era hardware is rocksdb, which had the benefit of being developed later. Similarly we need to come up with new concepts which makes both server and client side development easy as far as data management and services are concerned.</p>
+
+<p>In comes the concept of Quarks (the name originally given by one of my esteemed colleagues Dr. Russel Ahmed Apu). Quarks plan to provide a uniform structure to address architectural problems, a proposed step in the right direction to modern software development. As micro-services concept gain popularity, there needs to be a mindset and attitude change towards server side programming. Having a separate heavy-weight stand alone db will not be a feasible solution in the upcoming decades; hence Quarks concepts can be considered a paradigm shifting solution towards how services are written.</p>
+
+<h2>Philosophy</h2>
+
+<p>Quarks serves as a small lightweight easily distributable service which eliminates the need of writing a lot of apis in the server side. There is also no need to create data models in servers in simple scenarios and having to link them to a separate stand alone DB. At the heart of quarks is the concept of simplicity. Programming in modern era should be simple - the program shouldn&#39;t have to worry about traffic management, threads, scaling and distributing of the system when the need arises.</p>
+
+<p>For scaling - simply replicate the Quarks Servers, put a standard load balancer (like nginx) in front to distribute api calls. The Quarks services will communicate with each other and interchange data if needed.</p>
+
+<p>Why it is named Quarks is because quarks services act like small particles (read light weight micro-services) and create a large system eventually! Getting it up and running is as easy as dropping an executable in hosting-server and running it.</p>
+
+<p>A majority of modern apps now a days has to deal with data and Quarks provide a mechanism to cache, store, retrieve and operate on this data fast (taking advantage of modern hardware) with clever querying techniques.</p>
+
+<p>It is probably better to explain the usage of Quarks with a real life example.</p>
+
+<h2>Usage</h2>
+
+<p>Before moving on to the example, here is the essence in two lines:</p>
+
+<ol>
+    <li>User--&gt;[Quarks.Store] -&gt;ThreadManagement-&gt;[Cache/Ram]-&gt;Queue-&gt;PersistentStorage</li>
+    <li>User--&gt;[Quarks.Query]-&gt;ThreadManagement-&gt;fetch to [Cache/RAM]-&gt;return</li>
+</ol>
+
+<p>Will discuss how the scaling happens for huge data in a bit after we go through a use case scenario.</p>
+
+<p>User Story - A public chatting system</p>
+
+<p>Step 1 : User types name and asl (age sex location) and<br />
+choose from a list of chat channels and clicks join.<br />
+Call goes to nodejs/php server through api or socket.<br />
+server generates a user_id and assigns a user to a channel</p>
+
+<p>Step 2 : User sends some messages to a specific channel</p>
+
+<p>Step 3 : On re-entry user can see all messages for that channel.</p>
+
+<p>We address these steps as follows:<br />
+(Using diagrams to illustrate the solution)</p>
+
+<p><a href="https://res.cloudinary.com/practicaldev/image/fetch/s--Jyo8TQHT--/c_limit%2Cf_auto%2Cfl_progressive%2Cq_auto%2Cw_880/https://thepracticaldev.s3.amazonaws.com/i/db3zv7or79rdufg271et.png"><img alt="Step - 1" src="https://res.cloudinary.com/practicaldev/image/fetch/s--Jyo8TQHT--/c_limit%2Cf_auto%2Cfl_progressive%2Cq_auto%2Cw_880/https://thepracticaldev.s3.amazonaws.com/i/db3zv7or79rdufg271et.png" /></a></p>
+
+<p><a href="https://res.cloudinary.com/practicaldev/image/fetch/s---EL69zEZ--/c_limit%2Cf_auto%2Cfl_progressive%2Cq_auto%2Cw_880/https://thepracticaldev.s3.amazonaws.com/i/oc2xl1n0tsomv6gzwqf8.png"><img alt="Step - 2" src="https://res.cloudinary.com/practicaldev/image/fetch/s---EL69zEZ--/c_limit%2Cf_auto%2Cfl_progressive%2Cq_auto%2Cw_880/https://thepracticaldev.s3.amazonaws.com/i/oc2xl1n0tsomv6gzwqf8.png" /></a></p>
+
+<p><a href="https://res.cloudinary.com/practicaldev/image/fetch/s--nbYbKeER--/c_limit%2Cf_auto%2Cfl_progressive%2Cq_auto%2Cw_880/https://thepracticaldev.s3.amazonaws.com/i/tuw7f4b9tjdz7v0tnpe0.png"><img alt="Step - 3" src="https://res.cloudinary.com/practicaldev/image/fetch/s--nbYbKeER--/c_limit%2Cf_auto%2Cfl_progressive%2Cq_auto%2Cw_880/https://thepracticaldev.s3.amazonaws.com/i/tuw7f4b9tjdz7v0tnpe0.png" /></a></p>
+
+<p>When I talked about clever querying, have a look at how using wild card search it is possible to retrieve the desired info from loads of data.</p>
+
+<p>Needless to mention that all the saving, server hits, request queuing, traffic handling, thread management is now a part of the Quarks system which takes the headache.</p>
+
+<p>Now on to scaling and having a distributed system..</p>
+
+<p>As the traffic grows we can create new instances of the Quarks instance (let&#39;s call them core) and these can be controlled by a multicore/multi-instance manager. Illustration below:</p>
+
+<p><a href="https://res.cloudinary.com/practicaldev/image/fetch/s--VWDgv8eO--/c_limit%2Cf_auto%2Cfl_progressive%2Cq_auto%2Cw_880/https://thepracticaldev.s3.amazonaws.com/i/ssjjmqrys3uw545q2fnx.png"><img alt="Distributed Quarks" src="https://res.cloudinary.com/practicaldev/image/fetch/s--VWDgv8eO--/c_limit%2Cf_auto%2Cfl_progressive%2Cq_auto%2Cw_880/https://thepracticaldev.s3.amazonaws.com/i/ssjjmqrys3uw545q2fnx.png" /></a></p>
+
+<p>Basically, the idea is having a lot of light weight easily drop-able servers (calling them Quarks Cores) and an adequate balancing server (planning to name it Boson). Once the Boson is running, the cores would be able to talk to each other and fetch a lot of results very fast!</p>
+
+<p>So, how does the fetchMessages for a multi-core system look like? Not too much different from what you saw in Step-3. fetchMessages invoke a find query on Quarks.</p>
+
+<p><a href="https://res.cloudinary.com/practicaldev/image/fetch/s--SBqlTLA2--/c_limit%2Cf_auto%2Cfl_progressive%2Cq_auto%2Cw_880/https://thepracticaldev.s3.amazonaws.com/i/vq8urz51eixnd4broro7.png"><img alt="going multicore" src="https://res.cloudinary.com/practicaldev/image/fetch/s--SBqlTLA2--/c_limit%2Cf_auto%2Cfl_progressive%2Cq_auto%2Cw_880/https://thepracticaldev.s3.amazonaws.com/i/vq8urz51eixnd4broro7.png" /></a></p>
+
+<p>Again, an illustration on how Quarks is working on the query internally:</p>
+
+<p>First, the find request is carried on to the multicore manager which publishes the request for all of the listening cores to process:</p>
+
+<p><a href="https://res.cloudinary.com/practicaldev/image/fetch/s--RCJW1FRE--/c_limit%2Cf_auto%2Cfl_progressive%2Cq_auto%2Cw_880/https://thepracticaldev.s3.amazonaws.com/i/z98gsgcj3j61a7cdil9f.png"><img alt="fetchMessages multicore" src="https://res.cloudinary.com/practicaldev/image/fetch/s--RCJW1FRE--/c_limit%2Cf_auto%2Cfl_progressive%2Cq_auto%2Cw_880/https://thepracticaldev.s3.amazonaws.com/i/z98gsgcj3j61a7cdil9f.png" /></a></p>
+
+<p>Finally, as results become available, the manager aggregates them and returns to the requesting core which was invoked by the client.</p>
+
+<p><a href="https://res.cloudinary.com/practicaldev/image/fetch/s--sWXVHTZe--/c_limit%2Cf_auto%2Cfl_progressive%2Cq_auto%2Cw_880/https://thepracticaldev.s3.amazonaws.com/i/he84rl8mvqanm6bx764j.png"><img alt="Return results" src="https://res.cloudinary.com/practicaldev/image/fetch/s--sWXVHTZe--/c_limit%2Cf_auto%2Cfl_progressive%2Cq_auto%2Cw_880/https://thepracticaldev.s3.amazonaws.com/i/he84rl8mvqanm6bx764j.png" /></a></p>
+
+<p>Point to note - in client side coding we will hardly notice the difference.</p>
+
+<p>Some key features provided by Quarks:</p>
+
+<p>1) Persistence of data - Quarks will provide a mechanism , where after a certain amount of memory / cache is filled, it will send batch data for serialisation/ dumping to database for later retrieval. That reduces the hits to persistent storage. However, it will provide a mechanism where it can dump to persistent storage immediately if required.</p>
+
+<p>2) Querying on data - Quarks will be able to query on the value (as well as key) through&nbsp;<a href="https://en.wikipedia.org/wiki/Object-relational_mapping">ORM</a>&nbsp;style queries and apply business logics on the queried data.</p>
+
+<p>Sample Query Format , ..<br />
+<em>query items which are up for sale with key like item* (i.e item1, item2 etc.) which have rating greater than 3 and are approved, then find the sellers of such items (items has a seller_id field that contains the user_id of the seller) and lastly list all orders associated with the sellers whose delivery type is pickup (not home delivery).<br />
+    Keys for order object looks like ord*_user* (i.e ord1_user1, ord2_user1 etc.)<br />
+    Sellers have user ids in the form of user1, user2 etc.</em></p>
+
+<pre>
+    {
+    filter:
+    [
+    {
+    keys: &quot;item*&quot;,
+    where: [{rating:{gt:3}},{approved:{eq:1}}]
+    filter:
+    {
+    map: {field:&quot;seller_id&quot;, as:&quot;sellers&quot;},
+    filter:
+    {
+    map:
+    {
+    prefix:&quot;ord*_&quot;
+    field:&quot;user_id&quot;,
+    suffix:&quot;&quot; ,
+    as:&quot;orders&quot;
+    },
+    where:{deliveryType:{eq:&quot;pickup&quot;}}
+    }
+    },
+    
+    
+    ]
+    }
+</pre>
+
+<p><em>Here after getting a set of objects through filtering, map specifies how to join/include additional results by forming a wild card search through concatenating of<br />
+    i) a prefix,<br />
+    ii) field value of an existing object given the field name and a<br />
+    iii)suffix.</em><br />
+So, after getting a list of sellers along with the items, we are cleverly querying the orders for those sellers by forming an wildcard compare string which is of the form ord*_user*.</p>
+
+<p>Scripting languages like javascript will be allowed to apply business logic in the queried data. We would be able to use plugins too for computation and calculation.</p>
+
+<p>3) Sorting - Sorting will be done based on both query and applying server side logics if necessary through scripts/plugins.</p>
+
+<p>4) Expiry - Efficient data expiry mechanism will be provided in the server side.</p>
+
+<p>Lastly, Quarks can reside on the same memory space along with business logics by means of simple scripts or plugins (dynamically loaded libraries) without the need of having a separate server for storing data. Lightweight servers quering on the data of the same memory space will make results retrieval much faster than traditional systems.</p>
+
+<p>Quarks is up and running!</p>
+
+<p>Try the browser based Quarks console:<br />
+<a href="http://api.quarkshub.com/console">http://api.quarkshub.com/console</a><br />
+Type put, get and getall and follow instructions ..</p>
+
+<h2>Technology</h2>
+
+<p>a) C++ Crow Webserver for serving client requests<br />
+b) Good JSON Parsing C++ Library (not decided yet, probably will go with the one provided in Crow)<br />
+c) rocksdb and<br />
+d) v8 javascript engine</p>
+
+<p>ZeroMQ to be integrated for internal communications between Quarks Cores.<br />
+Code repo to be found here:&nbsp;<a href="https://github.com/lucpattyn/quarks">https://github.com/lucpattyn/quarks</a></p>
+
+<p>Just to re-iterate one more time, Quarks is a system as well as a philosophy and set of concepts and guidelines (ex. longer reads, short bursts of writes .. more on that in due time) to make modern day programming easy and simple.</p>
+
+<h2>Updates:&nbsp;</h2>
+
+<p>1. 2019-05-06 - We have now got the first draft of Quarks uploaded in&nbsp;git (<a href="https://github.com/lucpattyn/quarks">https://github.com/lucpattyn/quarks</a>)</p>
+
+<p>2. 2019-07-02 - Rocks DB integrated</p>
+
+<p>3. 2019-08-22 - Quarks now supports filter queries in the form of<br />
+{ &quot;keys&quot;:&quot;item*&quot;, &quot;filter&quot;:{&quot;map&quot;: {&quot;as&quot;:&quot;seller&quot;, &quot;field&quot;:&quot;seller_id&quot;}} }<br />
+in plain English :<br />
+<em>query items which are up for sale with key like item</em>&nbsp;(i.e item1, item2 etc.) , then find the sellers of such items (items has a seller_id field that contains the user_id of the seller)</p>
+
+<p>4. 2019-10-20 - Scripting integration through v8 Engine</p>
+
+<p>5. 2019-11-01 - Quarks Console is up and running (<a href="http://api.quarkshub.com/console">http://api.quarkshub.com/console</a>)</p>
+
+<p>Slowly but surely we are getting there :)</p>
+
+<p><br />
+Signing off,</p>
+
+<p>Mukit&nbsp;</p>
+
+<p>&nbsp;</p>
+</body>
+</html>

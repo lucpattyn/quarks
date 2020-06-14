@@ -332,12 +332,12 @@ namespace crow
     struct RuleParameterTraits
     {
         using self_t = T;
-		WebSocketRule& websocket() 
-		{
-			auto p =new WebSocketRule(((self_t*)this)->rule_);
+        WebSocketRule& websocket()
+        {
+            auto p =new WebSocketRule(((self_t*)this)->rule_);
             ((self_t*)this)->rule_to_upgrade_.reset(p);
-			return *p;
-		}
+            return *p;
+        }
 
         self_t& name(std::string name) noexcept
         {
