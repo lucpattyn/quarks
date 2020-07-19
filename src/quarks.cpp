@@ -303,11 +303,20 @@ bool Core::put(std::string body, std::string& out) {
 }
 
 bool Core::put(std::string key, std::string value, std::string& out){
-    crow::json::wvalue w;
-    w["key"] = key;
-    w["value"] = value;
+    out = R"({"result":false})";
+
+    rocksdb::Slice keySlice = key;
     
-    return put(crow::json::dump(w), out);
+    // modify the database
+    if (dbStatus.ok()){
+        	
+        rocksdb::Status status = db->Put(rocksdb::WriteOptions(), keySlice, value);
+
+        if(status.ok()){
+	    out = R"({"result":true})";
+
+	}
+    }
     
 }
 
@@ -1063,7 +1072,7 @@ bool Core::removeAtom(crow::json::rvalue& x, std::string& out) {
         i++;
     }
     if(ret){
-        out = std::string("{") + R"("result":)" + std::to_string(i) + std::string("}");
+        out = std::string("{") + R"("result":)" + std::to_string((int) i) + std::string("}");
         
     }else{
         std::string error = ",\"error\":\"could not remove all keys\"";
@@ -1617,14 +1626,35 @@ bool Core::atom(std::string body, std::string& out) {
 bool Core::increment(std::string key, int stepBy, std::string& out){
     std::lock_guard<std::mutex> _(mtx);
     
-    out = R"({"result:false"})";
+    out = R"({"result":false})";
     
     std::string val;
     bool ret = get(key, val);
     
     if(ret){
-        int value = std::stoi(val) + stepBy;
-        put(key, std::to_string(value), out);
+	try{	
+            int value = std::stoi(val);
+	    value += stepBy;
+
+	    std::string writeValue = std::to_string(value);
+        
+	    put(key, writeValue, out);    
+
+	}catch (const std::invalid_argument& ia) {
+        	//std::cerr << "Invalid argument: " << ia.what() << std::endl;
+            out =  R"({"result":false, "error:"Value to increment is not an integer"})";
+    	}
+
+    	catch (const std::out_of_range& oor) {
+        	//std::cerr << "Out of Range error: " << oor.what() << std::endl;
+            out =  R"({"result":false, "error":"Out of range"})";
+    	}
+
+    	catch (const std::exception& e)  {
+            out =  R"({"result":false, "error:"Unknown"})";
+        	
+    	}
+
     }
     
     return ret;
