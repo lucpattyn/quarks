@@ -713,6 +713,35 @@ int main(int argc, char ** argv) {
         return w;
         
     };
+
+    auto route_core_incr_callback =
+    [](const crow::request& req)
+    {
+        std::string out;
+                
+        std::string body = req.body;
+        auto p = req.url_params.get("body");
+        if(p != nullptr){
+            body = p;
+        }
+        CROW_LOG_INFO << "incr request body : " << body;
+
+
+        auto x = crow::json::load(body);
+        if (!x){
+            out = "invalid Json Body";
+            return out;
+        }
+        
+        std::string key = x["key"].s();
+        int stepBy  = x["step"].i();     
+	CROW_LOG_INFO << "incr request key, value : " << key << ", " << stepBy ;
+
+	Quarks::Core::_Instance.increment(key, stepBy, out);
+
+	return out;   
+                
+    };
    
     
     auto route_core_searchjson_callback =
@@ -948,14 +977,20 @@ int main(int argc, char ** argv) {
     CROW_ROUTE(app, "/getlist")
     .methods("GET"_method, "POST"_method)(route_core_getlist_callback);
     
+    CROW_ROUTE(app, "/incr")
+    .methods("GET"_method, "POST"_method)(route_core_incr_callback);
+    
     CROW_ROUTE(app, "/searchjson")
     .methods("GET"_method, "POST"_method)(route_core_searchjson_callback);
     
-    CROW_ROUTE(app, "/opentcpsocket")
-    .methods("GET"_method, "POST"_method)(route_core_opentcpsocket_callback);
 
     CROW_ROUTE(app, "/filetransfer")
     .methods("GET"_method, "POST"_method)(route_core_filetransfer_callback);
+
+
+    CROW_ROUTE(app, "/opentcpsocket")
+    .methods("GET"_method, "POST"_method)(route_core_opentcpsocket_callback);
+
     
     //auto& v = Quarks::Matrix::_Instance; // we will work with the matrix data struct
                                             // in later api calls
