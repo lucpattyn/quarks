@@ -158,7 +158,7 @@ http://0.0.0.0:18080/getlist?body=["g1_u1", "g2_u2"]
 
 k) increment a value saved as integer by a specified amount
 ```
-http://http://0.0.0.0:18080/incr?body={"key":"somecounter","step":5}
+http://0.0.0.0:18080/incr?body={"key":"somecounter","step":5}
 
 Note: Value to increment must be saved as integer with a previous call to put -
 http://0.0.0.0:18081/put?body={"key":"somecounter", "value":1}
