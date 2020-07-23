@@ -56,11 +56,7 @@ void closeDB(std::string schemaname) {
 class QWriter : public Producer {
 public:
 	virtual void onRead(void* data, size_t size){
-		char req[256]; // prone to buffer overflow
-		memcpy (req, data, size);
-		req[size] = 0;
-		std::cout << "Writer received: " << req << std::endl;
-		
+		std::cout << "Writer received: " << (char*)data << std::endl;		
 	}
 
 };
@@ -68,11 +64,7 @@ public:
 class QReader : public Consumer {
 public:
 	virtual void onRead(void* data, size_t size){
-		char req[256]; // prone to buffer overflow
-		memcpy (req, data, size);
-		req[size] = 0;
-		std::cout << "Writer received: " << req << std::endl;
-		
+		std::cout << "Reader received: " << data << std::endl;		
 
 	}
 
@@ -297,9 +289,13 @@ void publishPut(std::string key, std::string value){
 	if(Core::_Instance.isWriterNode()){
 		CROW_LOG_INFO << "publishing put ..";
 	
-		std::string w = key + " " + value;
-			
-		QWriterNode.write(w.c_str(), w.size());
+		crow::json::wvalue w;
+		w["value"] = value;
+		w["key"] = key;
+		
+		std::string publish = crow::json::dump(w);
+		
+		QWriterNode.write(publish.c_str(), publish.size()+1);
 	}
 }
 
@@ -1818,11 +1814,6 @@ bool Core::fileTransfer(std::string moduleName, std::string funcName, std::strin
 
 
 bool Core::openTCPSocketClient() {
-
-	std::cout << "running subscriber..\n";
-	runSubscriber();
-
-	return true;
 
 	bool ret = false;
 

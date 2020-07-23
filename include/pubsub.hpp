@@ -68,7 +68,6 @@ struct DecodedMsg : RelayMsg{
 		
 		buffer = new char [sz];
 		memcpy(buffer, msg, sz);
-		buffer[sz] = 0; // need to remove
 		
 		std::cout << "DecodedMsg size: " << size() << " data: " << data() << std::endl;	
 	}
@@ -119,6 +118,9 @@ static void s_catch_signals (void) {
 	sigaction (SIGINT, &action, NULL);
 	sigaction (SIGTERM, &action, NULL);
 }
+
+/*
+// working examples ..
 
 int runPublisher () {
 	//  Prepare our context and socket
@@ -185,7 +187,7 @@ int runSubscriber () {
 
 	return 0;
 
-}
+}*/
 
 int runBroker(const char* tcpBindUrl) {
 	//  Prepare our context and socket
@@ -207,7 +209,7 @@ int runBroker(const char* tcpBindUrl) {
 			socket.recv (&request);			
 			DecodedMsg req(request.data());
 	
-			char reqdata[256];	// prone to buffer overflow
+			char reqdata[1024];	// prone to buffer overflow
 			memcpy(reqdata, req.data(), req.size());
 			reqdata[req.size()] = 0;
 				
@@ -217,11 +219,7 @@ int runBroker(const char* tcpBindUrl) {
 			EncodedMsg rep(BROKER_OK, strlen(BROKER_OK) + 1);			
 			zmq::message_t reply (rep.size());
 			memcpy (reply.data (), rep.data(), rep.size());
-			/*size_t sz = 8;
-			zmq::message_t reply (sz);			
-			memcpy(reqdata, &sz, sizeof(sz));
-			memcpy(reqdata + sizeof(size_t), BROKER_OK, sz);
-			memcpy (reply.data (), reqdata, sizeof(sz) + sz);*/
+
 			socket.send (reply);
 				
 			//  Artificial delay
@@ -250,8 +248,8 @@ int runWriter (const char* brokerUrl, const char* producerUrl, const char* consu
 	zmq::socket_t broker (context, ZMQ_REQ);	
 	std::cout << "Writer connecting to broker .. " << std::endl;
 	
-	broker.connect (brokerUrl);
-			
+	broker.connect (brokerUrl);				
+	
 	// push pull
 	zmq::socket_t consumer(context, ZMQ_PULL);
     consumer.connect(consumerUrl);
@@ -260,21 +258,20 @@ int runWriter (const char* brokerUrl, const char* producerUrl, const char* consu
     producer.bind(producerUrl);
 		    
 	writer.setProducer(producer);
-			
-	const char* p = "WriterOnline";
-	EncodedMsg presence(p, strlen(p));	
+	
+	const char* r = "reportwriter";
+	EncodedMsg presence(r, strlen(r) + 1);		
+	zmq::message_t report(presence.size());
+	memcpy (report.data (), presence.data(), presence.size());	
 		
-	zmq::message_t request(presence.size());
-	memcpy (request.data (), presence.data(), presence.size());		
-	//memcpy (request.data (), presence.buffer(), presence.bufferSize());		
-	broker.send (request);	
+	broker.send (report);	
 			
 	//  Get the reply.
-	zmq::message_t reply;
-	broker.recv (&reply);
+	zmq::message_t res;
+	broker.recv (&res);
 	
-	DecodedMsg rep(reply.data());
-	writer.onRead(rep.data(), rep.size());
+	DecodedMsg reportRep(res.data());
+	writer.onRead(reportRep.data(), reportRep.size());
 		
 	s_catch_signals ();	
 	while(true){			
@@ -284,21 +281,22 @@ int runWriter (const char* brokerUrl, const char* producerUrl, const char* consu
 		try {       
 		
 			consumer.recv(&message);			
-			DecodedMsg req(message.data());			
-						
-			zmq::message_t request (5);
-			memcpy (request.data (), "putme", 5);			
-			std::cout << "Writer sending to broker .. " << std::endl;
+			DecodedMsg req(message.data());		
+			
+			EncodedMsg send(req.data(), req.size());						
+			zmq::message_t request (send.size());
+			memcpy (request.data (), send.data(), send.size());			
+			std::cout << "Writer sending to broker .. " << send.data() + sizeof(size_t)<< std::endl;
 			broker.send (request);	
 			
 			//  Get the reply.
 			zmq::message_t reply;
 			broker.recv (&reply);
 			
-			//RelayMsg rep(reply.data());					
-			//writer.onRead(rep.data(), rep.size());
-			
-			// artificail delay 
+			DecodedMsg rep(reply.data());
+			writer.onRead(rep.data(), rep.size());
+				
+			// artificial delay 
 			sleep(1);
 			
 			
