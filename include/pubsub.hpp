@@ -209,9 +209,10 @@ int runBroker(const char* tcpBindUrl) {
 			socket.recv (&request);			
 			DecodedMsg req(request.data());
 	
-			char reqdata[1024];	// prone to buffer overflow
-			memcpy(reqdata, req.data(), req.size());
-			reqdata[req.size()] = 0;
+			char reqdata[1025];	// 1 byte extra for trailing 0
+			size_t  reqsize = req.size() < 1024 ? req.size() : 1024;
+			memcpy(reqdata, req.data(), reqsize);
+			reqdata[reqsize] = 0;
 				
 			std::cout << "Broker received: " << reqdata << std::endl;
 			
@@ -245,33 +246,40 @@ int runWriter (const char* brokerUrl, const char* producerUrl, const char* consu
 	// Prepare our context and socket
 	zmq::context_t context (1);
 	
-	zmq::socket_t broker (context, ZMQ_REQ);	
-	std::cout << "Writer connecting to broker .. " << std::endl;
-	
-	broker.connect (brokerUrl);				
-	
 	// push pull
 	zmq::socket_t consumer(context, ZMQ_PULL);
     consumer.connect(consumerUrl);
     
 	zmq::socket_t producer(context, ZMQ_PUSH);
-    producer.bind(producerUrl);
-		    
+    producer.bind(producerUrl);	    
 	writer.setProducer(producer);
+
+	// broker
+	zmq::socket_t broker (context, ZMQ_REQ);	
 	
-	const char* r = "reportwriter";
-	EncodedMsg presence(r, strlen(r) + 1);		
-	zmq::message_t report(presence.size());
-	memcpy (report.data (), presence.data(), presence.size());	
+	bool brokerConnected = false;
+	if(strcmp(brokerUrl, "!")){
+		std::cout << "Writer connecting to broker .. " << std::endl;
+	
+		broker.connect (brokerUrl);				
 		
-	broker.send (report);	
+		const char* r = "reportwriter";
+		EncodedMsg presence(r, strlen(r) + 1);		
+		zmq::message_t report(presence.size());
+		memcpy (report.data (), presence.data(), presence.size());	
 			
-	//  Get the reply.
-	zmq::message_t res;
-	broker.recv (&res);
-	
-	DecodedMsg reportRep(res.data());
-	writer.onRead(reportRep.data(), reportRep.size());
+		broker.send (report);	
+				
+		//  Get the reply.
+		zmq::message_t res;
+		broker.recv (&res);
+		
+		brokerConnected = true;
+		
+		DecodedMsg reportRep(res.data());
+		writer.onRead(reportRep.data(), reportRep.size());
+
+	}
 		
 	s_catch_signals ();	
 	while(true){			
@@ -281,21 +289,24 @@ int runWriter (const char* brokerUrl, const char* producerUrl, const char* consu
 		try {       
 		
 			consumer.recv(&message);			
-			DecodedMsg req(message.data());		
+			DecodedMsg req(message.data());
 			
-			EncodedMsg send(req.data(), req.size());						
-			zmq::message_t request (send.size());
-			memcpy (request.data (), send.data(), send.size());			
-			std::cout << "Writer sending to broker .. " << send.data() + sizeof(size_t)<< std::endl;
-			broker.send (request);	
-			
-			//  Get the reply.
-			zmq::message_t reply;
-			broker.recv (&reply);
-			
-			DecodedMsg rep(reply.data());
-			writer.onRead(rep.data(), rep.size());
+			if(brokerConnected){
+				EncodedMsg send(req.data(), req.size());						
+				zmq::message_t request (send.size());
+				memcpy (request.data (), send.data(), send.size());			
+				std::cout << "Writer sending to broker .. " << send.data() + sizeof(size_t)<< std::endl;
+				broker.send (request);	
 				
+				//  Get the reply.
+				zmq::message_t reply;
+				broker.recv (&reply);
+				
+				DecodedMsg rep(reply.data());
+				writer.onRead(rep.data(), rep.size());
+
+			}
+									
 			// artificial delay 
 			sleep(1);
 			
@@ -314,27 +325,71 @@ int runWriter (const char* brokerUrl, const char* producerUrl, const char* consu
 }
 
 
-int runReader(const char* tcpUrl, Consumer& reader) {
-	//  Prepare our context and socket
-	zmq::context_t context (1);
-	zmq::socket_t socket (context, ZMQ_REQ);
-
-	std::cout << "Reader connecting to broker .. " << std::endl;
-	socket.connect (tcpUrl);
-
-	while(true){
-		zmq::message_t request (5);
-		memcpy (request.data (), "readm", 5);
-		std::cout << "Sending readm .. " << std::endl;
-		socket.send (request);
-			
-		//  Get the reply.
-		zmq::message_t reply;
-		socket.recv (&reply);
+int runReader(const char* brokerUrl, const char* consumerUrl, Consumer& reader) {
 	
-		reader.onRead(reply.data(), 0);
+	// Prepare our context and socket
+	zmq::context_t context (1);
+	
+	// push pull
+	zmq::socket_t consumer(context, ZMQ_PULL);
+    
+	bool consumerConnected = false;
+	if(strcmp(consumerUrl, "")){
+		std::cout << "Reader connecting to writer at: " << consumerUrl <<  std::endl;
+	
+		consumer.connect(consumerUrl);
+    	consumerConnected = true;
+	}
+	
+    // broker
+	zmq::socket_t broker (context, ZMQ_REQ);	
+	
+	bool brokerConnected = false;
+	if(strcmp(brokerUrl, "!")){
+		std::cout << "Reader connecting to broker .. " << std::endl;
+	
+		broker.connect (brokerUrl);				
 		
-		sleep(1);
+		const char* r = "reportreader";
+		EncodedMsg presence(r, strlen(r) + 1);		
+		zmq::message_t report(presence.size());
+		memcpy (report.data (), presence.data(), presence.size());	
+			
+		broker.send (report);	
+				
+		//  Get the reply.
+		zmq::message_t res;
+		broker.recv (&res);
+		
+		brokerConnected = true;
+		
+		DecodedMsg reportRep(res.data());
+		reader.onRead(reportRep.data(), reportRep.size());
+	}
+
+	
+	while(true){
+		zmq::message_t message; 
+		
+		try {       
+		
+			if(consumerConnected){
+				consumer.recv(&message);			
+				DecodedMsg req(message.data());		
+			
+				reader.onRead(req.data(), req.size());
+			}							
+			
+			// artificial delay 
+			sleep(1);
+			
+		} catch(zmq::error_t& e) {
+			std::cout << "W: interrupt received, proceeding…" << std::endl;
+		}
+		if (s_interrupted) {
+			std::cout << "W: interrupt received, killing server…" << std::endl;
+			break;
+		}
 	}
 
 	return 0;

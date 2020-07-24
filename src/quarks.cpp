@@ -64,7 +64,7 @@ public:
 class QReader : public Consumer {
 public:
 	virtual void onRead(void* data, size_t size){
-		std::cout << "Reader received: " << data << std::endl;		
+		std::cout << "Reader received: " << (char*)data << std::endl;		
 
 	}
 
@@ -73,8 +73,8 @@ public:
 static QWriter QWriterNode;
 static QReader QReaderNode;
 
-static std::string producerUrl = "tcp://*:5557";
-static std::string consumerUrl = "tcp://localhost:5557";
+static std::string producerUrl = "";
+static std::string consumerUrl = "";
 
 // end pub sub
 
@@ -202,33 +202,44 @@ void Core::run() {
 	
 	if(_broker){	
 		CROW_LOG_INFO << "broker starting .. ";
-		runBroker(_brokerBindUrl.c_str());
+		try{
+			// Broker is also a publisher for reader nodes
+			runBroker(_brokerBindUrl.c_str());
+		
+		} catch(const std::runtime_error& error) {	
+		
+			CROW_LOG_INFO << "runtime error encountered: " << error.what();
+		
+		}
 		
 	}else{
-		//std::thread t([&]() {						
-			
-			if(_reader){
-				CROW_LOG_INFO << "reader starting .. ";
-
-				runReader(_brokerUrl.c_str(), QReaderNode);
-			}
-	
+		try {
 			if(_writer){
 				CROW_LOG_INFO << "writer starting .. ";
 				
-				_brokerUrl.c_str(), producerUrl.c_str(), consumerUrl.c_str();
-					
+				// Writer node is by default a producer and a consumer of it's own message
+				if(!producerUrl.compare("")){
+					producerUrl = "tcp://*:5557";
+				}			
+				if(!consumerUrl.compare("")){
+					consumerUrl = "tcp://localhost:5557";
+				}			
 				runWriter(_brokerUrl.c_str(), producerUrl.c_str(), consumerUrl.c_str(), QWriterNode);
 			}
 			
-			//runSubscriber();
+			if(_reader){
+				CROW_LOG_INFO << "reader starting .. ";
+				// Reader node is a subscriber to broker and optinally consumer to writer nodes
+				runReader(_brokerUrl.c_str(), consumerUrl.c_str(), QReaderNode);
+			}
 			
-		//});
-				
-		//CROW_LOG_INFO << "publisher starting .. ";
-		//runPublisher();
+			//runSubscriber();	
+		} catch(const std::runtime_error& error) {	
 		
-	}
+			CROW_LOG_INFO << "runtime error encountered: " << error.what();
+		
+		}
+	}	
 	
 	//runPublisher();
 }
