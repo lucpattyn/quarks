@@ -52,6 +52,7 @@ void closeDB(std::string schemaname) {
 }
 
 // pub sub
+std::mutex _publish_mtx;
 
 class QWriter : public Producer {
 public:
@@ -66,6 +67,33 @@ public:
 	virtual void onRead(void* data, size_t size){
 		std::cout << "Reader received: " << (char*)data << std::endl;		
 
+		return;
+				
+		std::string jsonData = (char*) data;
+		auto x = crow::json::load(jsonData);		
+		if(!x){
+			std::cout << "Reader received invalid put request!";
+			
+		}else{
+			std::string key = x["key"].s();
+			std::string value = x["value"].s();
+			
+			std::cout << "reader putting " << key << " , " << value;
+
+			rocksdb::Slice keySlice = key;			
+			
+			// modify the database
+			if (dbStatus.ok()) {
+		
+				rocksdb::Status status = db->Put(rocksdb::WriteOptions(), keySlice, value);		
+				if(!status.ok()) {
+					std::cout << "Reader could not write to db!";
+					
+				}
+			}
+			
+		}
+		
 	}
 
 };
@@ -295,10 +323,11 @@ bool getKeyValuePair(std::string key, std::string& value, std::string& out) {
 }
 
 
-void publishPut(std::string key, std::string value){
-	
+void putRequest(std::string key, std::string value){
+	std::lock_guard<std::mutex> _(_publish_mtx);
+
 	if(Core::_Instance.isWriterNode()){
-		CROW_LOG_INFO << "publishing put ..";
+		//CROW_LOG_INFO << "publishing put ..";
 	
 		crow::json::wvalue w;
 		w["value"] = value;
@@ -306,7 +335,7 @@ void publishPut(std::string key, std::string value){
 		
 		std::string publish = crow::json::dump(w);
 		
-		QWriterNode.write(publish.c_str(), publish.size()+1);
+		QWriterNode.write(publish.c_str(), publish.size());
 	}
 }
 
@@ -380,7 +409,7 @@ bool insertKeyValuePair(bool failIfExists, crow::json::rvalue& x, std::string& o
 			ret = false;
 			
 		}else{
-			publishPut(key, writeValue);
+			putRequest(key, writeValue);
 		}
 
 	} else {
@@ -443,7 +472,7 @@ bool Core::put(std::string key, std::string value, std::string& out) {
 		if(status.ok()) {
 			out = R"({"result":true})";
 			
-			publishPut(key, value);
+			putRequest(key, value);
 			
 			ret = true;
 		}
@@ -1331,7 +1360,7 @@ bool Core::makePair(std::string body, crow::json::wvalue& out) {
 				error = "data failed to save";
 				ret = false;
 			}else{
-				publishPut(key, writeValue);
+				putRequest(key, writeValue);
 			}
 
 		} else {

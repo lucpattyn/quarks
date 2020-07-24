@@ -107,7 +107,7 @@ namespace Quarks {
 			bool openTCPSocketClient();
 
 			bool isAServer(){
-				return _broker || _writer;
+				return _broker || _writer || _reader;
 			}
 			
 			bool isBrokerNode(){
