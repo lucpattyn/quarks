@@ -140,7 +140,7 @@ int wildcmp(const char *wild, const char *str) {
 	return !*wild;
 }
 
-Core::Core() : _portNumber(18080) {
+Core::Core() : _portNumber(18080), _readerCountPerWriter(0) {
 
 }
 
@@ -167,7 +167,9 @@ void Core::setEnvironment(int argc, char** argv) {
 	
 	bool producerFlag = false;
 	bool consumerFlag = false;
-
+	
+	bool readersFlag = false;
+	
 	for(auto v : _argv) {
 		CROW_LOG_INFO << " v = " << v << " ";
 		if(schema) {
@@ -199,6 +201,10 @@ void Core::setEnvironment(int argc, char** argv) {
 		}else if(consumerFlag){
 			consumerUrl = v;
 			consumerFlag = false;
+			
+		}else if(readersFlag){
+			_readerCountPerWriter = std::stoi(v);
+			readersFlag = false;
 		}
 
 		if(!v.compare("-schema")) {
@@ -217,6 +223,8 @@ void Core::setEnvironment(int argc, char** argv) {
 			producerFlag = true;
 		} else if(!v.compare("-consumer")) {
 			consumerFlag = true;
+		} else if(!v.compare("-readers")) {
+			readersFlag = true;
 		}
 	}
 
@@ -335,7 +343,7 @@ void putRequest(std::string key, std::string value){
 		
 		std::string publish = crow::json::dump(w);
 		
-		QWriterNode.write(publish.c_str(), publish.size());
+		QWriterNode.write(publish.c_str(), publish.size()+1, Core::_Instance.getReaderCountPerWriter()); // 1 added for a trailing zero
 	}
 }
 

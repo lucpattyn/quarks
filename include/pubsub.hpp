@@ -92,12 +92,19 @@ public:
 	
 	virtual void onRead(void* data, size_t size) = 0;
 	
-	virtual void write(const char* data, size_t size){
+	virtual void write(const char* data, size_t size, int totalreaders){
 		EncodedMsg e(data, size);
-		zmq::message_t message (e.size()+1); // for added safety incase of a trailing zero (doesn't hurt)
+		zmq::message_t message (e.size());
 		memcpy (message.data (), e.data(), e.size());
 		
 		_producer->send(message);
+		
+		// sending to readers (this is dangerous because any reader may go down)
+		for(int i = 0; i < totalreaders; i++){
+			zmq::message_t message_readers (e.size());
+			memcpy (message_readers.data (), e.data(), e.size());
+			_producer->send(message_readers);
+		}	
 	}
 
 	zmq::socket_t* _producer;
@@ -217,8 +224,8 @@ int runBroker(const char* tcpBindUrl) {
 			std::cout << "Broker received: " << reqdata << std::endl;
 			
 			//  Send reply back to client
-			EncodedMsg rep(BROKER_OK, strlen(BROKER_OK));			
-			zmq::message_t reply (rep.size()+1); // added safety of a trailing zero, doesn't hurt
+			EncodedMsg rep(BROKER_OK, strlen(BROKER_OK)+1);			
+			zmq::message_t reply (rep.size()); 
 			memcpy (reply.data (), rep.data(), rep.size());
 
 			socket.send (reply);
@@ -264,8 +271,8 @@ int runWriter (const char* brokerUrl, const char* producerUrl, const char* consu
 		broker.connect (brokerUrl);				
 		
 		const char* r = "reportwriter";
-		EncodedMsg presence(r, strlen(r));		
-		zmq::message_t report(presence.size()+1); // added safety of a trailing zero, doesn't hurt
+		EncodedMsg presence(r, strlen(r)+1);		
+		zmq::message_t report(presence.size()); 
 		memcpy (report.data (), presence.data(), presence.size());	
 			
 		broker.send (report);	
@@ -293,7 +300,7 @@ int runWriter (const char* brokerUrl, const char* producerUrl, const char* consu
 			
 			if(brokerConnected){
 				EncodedMsg send(req.data(), req.size());						
-				zmq::message_t request (send.size()+1); // added safety of a trailing zero, doesn't hurt
+				zmq::message_t request (send.size());
 				memcpy (request.data (), send.data(), send.size());			
 				std::cout << "Writer sending to broker .. " << send.data() + sizeof(size_t)<< std::endl;
 				broker.send (request);	
@@ -351,8 +358,8 @@ int runReader(const char* brokerUrl, const char* consumerUrl, Consumer& reader) 
 		broker.connect (brokerUrl);				
 		
 		const char* r = "reportreader";
-		EncodedMsg presence(r, strlen(r));		
-		zmq::message_t report(presence.size()+1); // added safety of a trailing zero, doesn't hurt
+		EncodedMsg presence(r, strlen(r)+1);		
+		zmq::message_t report(presence.size()); 
 		memcpy (report.data (), presence.data(), presence.size());	
 			
 		broker.send (report);	
