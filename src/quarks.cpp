@@ -3,7 +3,7 @@
 
 #include <qsorter.hpp>
 
-#include <pubsub.hpp>
+#include <quarkscloud.hpp>
 
 #include "rocksdb/db.h"
 
@@ -54,47 +54,55 @@ void closeDB(std::string schemaname) {
 // pub sub
 std::mutex _publish_mtx;
 
-class QWriter : public Producer {
+class QReaderWriter : public QuarksCloud::ReaderWriter{
 public:
-	virtual void onRead(void* data, size_t size){
-		std::cout << "Writer received: " << (char*)data << std::endl;		
+	virtual void onRead(int type, void* data, size_t size){
+
+		if(type == QuarksCloud::save){
+			std::string jsonData = (char*) data;
+		
+			auto x = crow::json::load(jsonData);		
+			if(!x){
+				std::cout << "RW received invalid put request!";
+				
+			}else{
+				std::string key = x["key"].s();
+				std::string value = x["value"].s();
+				
+				std::cout << "RW putting " << key << " , " << value;
+	
+				rocksdb::Slice keySlice = key;			
+				
+				// modify the database
+				if (dbStatus.ok()) {
+			
+					rocksdb::Status status = db->Put(rocksdb::WriteOptions(), keySlice, value);		
+					if(!status.ok()) {
+						std::cout << "RW could not write to db!";
+						
+					}
+				}
+				
+			}
+		}		
+	}
+};
+
+class QWriter : public QReaderWriter {
+public:
+	virtual void onRead(int type, void* data, size_t size){
+		std::cout << "Writer received: " << (char*)data << std::endl;
+		QReaderWriter::onRead(type, data, size);		
 	}
 
 };
 
-class QReader : public Consumer {
+class QReader : public QReaderWriter {
 public:
-	virtual void onRead(void* data, size_t size){
-		std::cout << "Reader received: " << (char*)data << std::endl;		
-
-		return;
-				
-		std::string jsonData = (char*) data;
-		auto x = crow::json::load(jsonData);		
-		if(!x){
-			std::cout << "Reader received invalid put request!";
-			
-		}else{
-			std::string key = x["key"].s();
-			std::string value = x["value"].s();
-			
-			std::cout << "reader putting " << key << " , " << value;
-
-			rocksdb::Slice keySlice = key;			
-			
-			// modify the database
-			if (dbStatus.ok()) {
-		
-				rocksdb::Status status = db->Put(rocksdb::WriteOptions(), keySlice, value);		
-				if(!status.ok()) {
-					std::cout << "Reader could not write to db!";
-					
-				}
-			}
-			
-		}
-		
-	}
+	virtual void onRead(int type, void* data, size_t size){
+		std::cout << "Reader received: " << (char*)data << std::endl;
+		QReaderWriter::onRead(type, data, size);	
+	}	
 
 };
 
@@ -140,7 +148,7 @@ int wildcmp(const char *wild, const char *str) {
 	return !*wild;
 }
 
-Core::Core() : _portNumber(18080), _readerCountPerWriter(0) {
+Core::Core() : _portNumber(18080) {
 
 }
 
@@ -167,8 +175,6 @@ void Core::setEnvironment(int argc, char** argv) {
 	
 	bool producerFlag = false;
 	bool consumerFlag = false;
-	
-	bool readersFlag = false;
 	
 	for(auto v : _argv) {
 		CROW_LOG_INFO << " v = " << v << " ";
@@ -202,9 +208,6 @@ void Core::setEnvironment(int argc, char** argv) {
 			consumerUrl = v;
 			consumerFlag = false;
 			
-		}else if(readersFlag){
-			_readerCountPerWriter = std::stoi(v);
-			readersFlag = false;
 		}
 
 		if(!v.compare("-schema")) {
@@ -219,13 +222,11 @@ void Core::setEnvironment(int argc, char** argv) {
 			readerFlag = true;
 		} else if(!v.compare("-writer")) {
 			writerFlag = true;
-		} else if(!v.compare("-producer")) {
+		} else if(!v.compare("-producer") || (!v.compare("-publisher"))) {
 			producerFlag = true;
-		} else if(!v.compare("-consumer")) {
+		} else if(!v.compare("-consumer") || (!v.compare("-subscriber"))) {
 			consumerFlag = true;
-		} else if(!v.compare("-readers")) {
-			readersFlag = true;
-		}
+		} 
 	}
 
 	openDB(schemaname);
@@ -239,8 +240,11 @@ void Core::run() {
 	if(_broker){	
 		CROW_LOG_INFO << "broker starting .. ";
 		try{
-			// Broker is also a publisher for reader nodes
-			runBroker(_brokerBindUrl.c_str());
+			// Broker is a request receiver from writer as well as a publisher for reader nodes
+			if(!producerUrl.compare("")){
+				producerUrl = "tcp://*:5556";
+			}	
+			QuarksCloud::runBroker(_brokerBindUrl.c_str(), producerUrl.c_str());
 		
 		} catch(const std::runtime_error& error) {	
 		
@@ -259,14 +263,14 @@ void Core::run() {
 				}			
 				if(!consumerUrl.compare("")){
 					consumerUrl = "tcp://localhost:5557";
-				}			
-				runWriter(_brokerUrl.c_str(), producerUrl.c_str(), consumerUrl.c_str(), QWriterNode);
-			}
-			
-			if(_reader){
+				}		
+				
+				QuarksCloud::runWriter(_brokerUrl.c_str(), producerUrl.c_str(), consumerUrl.c_str(), QWriterNode);
+				
+			}else if(_reader){
 				CROW_LOG_INFO << "reader starting .. ";
-				// Reader node is a subscriber to broker and optinally consumer to writer nodes
-				runReader(_brokerUrl.c_str(), consumerUrl.c_str(), QReaderNode);
+				// Reader node is a subscriber to broker
+				QuarksCloud::runReader(_brokerUrl.c_str(), QReaderNode);
 			}
 			
 			//runSubscriber();	
@@ -343,7 +347,7 @@ void putRequest(std::string key, std::string value){
 		
 		std::string publish = crow::json::dump(w);
 		
-		QWriterNode.write(publish.c_str(), publish.size()+1, Core::_Instance.getReaderCountPerWriter()); // 1 added for a trailing zero
+		QWriterNode.write(publish.c_str(), publish.size()+1); // 1 added for a trailing zero
 	}
 }
 

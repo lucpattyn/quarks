@@ -122,9 +122,6 @@ namespace Quarks {
 				return _reader;
 			}
 			
-			int getReaderCountPerWriter(){
-				return _readerCountPerWriter;
-			}
 			
 		private:
 
@@ -145,9 +142,7 @@ namespace Quarks {
 
 			bool _broker;
 			std::string _brokerBindUrl;
-
-			int _readerCountPerWriter;
-
+			
 	};
 
 
@@ -195,8 +190,6 @@ namespace Quarks {
 			bool _notifyAllOnClose;
 
 	};
-
-
 
 }
 
