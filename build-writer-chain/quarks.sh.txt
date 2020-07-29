@@ -1,1 +1,0 @@
-./ocv_microservice_crow -port 18082 -writer tcp://localhost:5555
