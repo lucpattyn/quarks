@@ -136,12 +136,12 @@ namespace Quarks {
 			bool _reader;
 			bool _writer;
 			bool _logger;
-			bool _consumer;
-
+			
 			std::string _brokerUrl;
 
 			bool _broker;
 			std::string _brokerBindUrl;
+			std::string _sinkUrl;
 			
 	};
 

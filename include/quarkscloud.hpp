@@ -100,8 +100,15 @@ namespace QuarksCloud {
 			zmq::message_t message (e.size());
 			memcpy (message.data (), e.data(), e.size());
 			
-			_producer->send(message);
-	
+			if(_producer){
+				std::cout << "writing:" << data << std::endl;
+				_producer->send(message);
+			}
+			
+		}
+		
+		Interface(){
+			_producer = nullptr;
 		}
 	
 		zmq::socket_t* _producer;
@@ -122,48 +129,81 @@ namespace QuarksCloud {
 		sigaction (SIGINT, &action, NULL);
 		sigaction (SIGTERM, &action, NULL);
 	}
-		
-	int runBroker(const char* socketUrl, const char* publisherUrl) {
+	
+	// Broker capbilities:
+	// 1. request responsder[with:socketUrl] -> publish [with:publisherUrl]		<-- subscribe reader[with:subscriberUrl]
+	// 2. sink receiver[sinkUrl] -> publish [publisherUrl]						<-- subscribe reader[with:subscriberUrl]		  
+	// 3. publisher
+	//
+	int runBroker(const char* socketUrl, const char* publisherUrl,  const char* sinkUrl) {
 		//  Prepare our context and socket	
 		zmq::context_t context (1);
 		
 		// rep req
 		zmq::socket_t socket (context, ZMQ_REP);
-		socket.bind (socketUrl);
+		if(strcmp(socketUrl, "!")){			
+			socket.bind (socketUrl);
+		}
+		
+		// sink
+		zmq::socket_t receiver(context, ZMQ_PULL);		
+		bool sinkMode = false;
+	    if(strcmp(sinkUrl, "")){			
+			receiver.bind(sinkUrl);
+			sinkMode = true;
+		}	    
 		
 		// pub sub
 		zmq::socket_t publisher (context, ZMQ_PUB);
-	    publisher.bind(publisherUrl);
+	    publisher.bind(publisherUrl); // publisher url is mandatory because broker's main task is to publish
 		
-		std::cout << "Broker started.. socket url: " << socketUrl << ", publisher url: " << publisherUrl << std::endl;
+		std::cout << "Broker started.. socket url: " << socketUrl << ", publisher url: " 
+						<< publisherUrl << ", sinkUrl:" << sinkUrl << std::endl;
 		
 		s_catch_signals ();
+			
 		while (true) {
 	
 			zmq::message_t request;
 	
 			try {
 	
-				//  Wait for next request from client
-				socket.recv (&request);			
-				DecodedMsg req(request.data());
+				if(!sinkMode){ 
+					//  Wait for next request from client
+					socket.recv (&request);			
+					DecodedMsg req(request.data());
+			
+					char reqdata[1025];	// 1 byte extra for trailing 0
+					size_t  reqsize = req.size() < 1024 ? req.size() : 1024;
+					memcpy(reqdata, req.data(), reqsize);
+					reqdata[reqsize] = 0;
+						
+					std::cout << "Broker received: " << reqdata << std::endl;
+					
+					//  Send reply back to client
+					EncodedMsg rep(BROKER_OK, strlen(BROKER_OK)+1);			
+					zmq::message_t reply (rep.size()); 
+					memcpy (reply.data (), rep.data(), rep.size());
 		
-				char reqdata[1025];	// 1 byte extra for trailing 0
-				size_t  reqsize = req.size() < 1024 ? req.size() : 1024;
-				memcpy(reqdata, req.data(), reqsize);
-				reqdata[reqsize] = 0;
+					socket.send (reply);
+
+				} else {
+									
+					receiver.recv(&request);			
+					DecodedMsg req(request.data());
 					
-				std::cout << "Broker received: " << reqdata << std::endl;
+					char reqdata[1025];	// 1 byte extra for trailing 0
+					size_t  reqsize = req.size() < 1024 ? req.size() : 1024;
+					memcpy(reqdata, req.data(), reqsize);
+					reqdata[reqsize] = 0;
+						
+					std::cout << "Broker received through sink: " << reqdata << std::endl;
+					
 				
-				//  Send reply back to client
-				EncodedMsg rep(BROKER_OK, strlen(BROKER_OK)+1);			
-				zmq::message_t reply (rep.size()); 
-				memcpy (reply.data (), rep.data(), rep.size());
-	
-				socket.send (reply);
-					
+				}
+									
 				//  Artificial delay
-				sleep(1);
+				sleep(1); //  Give 0MQ time to deliver
 			
 			} catch(zmq::error_t& e) {
 				std::cout << "W: interrupt received, proceeding…" << std::endl;
@@ -180,36 +220,72 @@ namespace QuarksCloud {
 		return 0;
 	}
 	
-	int runWriter (const char* brokerUrl, const char* producerUrl, const char* consumerUrl, Interface& writer) {
+	//
+	// Writer capbilities:
+	// 1. self produce->self consume->send[with:brokerUrl]								 	--> request broker[sockerUrl]
+	// 2. (brokerUrl = "!") self produce->self consume->sink[with:sinkUrl]					<-- pull broker[sinkUrl]
+	// 3. (brokerUrl = ".") self produce->self consume->push[with:sinkUrl]->next consumer	<-- pull writer[consumerUrl] 
+	// 4. (brokerUrl = "+") consume previous producer->push[with:sinkUrl]->next consumer	<-- pull writer[consumerUrl] 
+	// 5. (brokerUrl = "}") last in chain - consume previous producer
+	int runWriter (const char* brokerUrl, const char* producerUrl, const char* consumerUrl, const char* sinkUrl, Interface& writer) {
 	
 		// Prepare our context and socket
 		zmq::context_t context (1);
 		
-		std::cout << "Writer started -> producer url: " << producerUrl << ", consumer url: " << consumerUrl << std::endl;
-	
-		// push pull	
-		zmq::socket_t producer(context, ZMQ_PUSH);
-	    producer.bind(producerUrl);	    
-		writer.setProducer(producer);
-	
+		// push pull
+		zmq::socket_t producer(context, ZMQ_PUSH);		
+		if(strcmp(producerUrl, "!")){
+			producer.bind(producerUrl);	    
+			writer.setProducer(producer);	
+		}
+	    
 		zmq::socket_t consumer(context, ZMQ_PULL);
 		bool consumerConnected = false;
 		if(strcmp(consumerUrl, "!")){ // if specifically stopped by supplying a '!' then don't connect, otherwise connect
 			consumer.connect(consumerUrl);
 			consumerConnected = true;
+			
+			std::cout << "Consumer connected: " << consumerUrl << std::endl;
+		}
+		
+		// writer chain
+		bool writerChain = false;
+		bool firstInChain = false;
+		bool lastInChain = false;
+		zmq::socket_t chainedWriter(context, ZMQ_PUSH);
+	    if(!strcmp(brokerUrl, ".")){
+			firstInChain = true;
+			writerChain = true;			
+			chainedWriter.bind(sinkUrl);		
+			std::cout << "Writer connected to head of chain: " << sinkUrl << std::endl;
+			
+		}else if(!strcmp(brokerUrl, "+")) {
+			writerChain = true;
+			chainedWriter.bind(sinkUrl);	
+			std::cout << "Writer connected to chain: " << sinkUrl << std::endl;
+			
+		}else if(!strcmp(brokerUrl, "}")){
+			lastInChain = true;
+			writerChain = true;
+			std::cout << "Writer connected to end of chain: " << sinkUrl << std::endl;
+			
 		}
 			
+		// sink
+		bool sinkConnected = false;
+		zmq::socket_t sender(context, ZMQ_PUSH);
+	    if(!writerChain && strcmp(sinkUrl, "")){
+			sender.connect(sinkUrl);	    
+			sinkConnected = true;
+		
+			std::cout << "Writer connected to sink: " << sinkUrl << std::endl;		
+		}	
+		
 		// broker
-		zmq::socket_t broker (context, ZMQ_REQ);	
 		bool brokerConnected = false;
-		
-		bool writerChain = false;
-		if(!strcmp(brokerUrl, "+")){
-			writerChain = true;
+		zmq::socket_t broker (context, ZMQ_REQ);		
+		if(!writerChain && strcmp(brokerUrl, "!")){
 			
-		} else if(strcmp(brokerUrl, "!")){
-			std::cout << "Writer connecting to broker .. " << std::endl;
-		
 			broker.connect (brokerUrl);				
 			
 			const char* r = "reportwriter";
@@ -223,13 +299,19 @@ namespace QuarksCloud {
 			zmq::message_t res;
 			broker.recv (&res);
 			
-			brokerConnected = true;
+			brokerConnected = true;			
 			
 			DecodedMsg reportRep(res.data());
 			writer.onRead(QuarksCloud::broker, reportRep.data(), reportRep.size());
+			
+			std::cout << "Writer connected to broker: " << brokerUrl  << std::endl;
+		
 	
 		}
-			
+		
+		std::cout << "Writer started -> broker url: " << brokerUrl << ", producer url: " << producerUrl 
+						<< ", consumer url: " << consumerUrl << ", sink url: " << sinkUrl << std::endl;
+				
 		s_catch_signals ();	
 		while(true){			
 					
@@ -240,8 +322,8 @@ namespace QuarksCloud {
 				if(consumerConnected){
 					consumer.recv(&message);			
 					DecodedMsg req(message.data());
-				
-					// if connected to a broker then delegate, otherwise take care of it locally
+					
+					// if connected to a broker then delegate, otherwise dispatch to sink or the next consumer
 					if(brokerConnected){
 						EncodedMsg send(req.data(), req.size());						
 						zmq::message_t request (send.size());
@@ -257,23 +339,43 @@ namespace QuarksCloud {
 						writer.onRead(QuarksCloud::broker, rep.data(), rep.size());
 	
 					}else {
-						writer.onRead(QuarksCloud::save, req.data(), req.size());
-						if(writerChain){ // produce message for the next consumer
-							std::cout << "Writer producing for next consumer .. ";
-							writer.write(req.data(), req.size());						
+						
+						if(writerChain){ // push to next consumer through new producer
+							
+							if(!firstInChain){
+								writer.onRead(QuarksCloud::save, req.data(), req.size());
+							}
+													
+							if(!lastInChain){
+								EncodedMsg e(req.data(), req.size());
+								zmq::message_t writermessage (e.size());
+								memcpy (writermessage.data (), e.data(), e.size());	
+													
+								std::cout << "Writer producing for next consumer .. ";							
+								chainedWriter.send(writermessage);
+							
+							}
+											
+						}else if(sinkConnected){
+							std::cout << "Writer disptaching to sink .. ";
+								
+							EncodedMsg e(req.data(), req.size());
+							zmq::message_t sinkmessage (e.size());
+							memcpy (sinkmessage.data (), e.data(), e.size());
+							
+							sender.send(sinkmessage);
 						}
 						
 					}
 					
 				}else{
-					std::cout << "Writer going to sleep for 100ms !! " << std::endl;
 					sleep(100);
 					std::cout << "Writer waking up after 100ms !! " << std::endl;
 				}
 			
 						
 				// artificial delay 
-				sleep(1);
+				sleep(1); //  Give 0MQ time to deliver
 				
 				
 			} catch(zmq::error_t& e) {
@@ -289,8 +391,10 @@ namespace QuarksCloud {
 		return 0;
 	}
 	
-	
-	int runReader(const char* brokerUrl, Interface& reader) {
+	// Reader capabilities:
+	// subscribe[subscriberUrl] -->	<-- publish broker[publisherUrl]
+	//
+	int runReader(const char* subscriberUrl, Interface& reader) {
 		
 		// Prepare our context and socket
 		zmq::context_t context (1);
@@ -301,16 +405,18 @@ namespace QuarksCloud {
 		zmq::socket_t subscriber (context, ZMQ_SUB);   
 		
 		bool brokerConnected = false;
-		if(strcmp(brokerUrl, "!")){
+		if(strcmp(subscriberUrl, "!")){
 			std::cout << "Reader connecting to broker .. " << std::endl;
 		
-		 	subscriber.connect(brokerUrl);	
+		 	subscriber.connect(subscriberUrl);	
 		 	brokerConnected = true;
 		 		
 			subscriber.setsockopt(ZMQ_SUBSCRIBE, "", 0);
 					
 		}
 	
+		std::cout << "Reader started -> subscriber url: " << subscriberUrl << std::endl;
+		
 		s_catch_signals ();	
 		while(true){
 			zmq::message_t message; 
@@ -326,7 +432,7 @@ namespace QuarksCloud {
 				}						
 				
 				// artificial delay 
-				sleep(1);
+				sleep(1); //  Give 0MQ time to deliver
 				
 			} catch(zmq::error_t& e) {
 				std::cout << "W: interrupt received, proceeding…" << std::endl;

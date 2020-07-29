@@ -171,7 +171,9 @@ void Core::setEnvironment(int argc, char** argv) {
 	bool producerFlag = false;
 	bool consumerFlag = false;
 	
-	_broker = _writer = _reader = _consumer = false;
+	bool sinkFlag = false;
+	
+	_broker = _writer = _reader = false;
 	
 	for(auto v : _argv) {
 		CROW_LOG_INFO << " v = " << v << " ";
@@ -192,6 +194,10 @@ void Core::setEnvironment(int argc, char** argv) {
 			_brokerBindUrl = v;
 			brokerFlag = false;
 			
+		}else if(sinkFlag){
+			_sinkUrl = v;
+			sinkFlag = false;
+			
 		}else if(readerFlag){
 			_reader = true;
 			_brokerUrl = v;
@@ -208,9 +214,6 @@ void Core::setEnvironment(int argc, char** argv) {
 			
 		}else if(consumerFlag){
 			consumerUrl = v;
-			if(consumerUrl.compare("!")){
-				_consumer = true;
-			}
 			consumerFlag = false;
 			
 		}
@@ -223,6 +226,8 @@ void Core::setEnvironment(int argc, char** argv) {
 			interceptsocket = true;
 		} else if(!v.compare("-broker")) {
 			brokerFlag = true;
+		} else if(!v.compare("-sink")) {
+			sinkFlag = true;
 		} else if(!v.compare("-reader")) {
 			readerFlag = true;
 		} else if(!v.compare("-writer")) {
@@ -246,10 +251,11 @@ void Core::run() {
 		CROW_LOG_INFO << "broker starting .. ";
 		try{
 			// Broker is a request receiver from writer as well as a publisher for reader nodes
+			// Broker can also act as sync for multiple consumers
 			if(!producerUrl.compare("")){
 				producerUrl = "tcp://*:5556"; // being treated as a publisherUrl
 			}	
-			QuarksCloud::runBroker(_brokerBindUrl.c_str(), producerUrl.c_str());
+			QuarksCloud::runBroker(_brokerBindUrl.c_str(), producerUrl.c_str(), _sinkUrl.c_str());
 		
 		} catch(const std::runtime_error& error) {	
 		
@@ -270,7 +276,7 @@ void Core::run() {
 					consumerUrl = "tcp://localhost:5557";
 				}		
 				
-				QuarksCloud::runWriter(_brokerUrl.c_str(), producerUrl.c_str(), consumerUrl.c_str(), __WriterNode);
+				QuarksCloud::runWriter(_brokerUrl.c_str(), producerUrl.c_str(), consumerUrl.c_str(), _sinkUrl.c_str(), __WriterNode);
 				
 			}else if(_reader){
 				CROW_LOG_INFO << "reader starting .. ";
