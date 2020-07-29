@@ -87,7 +87,7 @@ namespace QuarksCloud {
 		publish
 	};
 	
-	class ReaderWriter {
+	class Interface {
 	public:
 		void setProducer(zmq::socket_t& producer){
 			_producer = &producer;	
@@ -122,80 +122,9 @@ namespace QuarksCloud {
 		sigaction (SIGINT, &action, NULL);
 		sigaction (SIGTERM, &action, NULL);
 	}
-	
-	/*
-	// working examples ..
-	
-	int runPublisher () {
-		//  Prepare our context and socket
-	
-		zmq::context_t context (1);
-		zmq::socket_t socket (context, ZMQ_REP);
-		socket.bind ("tcp://*:5556");
-	
-		s_catch_signals ();
-		while (true) {
-	
-			zmq::message_t request;
-	
-			try {
-	
-				//  Wait for next request from client
-				socket.recv (&request);
-				std::cout << "Received Hello" << std::endl;
-	
-				//  Do some 'work'
-				sleep(1);
-	
-				//  Send reply back to client
-				zmq::message_t reply (5);
-				memcpy (reply.data (), "World", 5);
-				socket.send (reply);
-	
-			} catch(zmq::error_t& e) {
-				std::cout << "W: interrupt received, proceeding…" << std::endl;
-			}
-			if (s_interrupted) {
-				std::cout << "W: interrupt received, killing server…" << std::endl;
-				break;
-			}
-	
-		}
-	
-		std::cout << "W: interrupt received, exiting…" << std::endl;
-	
-		return 0;
-	}
-	
-	
-	int runSubscriber () {
-		//  Prepare our context and socket
-		zmq::context_t context (1);
-		zmq::socket_t socket (context, ZMQ_REQ);
-	
-		std::cout << "Connecting to hello world server…" << std::endl;
-		socket.connect ("tcp://localhost:5555");
-	
-		//  Do 10 requests, waiting each time for a response
-		for (int request_nbr = 0; request_nbr != 10; request_nbr++) {
-			zmq::message_t request (5);
-			memcpy (request.data (), "Hello", 5);
-			std::cout << "Sending Hello " << request_nbr << "…" << std::endl;
-			socket.send (request);
-	
-			//  Get the reply.
-			zmq::message_t reply;
-			socket.recv (&reply);
-			std::cout << "Received World " << request_nbr << std::endl;
-		}
-	
-		return 0;
-	
-	}*/
-	
+		
 	int runBroker(const char* socketUrl, const char* publisherUrl) {
-		//  Prepare our context and socket
-	
+		//  Prepare our context and socket	
 		zmq::context_t context (1);
 		
 		// rep req
@@ -207,7 +136,6 @@ namespace QuarksCloud {
 	    publisher.bind(publisherUrl);
 		
 		std::cout << "Broker started.. socket url: " << socketUrl << ", publisher url: " << publisherUrl << std::endl;
-	
 		
 		s_catch_signals ();
 		while (true) {
@@ -252,12 +180,12 @@ namespace QuarksCloud {
 		return 0;
 	}
 	
-	int runWriter (const char* brokerUrl, const char* producerUrl, const char* consumerUrl, ReaderWriter& writer) {
+	int runWriter (const char* brokerUrl, const char* producerUrl, const char* consumerUrl, Interface& writer) {
 	
 		// Prepare our context and socket
 		zmq::context_t context (1);
 		
-		std::cout << "Writer started.. producer url: " << producerUrl << ", consumer url: " << consumerUrl << std::endl;
+		std::cout << "Writer started -> producer url: " << producerUrl << ", consumer url: " << consumerUrl << std::endl;
 	
 		// push pull	
 		zmq::socket_t producer(context, ZMQ_PUSH);
@@ -268,6 +196,7 @@ namespace QuarksCloud {
 		bool consumerConnected = false;
 		if(strcmp(consumerUrl, "!")){ // if specifically stopped by supplying a '!' then don't connect, otherwise connect
 			consumer.connect(consumerUrl);
+			consumerConnected = true;
 		}
 			
 		// broker
@@ -311,7 +240,7 @@ namespace QuarksCloud {
 				if(consumerConnected){
 					consumer.recv(&message);			
 					DecodedMsg req(message.data());
-					
+				
 					// if connected to a broker then delegate, otherwise take care of it locally
 					if(brokerConnected){
 						EncodedMsg send(req.data(), req.size());						
@@ -335,8 +264,14 @@ namespace QuarksCloud {
 						}
 						
 					}
+					
+				}else{
+					std::cout << "Writer going to sleep for 100ms !! " << std::endl;
+					sleep(100);
+					std::cout << "Writer waking up after 100ms !! " << std::endl;
 				}
-				
+			
+						
 				// artificial delay 
 				sleep(1);
 				
@@ -355,7 +290,7 @@ namespace QuarksCloud {
 	}
 	
 	
-	int runReader(const char* brokerUrl, ReaderWriter& reader) {
+	int runReader(const char* brokerUrl, Interface& reader) {
 		
 		// Prepare our context and socket
 		zmq::context_t context (1);

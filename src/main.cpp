@@ -1202,10 +1202,10 @@ int main(int argc, char ** argv) {
 	
 	bool runAsServer = Quarks::Core::_Instance.isAServer();
 	
-	//if(runnable){ <-- warning: cannot put thread t inside a scope since it gets destroyed on scope exit
+	//if(runAsServer){ <-- warning: cannot put thread t inside a scope since it gets destroyed on scope exit
 	std::thread t([&app, &runAsServer]() {
 		if(runAsServer){
-			
+			std::cout << "Quarks running as server .." << std::endl;
     		app.port(Quarks::Core::_Instance.getPort()).multithreaded().run();
 		}		
 			

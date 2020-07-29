@@ -122,7 +122,6 @@ namespace Quarks {
 				return _reader;
 			}
 			
-			
 		private:
 
 			int _argc;
@@ -137,6 +136,7 @@ namespace Quarks {
 			bool _reader;
 			bool _writer;
 			bool _logger;
+			bool _consumer;
 
 			std::string _brokerUrl;
 

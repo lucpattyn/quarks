@@ -52,12 +52,14 @@ void closeDB(std::string schemaname) {
 }
 
 // pub sub
-std::mutex _publish_mtx;
+//std::mutex _publish_mtx;
 
-class QReaderWriter : public QuarksCloud::ReaderWriter{
+
+class QCWriter : public QuarksCloud::Interface {
 public:
 	virtual void onRead(int type, void* data, size_t size){
-
+		std::cout << "Writer received: " << (char*)data << std::endl;
+		
 		if(type == QuarksCloud::save){
 			std::string jsonData = (char*) data;
 		
@@ -69,7 +71,7 @@ public:
 				std::string key = x["key"].s();
 				std::string value = x["value"].s();
 				
-				std::cout << "RW putting " << key << " , " << value;
+				std::cout << "__Writer putting " << key << " , " << value << std::endl;
 	
 				rocksdb::Slice keySlice = key;			
 				
@@ -85,29 +87,22 @@ public:
 				
 			}
 		}		
-	}
-};
-
-class QWriter : public QReaderWriter {
-public:
-	virtual void onRead(int type, void* data, size_t size){
-		std::cout << "Writer received: " << (char*)data << std::endl;
-		QReaderWriter::onRead(type, data, size);		
+	
 	}
 
 };
 
-class QReader : public QReaderWriter {
+class QCReader : public QuarksCloud::Interface {
 public:
 	virtual void onRead(int type, void* data, size_t size){
 		std::cout << "Reader received: " << (char*)data << std::endl;
-		QReaderWriter::onRead(type, data, size);	
+	
 	}	
 
 };
 
-static QWriter QWriterNode;
-static QReader QReaderNode;
+static QCWriter __WriterNode;
+static QCReader __ReaderNode;
 
 static std::string producerUrl = "";
 static std::string consumerUrl = "";
@@ -176,25 +171,32 @@ void Core::setEnvironment(int argc, char** argv) {
 	bool producerFlag = false;
 	bool consumerFlag = false;
 	
+	_broker = _writer = _reader = _consumer = false;
+	
 	for(auto v : _argv) {
 		CROW_LOG_INFO << " v = " << v << " ";
 		if(schema) {
 			schemaname = v;
 			schema = false;
+			
 		} else if(port) {
 			_portNumber = std::stoi(v);
 			port = false;
+			
 		} else if(interceptsocket) {
 			_hooksocket = false;
 			interceptsocket = false;
+			
 		}else if(brokerFlag){
 			_broker = true;
 			_brokerBindUrl = v;
 			brokerFlag = false;
+			
 		}else if(readerFlag){
 			_reader = true;
 			_brokerUrl = v;
 			readerFlag = false;
+			
 		}else if(writerFlag){
 			_writer = true;
 			_brokerUrl = v;
@@ -206,6 +208,9 @@ void Core::setEnvironment(int argc, char** argv) {
 			
 		}else if(consumerFlag){
 			consumerUrl = v;
+			if(consumerUrl.compare("!")){
+				_consumer = true;
+			}
 			consumerFlag = false;
 			
 		}
@@ -242,7 +247,7 @@ void Core::run() {
 		try{
 			// Broker is a request receiver from writer as well as a publisher for reader nodes
 			if(!producerUrl.compare("")){
-				producerUrl = "tcp://*:5556";
+				producerUrl = "tcp://*:5556"; // being treated as a publisherUrl
 			}	
 			QuarksCloud::runBroker(_brokerBindUrl.c_str(), producerUrl.c_str());
 		
@@ -265,12 +270,12 @@ void Core::run() {
 					consumerUrl = "tcp://localhost:5557";
 				}		
 				
-				QuarksCloud::runWriter(_brokerUrl.c_str(), producerUrl.c_str(), consumerUrl.c_str(), QWriterNode);
+				QuarksCloud::runWriter(_brokerUrl.c_str(), producerUrl.c_str(), consumerUrl.c_str(), __WriterNode);
 				
 			}else if(_reader){
 				CROW_LOG_INFO << "reader starting .. ";
 				// Reader node is a subscriber to broker
-				QuarksCloud::runReader(_brokerUrl.c_str(), QReaderNode);
+				QuarksCloud::runReader(_brokerUrl.c_str(), __ReaderNode);
 			}
 			
 			//runSubscriber();	
@@ -336,7 +341,7 @@ bool getKeyValuePair(std::string key, std::string& value, std::string& out) {
 
 
 void putRequest(std::string key, std::string value){
-	std::lock_guard<std::mutex> _(_publish_mtx);
+	//std::lock_guard<std::mutex> _(_publish_mtx);
 
 	if(Core::_Instance.isWriterNode()){
 		//CROW_LOG_INFO << "publishing put ..";
@@ -347,7 +352,7 @@ void putRequest(std::string key, std::string value){
 		
 		std::string publish = crow::json::dump(w);
 		
-		QWriterNode.write(publish.c_str(), publish.size()+1); // 1 added for a trailing zero
+		__WriterNode.write(publish.c_str(), publish.size()+1); // 1 added for a trailing zero
 	}
 }
 
