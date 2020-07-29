@@ -51,9 +51,9 @@ void closeDB(std::string schemaname) {
 
 }
 
-// pub sub
-//std::mutex _publish_mtx;
+// Quarks Cloud 
 
+std::mutex _publish_mtx;
 
 class QCWriter : public QuarksCloud::Interface {
 public:
@@ -65,7 +65,7 @@ public:
 		
 			auto x = crow::json::load(jsonData);		
 			if(!x){
-				std::cout << "RW received invalid put request!";
+				std::cout << "__Writer received invalid put request!";
 				
 			}else{
 				std::string key = x["key"].s();
@@ -80,7 +80,7 @@ public:
 			
 					rocksdb::Status status = db->Put(rocksdb::WriteOptions(), keySlice, value);		
 					if(!status.ok()) {
-						std::cout << "RW could not write to db!";
+						std::cout << "__Writer could not write to db!";
 						
 					}
 				}
@@ -107,7 +107,7 @@ static QCReader __ReaderNode;
 static std::string producerUrl = "";
 static std::string consumerUrl = "";
 
-// end pub sub
+// end Quarks Cloud
 
 int wildcmp(const char *wild, const char *str) {
 	// Written by Jack Handy - <A href="mailto:jakkhandy@hotmail.com">jakkhandy@hotmail.com</A>
@@ -341,7 +341,7 @@ bool getKeyValuePair(std::string key, std::string& value, std::string& out) {
 
 
 void putRequest(std::string key, std::string value){
-	//std::lock_guard<std::mutex> _(_publish_mtx);
+	std::lock_guard<std::mutex> _(_publish_mtx);
 
 	if(Core::_Instance.isWriterNode()){
 		//CROW_LOG_INFO << "publishing put ..";

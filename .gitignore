@@ -1,6 +1,8 @@
 build/
 build-broker/
 build-writer/
+build-writer-chain/
+build-writer-tail/
 build-reader/
 .idea/
 .vscode/
