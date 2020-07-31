@@ -53,7 +53,33 @@ void closeDB(std::string schemaname) {
 
 // Quarks Cloud 
 
-std::mutex _publish_mtx;
+void qcSave(void* data, size_t size){
+	std::string jsonData = (char*) data;
+	
+	auto x = crow::json::load(jsonData);		
+	if(!x){
+		std::cout << "__Writer received invalid put request!";
+		
+	}else{
+		std::string key = x["key"].s();
+		std::string value = x["value"].s();
+		
+		std::cout << "__Writer putting " << key << " , " << value << std::endl;
+
+		rocksdb::Slice keySlice = key;			
+		
+		// modify the database
+		if (dbStatus.ok()) {
+	
+			rocksdb::Status status = db->Put(rocksdb::WriteOptions(), keySlice, value);		
+			if(!status.ok()) {
+				std::cout << "__Writer could not write to db!";
+				
+			}
+		}
+		
+	}
+}
 
 class QCWriter : public QuarksCloud::Interface {
 public:
@@ -61,31 +87,7 @@ public:
 		std::cout << "Writer received: " << (char*)data << std::endl;
 		
 		if(type == QuarksCloud::save){
-			std::string jsonData = (char*) data;
-		
-			auto x = crow::json::load(jsonData);		
-			if(!x){
-				std::cout << "__Writer received invalid put request!";
-				
-			}else{
-				std::string key = x["key"].s();
-				std::string value = x["value"].s();
-				
-				std::cout << "__Writer putting " << key << " , " << value << std::endl;
-	
-				rocksdb::Slice keySlice = key;			
-				
-				// modify the database
-				if (dbStatus.ok()) {
-			
-					rocksdb::Status status = db->Put(rocksdb::WriteOptions(), keySlice, value);		
-					if(!status.ok()) {
-						std::cout << "__Writer could not write to db!";
-						
-					}
-				}
-				
-			}
+			qcSave(data, size);
 		}		
 	
 	}
@@ -96,7 +98,11 @@ class QCReader : public QuarksCloud::Interface {
 public:
 	virtual void onRead(int type, void* data, size_t size){
 		std::cout << "Reader received: " << (char*)data << std::endl;
-	
+
+		if(type == QuarksCloud::save){
+			qcSave(data, size);
+		}		
+		
 	}	
 
 };
@@ -106,6 +112,8 @@ static QCReader __ReaderNode;
 
 static std::string producerUrl = "";
 static std::string consumerUrl = "";
+
+std::mutex __put_mtx;
 
 // end Quarks Cloud
 
@@ -254,7 +262,10 @@ void Core::run() {
 			// Broker can also act as sync for multiple consumers
 			if(!producerUrl.compare("")){
 				producerUrl = "tcp://*:5556"; // being treated as a publisherUrl
-			}	
+			}
+			if(!_sinkUrl.compare("x")){
+				_sinkUrl = "tcp://*:5558";
+			}
 			QuarksCloud::runBroker(_brokerBindUrl.c_str(), producerUrl.c_str(), _sinkUrl.c_str());
 		
 		} catch(const std::runtime_error& error) {	
@@ -274,6 +285,12 @@ void Core::run() {
 				}			
 				if(!consumerUrl.compare("")){
 					consumerUrl = "tcp://localhost:5557";
+				}
+				if(!_sinkUrl.compare("x")){
+					_sinkUrl = "tcp://*:5558";
+										
+				}else if(!_sinkUrl.compare("+")){
+					 _sinkUrl = "tcp://localhost:5558";
 				}		
 				
 				QuarksCloud::runWriter(_brokerUrl.c_str(), producerUrl.c_str(), consumerUrl.c_str(), _sinkUrl.c_str(), __WriterNode);
@@ -281,6 +298,9 @@ void Core::run() {
 			}else if(_reader){
 				CROW_LOG_INFO << "reader starting .. ";
 				// Reader node is a subscriber to broker
+				if(!_brokerUrl.compare("+")){
+					_brokerUrl = "tcp://localhost:5556"; // being treated as a subscriberUrl
+				}
 				QuarksCloud::runReader(_brokerUrl.c_str(), __ReaderNode);
 			}
 			
@@ -347,7 +367,7 @@ bool getKeyValuePair(std::string key, std::string& value, std::string& out) {
 
 
 void putRequest(std::string key, std::string value){
-	std::lock_guard<std::mutex> _(_publish_mtx);
+	std::lock_guard<std::mutex> _(__put_mtx);
 
 	if(Core::_Instance.isWriterNode()){
 		//CROW_LOG_INFO << "publishing put ..";
@@ -356,9 +376,9 @@ void putRequest(std::string key, std::string value){
 		w["value"] = value;
 		w["key"] = key;
 		
-		std::string publish = crow::json::dump(w);
+		std::string data = crow::json::dump(w);
 		
-		__WriterNode.write(publish.c_str(), publish.size()+1); // 1 added for a trailing zero
+		__WriterNode.write(data.c_str(), data.size()+1); // 1 added for a trailing zero
 	}
 }
 

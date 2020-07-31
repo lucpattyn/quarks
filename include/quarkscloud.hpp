@@ -178,7 +178,13 @@ namespace QuarksCloud {
 					memcpy(reqdata, req.data(), reqsize);
 					reqdata[reqsize] = 0;
 						
-					std::cout << "Broker received: " << reqdata << std::endl;
+					std::cout << "Broker received request: " << reqdata << std::endl;
+					
+					EncodedMsg send(req.data(), req.size());						
+					zmq::message_t publishermsg (send.size());
+					memcpy (publishermsg.data (), send.data(), send.size());			
+					std::cout << "Broker publishing to readers.. " << send.data() + sizeof(size_t) << std::endl;
+					publisher.send(publishermsg);
 					
 					//  Send reply back to client
 					EncodedMsg rep(BROKER_OK, strlen(BROKER_OK)+1);			
@@ -199,6 +205,11 @@ namespace QuarksCloud {
 						
 					std::cout << "Broker received through sink: " << reqdata << std::endl;
 					
+					EncodedMsg send(req.data(), req.size());						
+					zmq::message_t publishermsg (send.size());
+					memcpy (publishermsg.data (), send.data(), send.size());			
+					std::cout << "Broker publishing to readers.. " << send.data() + sizeof(size_t) << std::endl;
+					publisher.send(publishermsg);
 				
 				}
 									
@@ -248,23 +259,25 @@ namespace QuarksCloud {
 			std::cout << "Consumer connected: " << consumerUrl << std::endl;
 		}
 		
-		// writer chain
+		// writer chain (experimental - probably shouldn't be used)
 		bool writerChain = false;
 		bool firstInChain = false;
 		bool lastInChain = false;
 		zmq::socket_t chainedWriter(context, ZMQ_PUSH);
-	    if(!strcmp(brokerUrl, ".")){
+	    if(!strcmp(brokerUrl, "-")){
 			firstInChain = true;
 			writerChain = true;			
 			chainedWriter.bind(sinkUrl);		
 			std::cout << "Writer connected to head of chain: " << sinkUrl << std::endl;
+			sinkUrl = "";
 			
 		}else if(!strcmp(brokerUrl, "+")) {
 			writerChain = true;
 			chainedWriter.bind(sinkUrl);	
 			std::cout << "Writer connected to chain: " << sinkUrl << std::endl;
+			sinkUrl = "";
 			
-		}else if(!strcmp(brokerUrl, "}")){
+		}else if(!strcmp(brokerUrl, ".")){
 			lastInChain = true;
 			writerChain = true;
 			std::cout << "Writer connected to end of chain: " << sinkUrl << std::endl;
@@ -274,7 +287,7 @@ namespace QuarksCloud {
 		// sink
 		bool sinkConnected = false;
 		zmq::socket_t sender(context, ZMQ_PUSH);
-	    if(!writerChain && strcmp(sinkUrl, "")){
+	    if(strcmp(sinkUrl, "")){
 			sender.connect(sinkUrl);	    
 			sinkConnected = true;
 		
@@ -355,8 +368,9 @@ namespace QuarksCloud {
 								chainedWriter.send(writermessage);
 							
 							}
+						}
 											
-						}else if(sinkConnected){
+						if(sinkConnected){
 							std::cout << "Writer disptaching to sink .. ";
 								
 							EncodedMsg e(req.data(), req.size());
