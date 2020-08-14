@@ -580,4 +580,52 @@ Currently it is turned off by using #ifdef _USE_PLUGIN in the codes and if (_USE
   
   Check #How to Build section for compilation and binary creation
 
+### Quarks Cloud
+
+Quarks Cloud provides the functionalities for scaling and replicating nodes
+(through extensive use of ZeroMQ).
+
+Genearlly each Quarks server is called a core.
+When we are using the cloud features the cores are called nodes.
+
+There are three types of nodes:
+1. Broker Node
+2. Writer Node
+3. Reader Node
+
+Broker nodes are used to publish data across multiple nodes.
+All writes through api calls are written to a writer node.
+The writer node sends the message to broker node which publishes to multiple reader nodes.
+Reader nodes are dedicated for only data reading related api calls.
+This helps serving huge amount of requests because the readers are plain replica of writer node.
+
+Conceptual flow:
+												 	   |-> [reader]
+user->write api calls(ex. put)-> [writer] -> [broker] -|-> [reader]  <-read api calls(ex. get)<-user
+												       |-> [reader]
+
+Following are the commands to start up broker, writer and readers:
+
+Start broker node:
+```
+ ./ocv_microservice_crow -port 18081 -broker tcp://*:5555
+ 
+```
+* Opens a socket for communication in port 5555 to accept writer requests
+  Opens a publisher at port 5556 port for subscribers(i.e readers) to listen to
+
+Start writer node:
+```
+./ocv_microservice_crow -port 18082 -writer tcp://localhost:5555
+
+```
+* Connects to broker at port 5555
+
+Start reader node:
+```
+./ocv_microservice_crow -port 18083 -reader tcp://localhost:5556
+
+```
+* Listens to broker at port 5556
+* There can be multiple readers started in different ports.
 

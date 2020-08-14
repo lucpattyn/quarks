@@ -1623,18 +1623,24 @@ bool Core::getList(crow::json::rvalue& args,
 
 			// iterate all entries
 			for (auto key : args) {
+				bool valid = false;
+		
 				std::string s = key.s();
 				if(getJson(s, out)) {
 					w["value"] = std::move(out);
-				} else {
-					w["error"] = i+1; // i is incremented later ..
-				}
+					w["key"] = s;
+					
+					valid = true;
 
-				w["key"] = s;
-
+				} //else {
+					//w["error"] = i+1; // i is incremented later ..
+				//}
+				
 				i++;
 				if(i > lowerbound && (i < upperbound || limit == -1)) {
-					matchedResults.push_back(std::move(w));
+					if(valid){
+						matchedResults.push_back(std::move(w));
+					}					
 				}
 
 			}

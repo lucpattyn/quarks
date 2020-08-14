@@ -680,13 +680,13 @@ int main(int argc, char ** argv) {
 		std::vector<crow::json::wvalue> jsonResults;
 		bool ret = Quarks::Core::_Instance.getList(x, jsonResults, std::stoi(q.skip), std::stoi(q.limit));
 
-		if(jsonResults.size()) {
+		//if(jsonResults.size()) {
 			//w["result"] = jsonResults[0].s();
 			//CROW_LOG_INFO << "jsonResults[0] : "
 			//   <<  crow::json::dump(jsonResults[0])
 
 			w["result"] = std::move(jsonResults);
-		}
+		//}
 
 		if(!ret) {
 			w["error"] = "runtime error";
