@@ -81,6 +81,11 @@ int main(int argc, char ** argv) {
 	v8EngineInitializeInMain(argc, argv);
 #endif
 
+	auto route_ping_callback = 
+	[](const crow::request& req) {
+		return "pong";  
+	};
+
 #ifdef _USE_PLUGINS
 
 	auto route_filter_gaussian_callback =
@@ -114,6 +119,7 @@ int main(int argc, char ** argv) {
 #endif
 
 
+	// websockets
 	QSocket::Interceptor& interceptor = Quarks::Core::_Instance.shouldHookSocket()
 	                                    ? Quarks::SocketInterceptor::getInstance(Quarks::Core::_Instance)
 	                                    : QSocket::DefaultInterceptor();
@@ -121,7 +127,7 @@ int main(int argc, char ** argv) {
 	QSocket qsock(CROW_ROUTE(app, "/ws"), interceptor);
 
 	QSocket qsockFileUploader(CROW_ROUTE(app, "/ws/files/upload"), QSocket::FileInterceptor("upload"));
-
+	// end websockets
 
 
 ///////////////////////////////////////////
@@ -802,6 +808,9 @@ int main(int argc, char ** argv) {
 
 	};
 
+	// core ends //
+	//////////////
+
 	// html stuff
 	/*
 	auto uriDecode = [](const std::string& in, std::string& out){
@@ -1181,6 +1190,8 @@ int main(int argc, char ** argv) {
 		return page.render(x);
 	});
 
+	CROW_ROUTE(app, "/ping")
+	(route_ping_callback);
 
 #ifdef _USE_PLUGINS
 	CROW_ROUTE(app, "/filter/gaussian")
@@ -1197,6 +1208,9 @@ int main(int argc, char ** argv) {
 
 	CROW_ROUTE(app, "/ai")
 	.methods("GET"_method)(route_ai_callback);
+	
+// end AI calls
+
 
 	std::cout << "running main .." << std::endl;
 	
