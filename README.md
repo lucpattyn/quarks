@@ -212,12 +212,12 @@ n) provide a prefix, key pair for which all keys (along with values) greater tha
    starting with the prefix are returned 
    
 ```
-http://0.0.0.0:18080/getkeysafter?body=["key_prefix", "key"]
+http://0.0.0.0:18080/getkeysafter?body=["key_prefix", "comparekey"]
 
 ```
 Multiple prefix, key pair can be provided like the following:
 ```
-http://0.0.0.0:18080/getkeysafter?body=["key_prefix1", "key1", "key_prefix2", "key2", ... "key_prefixN", "keyN"]
+http://0.0.0.0:18080/getkeysafter?body=["key_pre1", "key1", "key_pre2", "key2", ... "key_preN", "keyN"]
 
 ```
 
@@ -225,12 +225,12 @@ o) provide a prefix, key pair for which the highest key (along with values and i
    starting with the prefix is returned 
    
 ```
-http://0.0.0.0:18080/getkeyslast?body=["key_prefix", "key"]
+http://0.0.0.0:18080/getkeyslast?body=["key_prefix", "comparekey"]
 
 ```
 Multiple prefix, key pair can be provided like the following:
 ```
-http://0.0.0.0:18080/getkeyslast?body=["key_prefix1", "key1", "key_prefix2", "key2", ... "key_prefixN", "keyN"]
+http://0.0.0.0:18080/getkeyslast?body=["key_pre1", "key1", "key_pre2", "key2", ... "key_preN", "keyN"]
 
 ```
   
@@ -364,17 +364,20 @@ vii) provide a prefix, key pair for which all keys (along with values) greater t
    starting with the prefix are returned 
    
 ```
-http://0.0.0.0:18080/getkeysafter?body=["key_prefix", "key"]
+POST: http://0.0.0.0:18080/getkeysafter
+BODY:
+["key_prefix", "key"]
 
 ```
-
 Multiple prefix, key pair can be provided like the following:
 ```
-http://0.0.0.0:18080/getkeysafter?body=["key_prefix1", "key1", "key_prefix2", "key2", ... "key_prefixN", "keyN"]
+POST: http://0.0.0.0:18080/getkeysafter
+BODY:
+["key_pre1", "key1", "key_pre2", "key2", ... "key_preN", "keyN"]
 
 ```
 
-viii) provide a prefix, key pair for which the highest key (along with values and index) greater than the passed key,
+viii) provide a prefix, key pair for which the highest key (along with value and index) greater than the passed key,
    starting with the prefix is returned 
    
 ```
@@ -388,11 +391,11 @@ Multiple prefix, key pair can be provided like the following:
 ```
 POST: http://0.0.0.0:18080/getkeyslast
 BODY:
-["key_prefix1", "key1", "key_prefix2", "key2", ... "key_prefixN", "keyN"]
+["key_pre1", "key1", "key_pre2", "key2", ... "key_preN", "keyN"]
 
 ```
 
-###Filters and joins
+### Filters and joins
 
 There is also provision to run ORM style queries with searchjson and applying filters
 
@@ -504,7 +507,8 @@ Quarks will allow minimum usage of scripting to ensure the server side codes rem
 
 ### BENCHMARKING
 ```
-https://github.com/kaisarh/quarks/tree/dev/benchmark/results?fbclid=IwAR2ea_PuZ6drbdg4PUuFfhirXdHC4rtlQ3I1KDR9G-PSaIJlFfA0FXNjUw8
+https://github.com/kaisarh/quarks/tree/dev/benchmark/results?
+fbclid=IwAR2ea_PuZ6drbdg4PUuFfhirXdHC4rtlQ3I1KDR9G-PSaIJlFfA0FXNjUw8
 
 ```
 Thanks Kaisar Haq :)
@@ -665,19 +669,27 @@ The response should be a gausian filtered image from the submited image.
 OpenCV however is a plugin (an additional feature) and not the main purpose behind Quarks.
 Currently it is turned off by using #ifdef _USE_PLUGIN in the codes and if (_USE_PLUGINS) in CMakeLists.txt
 
-### Dependencies installation for Ubuntu 18.04 
+### Quick Start: Dependencies installation for Ubuntu 18.04 
 
- #environment and compiler setup
+ environment and compiler setup
+ 
  -$ sudo apt-get update -y
- -$ sudo apt-get install build-essential 
+ 
+ -$ sudo apt-get install build-essential
+  
  -$ sudo apt-get install ninja-build
+ 
 
- #main dependency libraries installation:
+ main dependency libraries installation:
 
  -$ sudo apt-get install libboost-system-dev
+ 
  -$ sudo apt-get install libv8-dev
+ 
  -$ sudo apt-get install librocksdb-dev
+ 
  -$ sudo apt-get install libzmq3-dev
   
-Check #How to Build section for compilation and binary creation
+ Build and Run:
+ Check #How to Build section for compilation and binary creation and #Testing section for how to run
 
