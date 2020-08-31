@@ -701,6 +701,68 @@ int main(int argc, char ** argv) {
 		return w;
 
 	};
+	
+	auto route_core_getkeysafter_callback =
+	[](const crow::request& req) {
+		crow::json::wvalue w;
+		w["result"] = "";
+
+		std::string body = req.body;
+		auto p = req.url_params.get("body");
+		if(p != nullptr) {
+			body = p;
+		}
+
+		auto x = crow::json::load(body);
+		if (!x) {
+			w["error"] = "invalid parameters";
+			return w;
+		}
+
+		auto q = QueryParams::Parse(req);
+
+		std::vector<crow::json::wvalue> jsonResults;
+		bool ret = Quarks::Core::_Instance.getKeysAfter(x, jsonResults, std::stoi(q.skip), std::stoi(q.limit));
+
+		w["result"] = std::move(jsonResults);
+
+		if(!ret) {
+			w["error"] = "runtime error";
+		}
+
+		return w;
+
+	};
+
+	auto route_core_getkeyslast_callback =
+	[](const crow::request& req) {
+		crow::json::wvalue w;
+		w["result"] = "";
+
+		std::string body = req.body;
+		auto p = req.url_params.get("body");
+		if(p != nullptr) {
+			body = p;
+		}
+
+		auto x = crow::json::load(body);
+		if (!x) {
+			w["error"] = "invalid parameters";
+			return w;
+		}
+
+		std::vector<crow::json::wvalue> jsonResults;
+		bool ret = Quarks::Core::_Instance.getKeysLast(x, jsonResults);
+
+		w["result"] = std::move(jsonResults);
+
+		if(!ret) {
+			w["error"] = "runtime error";
+		}
+
+		return w;
+
+	};
 
 	auto route_core_incr_callback =
 	[](const crow::request& req) {
@@ -966,6 +1028,12 @@ int main(int argc, char ** argv) {
 
 	CROW_ROUTE(app, "/getlist")
 	.methods("GET"_method, "POST"_method)(route_core_getlist_callback);
+	
+	CROW_ROUTE(app, "/getkeysafter")
+	.methods("GET"_method, "POST"_method)(route_core_getkeysafter_callback);
+	
+	CROW_ROUTE(app, "/getkeyslast")
+	.methods("GET"_method, "POST"_method)(route_core_getkeyslast_callback);
 
 	CROW_ROUTE(app, "/incr")
 	.methods("GET"_method, "POST"_method)(route_core_incr_callback);
@@ -974,17 +1042,18 @@ int main(int argc, char ** argv) {
 	.methods("GET"_method, "POST"_method)(route_core_searchjson_callback);
 
 
+	// experimental
 	CROW_ROUTE(app, "/filetransfer")
 	.methods("GET"_method, "POST"_method)(route_core_filetransfer_callback);
 
-
 	CROW_ROUTE(app, "/opentcpsocket")
 	.methods("GET"_method, "POST"_method)(route_core_opentcpsocket_callback);
-
-
+	// 
+	
 	//auto& v = Quarks::Matrix::_Instance; // we will work with the matrix data struct
 	// in later api calls
-
+	
+	// html serving
 	auto resourceLoader = [](crow::mustache::context& x, std::string filename,
 	const char* base = nullptr) {
 		char name[256];

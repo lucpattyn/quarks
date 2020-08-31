@@ -82,16 +82,25 @@ namespace Quarks {
 
 
 			bool iterJson(std::string wild,
-			              std::vector<crow::json::wvalue>& matchedResults,
-			              int skip = 0, int limit = -1);
+			            std::vector<crow::json::wvalue>& matchedResults,
+			            int skip = 0, int limit = -1);
 
 			bool getList(crow::json::rvalue& args,
-			             std::vector<crow::json::wvalue>& matchedResults,
-			             int skip = 0, int limit = -1);
-
+			            std::vector<crow::json::wvalue>& matchedResults,
+			            int skip = 0, int limit = -1);
+			
+			bool getAfter(std::string key, std::string prefix, std::vector<crow::json::wvalue>& matchedResults,
+						int skip = 0, int limit = -1);             
+			bool getKeysAfter(crow::json::rvalue& args,
+                   		std::vector<crow::json::wvalue>& matchedResults,
+                   		int skip = 0, int limit = -1);
+            
+            bool getLast(std::string key, std::string prefix, std::vector<crow::json::wvalue>& matchedResults);
+			bool getKeysLast(crow::json::rvalue& args, std::vector<crow::json::wvalue>& matchedResults);
+			
 			bool searchJson(crow::json::rvalue& args,
-			                std::vector<crow::json::wvalue>& matchedResults,
-			                int skip = 0, int limit = -1);
+			            std::vector<crow::json::wvalue>& matchedResults,
+			            int skip = 0, int limit = -1);
 
 			bool atom(std::string body, std::string& out);
 

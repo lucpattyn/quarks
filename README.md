@@ -42,6 +42,9 @@ cmake .. -G Ninja
 ninja
 ```
 
+Thanks Tareq Ahmed Siraj  (https://github.com/tareqsiraj) for introduing Ninja,
+made life way easier
+
 ### Testing
 
 After initializing by issuing following command
@@ -49,23 +52,8 @@ After initializing by issuing following command
 ```
 ./ocv_microservice_crow
 ```
-In most cases the following apis returns results in Json format
-{"result":true} or {"error":"error description"}
 
 ### GET REQUESTS
-
-Available features:
-    a)  Put a key value pair 
-    b)  Get value object (json or string) against key 
-    c)  List values by wildcard search with keys
-    d)  List sorted values by wildcard search with keys
-    e)  List keys vs values by wildcard search with keys
-    f)   Get count of keys by wildcard search
-    g)  Remove a key
-    h)  Remove keys by wildcard search
-    i)   Check if a key already exists  
-    k)  Execute Atoms: atoms are set of Put and Remove operations which can be executed in a single API call
-    m) Autogenerate key and make a key value pair given a key-prefix and value 
 
 ### Description
 
@@ -118,7 +106,7 @@ http://0.0.0.0:18080/getsorted?keys=g1_u*&skip=0&limit=10&filter={"where":{"mess
 ```
 Apply equal-to filter on a value performing multiple comparisons (using eq_any):
 ```
-http://0.0.0.0:18080/getsorted?keys=g1_u*&sortby=msg&des=true&skip=0&limit=10&filter={"where":{"messageTo":{"eq_any":["u2","u4"]}}}
+http://0.0.0.0:18080/getsorted?keys=g1_u*&filter={"where":{"messageTo":{"eq_any":["u2","u4"]}}}
 
 ```
 
@@ -211,29 +199,47 @@ remove:["g1_u1","g1_u2", "g3_u3"]
    3) If you have a number of put operations and no removes then use  ../put/atom (and not  ../atom)
    4) If you have a number of remove operations and no puts then use  ../remove/atom (and not ../atom)
   
-m) Autogenerate key with prefix and value provided
+m) autogenerate key with prefix and value provided
 
 ``` 
  http://0.0.0.0:18080/make?body={"prefix":"dev_","value":"101"}
+ 
 ```
 * returns the key value pair as json object; if "key" is specified along with prefix 
  then a key is formed with prefix+key and no key generation occurs
 
+n) provide a prefix, key pair for which all keys (along with values) greater than the passed key,
+   starting with the prefix are returned 
+   
+```
+http://0.0.0.0:18080/getkeysafter?body=["key_prefix", "key"]
+
+```
+Multiple prefix, key pair can be provided like the following:
+```
+http://0.0.0.0:18080/getkeysafter?body=["key_prefix1", "key1", "key_prefix2", "key2", ... "key_prefixN", "keyN"]
+
+```
+
+o) provide a prefix, key pair for which the highest key (along with values and index) greater than the passed key,
+   starting with the prefix is returned 
+   
+```
+http://0.0.0.0:18080/getkeyslast?body=["key_prefix", "key"]
+
+```
+Multiple prefix, key pair can be provided like the following:
+```
+http://0.0.0.0:18080/getkeyslast?body=["key_prefix1", "key1", "key_prefix2", "key2", ... "key_prefixN", "keyN"]
+
+```
   
 ### POST REQUESTS
 
-Available features:
-    i)    Put a json object against key, 
-    ii)   Get that object against key 
-    iii)  Do a wildcard search of keys 
-    iv)  Get a list of key value pair given a list of keys
-    v)   Execute atoms: atoms are set of Put and Remote operations which can be executed in a single API call
-    vi)  Autogenerate key and make a key value pair given a key-prefix and value 
-    vii) Apply filters and joins
 
 ### Description
 
- i) Put a json object against a key:
+i) Put a json object against a key:
  POST: http://0.0.0.0:18080/putjson
 ```
 BODY:
@@ -354,8 +360,41 @@ BODY:
 * returns the key value pair as json object; if "key" is specified along with prefix 
 then a key is formed with prefix+key and no key generation occurs
 
+vii) provide a prefix, key pair for which all keys (along with values) greater than the passed key,
+   starting with the prefix are returned 
+   
+```
+http://0.0.0.0:18080/getkeysafter?body=["key_prefix", "key"]
 
-vii) Filters and joins: There is also provision to run ORM style queries with searchjson and applying filters
+```
+
+Multiple prefix, key pair can be provided like the following:
+```
+http://0.0.0.0:18080/getkeysafter?body=["key_prefix1", "key1", "key_prefix2", "key2", ... "key_prefixN", "keyN"]
+
+```
+
+viii) provide a prefix, key pair for which the highest key (along with values and index) greater than the passed key,
+   starting with the prefix is returned 
+   
+```
+POST: http://0.0.0.0:18080/getkeyslast
+BODY:
+["key_prefix", "key"]
+
+```
+
+Multiple prefix, key pair can be provided like the following:
+```
+POST: http://0.0.0.0:18080/getkeyslast
+BODY:
+["key_prefix1", "key1", "key_prefix2", "key2", ... "key_prefixN", "keyN"]
+
+```
+
+###Filters and joins
+
+There is also provision to run ORM style queries with searchjson and applying filters
 
 POST: http://0.0.0.0:18080/searchjson
 
@@ -495,9 +534,10 @@ Reader nodes are dedicated for only data reading related api calls.
 This helps serving huge amount of requests because the readers are plain replica of writer node.
 
 Conceptual flow:
-												 	   |-> [reader]
-user->write api calls(ex. put)-> [writer] -> [broker] -|-> [reader]  <-read api calls(ex. get)<-user
-												       |-> [reader]
+												 	   
+user->write apis-> [writer] -> [broker] -> [reader] <-read apis<-user	
+
+("/put" is an example of write api and "/get" is read api example)								       
 
 Following are the commands to start up broker, writer and readers:
 
@@ -628,7 +668,7 @@ Currently it is turned off by using #ifdef _USE_PLUGIN in the codes and if (_USE
 ### Dependencies installation for Ubuntu 18.04 
 
  #environment and compiler setup
-
+ -$ sudo apt-get update -y
  -$ sudo apt-get install build-essential 
  -$ sudo apt-get install ninja-build
 

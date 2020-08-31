@@ -1656,6 +1656,246 @@ bool Core::getList(crow::json::rvalue& args,
 
 }
 
+bool Core::getAfter(std::string key, std::string prefix, std::vector<crow::json::wvalue>& matchedResults,
+						int skip /*= 0*/, int limit /*= -1*/) {
+
+	bool ret = true;
+	if (dbStatus.ok()) {
+
+		// create new iterator
+		rocksdb::ReadOptions ro;
+		rocksdb::Iterator* it = db->NewIterator(ro);
+
+		rocksdb::Slice startKey(key);
+		rocksdb::Slice pre(prefix);
+
+		int i  = -1;
+		int count = (limit == -1) ? INT_MAX : limit;
+
+		int lowerbound  = skip - 1;
+		int upperbound = skip + count;
+
+		it->Seek(startKey);
+		if(it->Valid())
+			it->Next(); // because we are searching after (excluding the key provided)
+		for ( ; it->Valid() && it->key().starts_with(pre); it->Next()) {
+
+			i++;
+
+			if(i > lowerbound && (i < upperbound || limit == -1)) {
+				crow::json::wvalue w;
+
+				try {
+					auto x = crow::json::load(it->value().ToString());
+
+					if(!x) {
+						w["value"] =  crow::json::load(std::string("[\"") +
+						                               it->value().ToString() + std::string("\"]"));
+
+					} else {
+						w["value"] = x;
+					}
+
+				} catch (const std::runtime_error& error) {
+					CROW_LOG_INFO << "Runtime Error: " << i << it->value().ToString();
+
+					w["error"] =  it->value().ToString();
+
+					matchedResults.push_back(std::move(w));
+
+					ret = false;
+				}
+
+				w["key"] = it->key().ToString();
+
+				//CROW_LOG_INFO << "w key fwd: " << crow::json::dump(w) << " skip: "
+				//<< skip << ", limit: " << limit;
+
+				matchedResults.push_back(std::move(w));
+
+			}
+
+			if((i == upperbound) && (limit != -1)) {
+				break;
+			}
+
+		}
+
+
+
+		// do something after loop
+
+		delete it;
+
+	}
+
+	return ret && dbStatus.ok();
+
+	
+}
+
+bool Core::getKeysAfter(crow::json::rvalue& args,
+                   std::vector<crow::json::wvalue>& matchedResults,
+                   int skip /*= 0*/, int limit /*= -1*/) {
+
+
+	bool ret = true;
+
+	if (dbStatus.ok()) {
+
+		try {
+			
+			std::vector<crow::json::wvalue> out;
+			crow::json::wvalue w;
+			
+			bool prefix = false;			
+			std::string lastPrefix = "";
+			// iterate all entries
+			for (auto pair : args) {
+				prefix = !prefix;
+				
+				std::string p = pair.s();
+				if(prefix){
+					lastPrefix = p;					
+				}else{
+					if(getAfter(p, lastPrefix, out, skip, limit)) {
+						w["after"] = std::move(out);
+						w["key"] = p;
+						
+						matchedResults.push_back(std::move(w));
+					} 
+				}
+
+			}
+
+		} catch (const std::runtime_error& error) {
+			ret = false;
+
+		}
+
+	}
+
+	return ret;
+
+}
+
+
+bool Core::getLast(std::string key, std::string prefix, std::vector<crow::json::wvalue>& matchedResults) {
+
+	bool ret = true;
+	if (dbStatus.ok()) {
+
+		// create new iterator
+		rocksdb::ReadOptions ro;
+		rocksdb::Iterator* it = db->NewIterator(ro);
+
+		rocksdb::Slice startKey(key);
+		rocksdb::Slice pre(prefix);
+
+		int count = 0;
+
+		std::string lastKey;
+		
+		it->Seek(startKey);
+		if(it->Valid())
+			it->Next(); // because we are searching after (excluding the key provided)
+		for ( ; it->Valid() && it->key().starts_with(pre); it->Next()) {
+
+			count++;
+
+		}
+
+		if(count > 0){
+			it->Prev();
+			if(it->Valid()){
+				crow::json::wvalue w;
+
+				try {
+					auto x = crow::json::load(it->value().ToString());
+
+					if(!x) {
+						w["value"] =  crow::json::load(std::string("[\"") +
+						                               it->value().ToString() + std::string("\"]"));
+
+					} else {
+						w["value"] = x;
+					}
+
+				} catch (const std::runtime_error& error) {
+					CROW_LOG_INFO << "Runtime Error: " << it->value().ToString();
+
+					w["error"] =  it->value().ToString();
+
+					matchedResults.push_back(std::move(w));
+
+					ret = false;
+				}
+				
+				w["index"] = count-1;
+
+				w["key"] = it->key().ToString();
+
+				
+				matchedResults.push_back(std::move(w));
+			
+			}
+		}
+		
+
+
+		// do something after loop
+		delete it;
+
+	}
+
+	return ret && dbStatus.ok();
+
+	
+}
+
+bool Core::getKeysLast(crow::json::rvalue& args,
+                   std::vector<crow::json::wvalue>& matchedResults) {
+
+
+	bool ret = true;
+
+	if (dbStatus.ok()) {
+
+		try {
+			
+			std::vector<crow::json::wvalue> out;
+			crow::json::wvalue w;
+
+			bool prefix = false;			
+			std::string lastPrefix = "";
+			// iterate all entries
+			for (auto pair : args) {
+				prefix = !prefix;
+				
+				std::string p = pair.s();
+				if(prefix){
+					lastPrefix = p;					
+				}else{
+					if(getLast(p, lastPrefix, out)) {
+						w["last"] = std::move(out);
+						w["key"] = p;
+						
+						matchedResults.push_back(std::move(w));
+					} 
+				}
+
+			}
+
+		} catch (const std::runtime_error& error) {
+			ret = false;
+
+		}
+
+	}
+
+	return ret;
+
+}
 
 
 
