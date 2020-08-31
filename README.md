@@ -111,9 +111,14 @@ d) List sorted values by wildcard search with keys (you can specifiy skip and li
  http://0.0.0.0:18080/getsorted?keys=g1_u*&sortby=msg&des=true&skip=5&limit=10 
 
 ```
-It is possible to apply equal-to filter on a value :
+Apply equal-to filter on a value (using eq) :
 ```
 http://0.0.0.0:18080/getsorted?keys=g1_u*&skip=0&limit=10&filter={"where":{"messageTo":{"eq":"u2"}}}
+
+```
+Apply equal-to filter on a value performing multiple comparisons (using eq_any):
+```
+http://0.0.0.0:18080/getsorted?keys=g1_u*&sortby=msg&des=true&skip=0&limit=10&filter={"where":{"messageTo":{"eq_any":["u2","u4"]}}}
 
 ```
 
@@ -458,10 +463,68 @@ In our example, we named the function - "jsFilter" in main.js.
 
 Quarks will allow minimum usage of scripting to ensure the server side codes remain super optimized.
 
-After v8 engine integration and scripting support,
-the next target is to allow listener support through zero mq to communicate with other processes and services.
+### BENCHMARKING
+```
+https://github.com/kaisarh/quarks/tree/dev/benchmark/results?fbclid=IwAR2ea_PuZ6drbdg4PUuFfhirXdHC4rtlQ3I1KDR9G-PSaIJlFfA0FXNjUw8
 
-Websocket support has been added too.
+```
+Thanks Kaisar Haq :)
+
+
+After v8 engine integration and scripting support,
+the next target was to allow listener support through zero mq to communicate with other processes and services
+and creating the Quarks Cloud (partially done).
+
+### Quarks Cloud
+
+Quarks Cloud provides the functionalities for scaling and replicating nodes
+(through extensive use of ZeroMQ).
+
+Genearlly each Quarks server is called a core.
+When we are using the cloud features the cores are called nodes.
+
+There are three types of nodes:
+1. Broker Node
+2. Writer Node
+3. Reader Node
+
+Broker nodes are used to publish data across multiple nodes.
+All writes through api calls are written to a writer node.
+The writer node sends the message to broker node which publishes to multiple reader nodes.
+Reader nodes are dedicated for only data reading related api calls.
+This helps serving huge amount of requests because the readers are plain replica of writer node.
+
+Conceptual flow:
+												 	   |-> [reader]
+user->write api calls(ex. put)-> [writer] -> [broker] -|-> [reader]  <-read api calls(ex. get)<-user
+												       |-> [reader]
+
+Following are the commands to start up broker, writer and readers:
+
+Start broker node:
+```
+ ./ocv_microservice_crow -port 18081 -broker tcp://*:5555
+ 
+```
+* Opens a socket for communication in port 5555 to accept writer requests
+  Opens a publisher at port 5556 port for subscribers(i.e readers) to listen to
+
+Start writer node:
+```
+./ocv_microservice_crow -port 18082 -writer tcp://localhost:5555
+
+```
+* Connects to broker at port 5555
+
+Start reader node:
+```
+./ocv_microservice_crow -port 18083 -reader tcp://localhost:5556
+
+```
+* Listens to broker at port 5556
+* There can be multiple readers started in different ports.
+
+Websocket support has been added (Not the strongest point of Quarks yet and needs improvement).
 
 ### WEBSOCKETS
 
@@ -548,7 +611,7 @@ sock.onmessage = (e)=>{
 ```
 
 
-
+Quarks has plans for plugins integration.
 
 ### PLUGINS
 
@@ -561,7 +624,6 @@ The response should be a gausian filtered image from the submited image.
 
 OpenCV however is a plugin (an additional feature) and not the main purpose behind Quarks.
 Currently it is turned off by using #ifdef _USE_PLUGIN in the codes and if (_USE_PLUGINS) in CMakeLists.txt
-
 
 ### Dependencies installation for Ubuntu 18.04 
 
@@ -576,8 +638,6 @@ Currently it is turned off by using #ifdef _USE_PLUGIN in the codes and if (_USE
  -$ sudo apt-get install libv8-dev
  -$ sudo apt-get install librocksdb-dev
  -$ sudo apt-get install libzmq3-dev
-
   
-  Check #How to Build section for compilation and binary creation
-
+Check #How to Build section for compilation and binary creation
 

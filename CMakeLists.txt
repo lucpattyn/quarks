@@ -62,7 +62,10 @@ else()
     message(FATAL_ERROR "Crow not found. Could not build this app.")
 endif()
 
-find_package(Boost COMPONENTS system REQUIRED)
+# for windows powershell exclude system and add -lboost_system
+find_package(Boost COMPONENTS REQUIRED)
+
+#find_package(Boost COMPONENTS system REQUIRED)
 
 if (Boost_FOUND)
     include_directories(${Boost_INCLUDEDIR})
@@ -77,8 +80,14 @@ else()
     message(FATAL_ERROR "Boost not found. Could not build this app.")
 endif()
 
+#mac
 #target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb libv8.dylib libv8_libplatform.dylib)
-target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb -lv8 -lzmq)
+
+#windows powershell
+#target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb -lv8 -lzmq -lboost_system)
+
+#linux
+target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb -lv8 -lzmq -lboost_system)
 
 if (BUILD_TESTS)
     find_package(GTest)

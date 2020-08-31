@@ -62,40 +62,83 @@ namespace QSorter {
         
         
         bool validate(const crow::json::rvalue& value, const crow::json::rvalue& filter){
-            // sample : where: {deliveryType: {eq:‚Äùpickup‚Äù}}
-            //if(filter.has("where")){
-                //const crow::json::rvalue& where = filter["where"];
-                // iterate all entries
+            // filter sample1 : {where: {deliveryType: {eq:"pickup"ù}}}
+            // filter sample2 : {where: {deliveryType: {eq_any:["pickup","homedelivery"]ù}}}
+            
+            for (auto& obj : filter){
+                CROW_LOG_INFO << "JsonComparerValidate key : " << obj.key();
+                CROW_LOG_INFO << "JsonComparerValidate value : " << obj;
                 
-                for (auto& obj : filter){
-                    CROW_LOG_INFO << "JsonComparerValidate key : " << obj.key();
-                    CROW_LOG_INFO << "JsonComparerValidate value : " << obj;
-                    
-                    std::string key = obj.key();
-                    
-                    if(!key.compare("where")){
-                        auto& v = filter[key];
-                        if(v.has("and")){
+                std::string key = obj.key();
+                
+                if(!key.compare("where")){
+                    auto& v = filter[key];
+                    if(v.has("and")){
+                        
+                    }else if(v.has("or")){
+                        
+                    }else{
+                        std::string field = v.begin()->key();
+                        CROW_LOG_INFO << "JsonComparerValidate field : " << field;
+                        auto& op = v[field];
+                        std::string opKey = op.begin()->key();
+                        
+                        CROW_LOG_INFO << "JsonComparerValidate opKey : " << opKey;
+                       
+                        if(!opKey.compare("eq")){
                             
-                        }else if(v.has("or")){
-                            
-                        }else{
-                            std::string field = v.begin()->key();
-                            CROW_LOG_INFO << "JsonComparerValidate field : " << field;
-                            auto& op = v[field];
-                            std::string opKey = op.begin()->key();
-                            
-                            CROW_LOG_INFO << "JsonComparerValidate opKey : " << opKey;
-                           
-                            if(!opKey.compare("eq")){
+                            auto& check = op[opKey];
+                                                            
+                            if(value.has(field)){
+                                //int type = -1;
+                                switch (value[field].t()) {
+                                    case crow::json::type::String:{
+                                        //type = 0;
+                                        std::string checkValue = check.s();
+                                        
+                                        CROW_LOG_INFO << "JsonComparerValidate check : "
+                                                      << checkValue;
+                                        std::string fieldValue = value[field].s();
+                                        CROW_LOG_INFO << "JsonComparerValidate fieldValue : "
+                                        << fieldValue;
+                                        
+                                        if(!fieldValue.compare(checkValue)){
+                                            return true;
+                                        }
+                                        
+                                    break;
+                                    }
+                                        
+                                    case crow::json::type::Number:{
+                                        //type = 1;
+                                        double checkValue = check.d();
+                                        double fieldValue = value[field].d();
+                                        if(fieldValue == checkValue){
+                                            return true;
+                                        }
+                                        
+									break;
+                                    }
+                                        
+                                    default:;
+                                }
                                 
-                                auto& check = op[opKey];
-                                                                
-                                if(value.has(field)){
-                                    int type = -1;
-                                    switch (value[field].t()) {
-                                        case crow::json::type::String:{
-                                            type = 0;
+                                
+                            }
+                        } // end of eq
+                        else if(!opKey.compare("eq_any")){
+                            
+                            auto& checks = op[opKey];
+                                                            
+                            if(value.has(field)){
+                                //int type = -1;
+                                switch (value[field].t()) {
+                                    case crow::json::type::String:{
+                                        //type = 0;
+                                        
+                                        // iterate all entries
+										for (auto check : checks) {
+                                        
                                             std::string checkValue = check.s();
                                             
                                             CROW_LOG_INFO << "JsonComparerValidate check : "
@@ -107,36 +150,45 @@ namespace QSorter {
                                             if(!fieldValue.compare(checkValue)){
                                                 return true;
                                             }
-                                            break;
                                         }
                                             
-                                        case crow::json::type::Number:{
-                                            type = 1;
+                                    break;
+									}
+                                        
+                                    case crow::json::type::Number:{
+                                        //type = 1;
+                                        
+                                         // iterate all entries
+										for (auto check : checks) {
                                             double checkValue = check.d();
                                             double fieldValue = value[field].d();
                                             if(fieldValue == checkValue){
                                                 return true;
                                             }
-                                            break;
-                                        }
-                                            
-                                        default:;
-                                    }
+										
+										}
+										
+									break;
+									}
+                                        
+                                    default:;
                                     
+                                } // end of switch
                                     
-                                }
-                            }
-                        }
-                        
-                        return false;
+                            } // end of value has
+                        } // end of eq_any
+
                     }
-                    //for (auto& nextKey : filter[key.s()]){
-                    //    CROW_LOG_INFO << "JsonComparerValidate Next : " << nextKey;
-                    //}
-                }
+                    
+                    return false;
+                } // end of where
                 
-            
-            //}
+                //for (auto& nextKey : filter[key.s()]){
+                //    CROW_LOG_INFO << "JsonComparerValidate Next : " << nextKey;
+                //}
+                
+            } // end of main for loop
+                
             
             return false;
             
