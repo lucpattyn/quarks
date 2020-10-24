@@ -109,6 +109,10 @@ namespace Quarks {
 			std::mutex mtx;
 			bool increment(std::string key, int stepBy, std::string& out);
 
+			// backup and restore
+			bool backup(std::string path);
+			bool restore(std::string path);
+			
 			/////// r&d ////////////////
 			bool fileTransfer(std::string moduleName, std::string funcName,
 			                  std::string channelName, std::string remoteDescription);
@@ -151,6 +155,8 @@ namespace Quarks {
 			bool _broker;
 			std::string _brokerBindUrl;
 			std::string _sinkUrl;
+			
+			std::string _dbPath;
 			
 	};
 

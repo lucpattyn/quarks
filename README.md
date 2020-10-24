@@ -505,6 +505,19 @@ In our example, we named the function - "jsFilter" in main.js.
 
 Quarks will allow minimum usage of scripting to ensure the server side codes remain super optimized.
 
+## Backup and Restore
+```
+For backing up the database try:
+http://0.0.0.0:18080/backup?body={"path":"quarks_backup_1"}
+
+To restore simply run quarks next time using the "db" commandline parameter
+ ./ocv_microservice_crow -db quarks_backup_1
+ 
+ -db followed by the path denotes the rocksdb directory path to use when starting quarks
+
+```
+
+
 ### BENCHMARKING
 ```
 https://github.com/kaisarh/quarks/tree/dev/benchmark/results?
@@ -517,6 +530,7 @@ Thanks Kaisar Haq :)
 After v8 engine integration and scripting support,
 the next target was to allow listener support through zero mq to communicate with other processes and services
 and creating the Quarks Cloud (partially done).
+
 
 ### Quarks Cloud
 
@@ -659,9 +673,9 @@ Quarks has plans for plugins integration.
 
 ### PLUGINS
 
-Currently, only OpenCV is provided as a plugin.
+Currently, only OpenCV is provided as a plugin (codes commented).
 
-For those interested in testing OpenCV as plugin,
+For those interested in testing OpenCV as plugin (uncommenting the relevant codes),
 you should submit a POST request to http://localhost:18080/filters/gausian. 
 The body of this request should be your binary PNG image. 
 The response should be a gausian filtered image from the submited image.

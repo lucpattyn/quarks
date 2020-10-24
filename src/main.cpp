@@ -784,7 +784,7 @@ int main(int argc, char ** argv) {
 
 		std::string key = x["key"].s();
 		int stepBy  = x["step"].i();
-		CROW_LOG_INFO << "incr request key, value : " << key << ", " << stepBy ;
+		//CROW_LOG_INFO << "incr request key, value : " << key << ", " << stepBy ;
 
 		Quarks::Core::_Instance.increment(key, stepBy, out);
 
@@ -836,6 +836,37 @@ int main(int argc, char ** argv) {
 
 		atom(body, out);
 
+		return out;
+
+	};
+	
+	auto route_core_backup_callback =
+	[atom](const crow::request& req) {
+
+		std::string out = R"({"result":false})";
+
+		std::string body = req.body;
+
+		auto x = req.url_params.get("body");
+		if(x != nullptr) {
+			body = x;
+		}
+		
+		auto p = crow::json::load(body);
+		if (!p) {
+			out = R"({"result":false, "error":"invalid parameters"})";
+			return out;
+		}
+
+		std::string path = "";
+		if(p.has("path")){
+			path = p["path"].s();			
+		}
+	
+		if(Quarks::Core::_Instance.backup(path)){
+			out = R"({"result":true})";
+		}
+		
 		return out;
 
 	};
@@ -1040,7 +1071,10 @@ int main(int argc, char ** argv) {
 
 	CROW_ROUTE(app, "/searchjson")
 	.methods("GET"_method, "POST"_method)(route_core_searchjson_callback);
-
+	
+	// backup and restore
+	CROW_ROUTE(app, "/backup")
+	.methods("GET"_method, "POST"_method)(route_core_backup_callback);
 
 	// experimental
 	CROW_ROUTE(app, "/filetransfer")

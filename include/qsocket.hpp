@@ -220,6 +220,7 @@ public:
 				FILE* fp = mFiles[&conn];
 				if(fp){
 					bool ret = fwrite(msg.c_str(), sizeof(char), msg.size(), fp) > 0;
+					return ret;
 				}
 						
 			}

@@ -6,6 +6,7 @@
 #include <quarkscloud.hpp>
 
 #include "rocksdb/db.h"
+#include "rocksdb/utilities/checkpoint.h"
 
 #include <iomanip>
 
@@ -38,13 +39,13 @@ void openDB(std::string schemaname) {
 	options.create_if_missing = true;
 	dbStatus = rocksdb::DB::Open(options, schemaname, &db);
 
-	CROW_LOG_INFO << "opening schema: " << schemaname;
+	CROW_LOG_INFO << "opening db: " << schemaname;
 
 }
 
 void closeDB(std::string schemaname) {
 
-	CROW_LOG_INFO << "closing schema: " << schemaname;
+	CROW_LOG_INFO << "closing db: " << schemaname;
 
 	// close the database
 	delete db; // deleting causes segmentation fault, let the memory leak take over :(
@@ -226,7 +227,7 @@ void Core::setEnvironment(int argc, char** argv) {
 			
 		}
 
-		if(!v.compare("-schema")) {
+		if(!v.compare("-db")) {
 			schema = true;
 		} else if(!v.compare("-port")) {
 			port = true;
@@ -247,7 +248,9 @@ void Core::setEnvironment(int argc, char** argv) {
 		} 
 	}
 
+	_dbPath = schemaname;
 	openDB(schemaname);
+	
 	_argv.push_back(schemaname);
 
 }
@@ -2111,7 +2114,37 @@ bool Core::increment(std::string key, int stepBy, std::string& out) {
 	return ret;
 }
 
+// backup and restore
+bool Core::backup(std::string path){
+	if(!path.compare("")){
+		path = "quarks_backup";
+	}
 
+	rocksdb::Checkpoint* cp;
+	rocksdb::Status status = rocksdb::Checkpoint::Create(db, &cp);
+	
+	if(status.ok()){
+		status = cp->CreateCheckpoint(path);
+	}
+	
+	return status.ok();
+}
+
+bool Core::restore(std::string path){
+	if(!path.compare("")){
+		path = "quarks_backup";
+	}
+
+	//rocksdb::BackupEngine* backup_engine = nullptr;
+	//rocksdb::Status status = rocksdb::BackupEngine::Open(rocksdb::Env::Default(), rocksdb::BackupableDBOptions(path), &backup_engine);
+	//backup_engine->RestoreDBFromLatestBackup(path, path);
+	
+	//delete backup_engine;
+	
+	return true;
+}
+
+// r&d 
 bool Core::fileTransfer(std::string moduleName, std::string funcName, std::string channelName,
                         std::string remoteDescription) {
 
