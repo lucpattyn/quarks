@@ -12,6 +12,9 @@
 
 #include <qsocket.hpp>
 
+#include <quarkstcp.hpp>
+#include <quarkstaskqueue.hpp>
+
 #ifdef _USE_RAPIDAPI
 
 #include <curl/curl.h>
@@ -948,13 +951,14 @@ int main(int argc, char ** argv) {
 
 	auto route_ai_callback =
 	[](const crow::request& req) {
+		
+#ifdef _USE_RAPIDAPI
+
 		const char* q = req.url_params.get("msg");
 		std::string params;
 		//uriDecode(q, params);
 
 		//CROW_LOG_INFO << "uri params:" << params << q;
-
-#ifdef _USE_RAPIDAPI
 
 		CURL *curl;
 		//CURLcode cres;
@@ -1316,6 +1320,27 @@ int main(int argc, char ** argv) {
 
 
 	std::cout << "running main .." << std::endl;
+	
+	if(Quarks::Core::_Instance.isTcpServer()){	
+		std::thread ts([]() {
+			tcpServerStart(Quarks::Core::_Instance.getTcpUrl());				
+		});
+		
+		ts.detach();
+	}
+	
+	if(Quarks::Core::_Instance.isTcpClient()){
+		std::thread tc([]() {
+			tcpClientStart(Quarks::Core::_Instance.getTcpUrl());		
+		});
+		
+		tc.detach();
+	}
+	
+	/*std::thread tq([](){
+		startTaskQueueService();	
+	});
+	tq.detach();*/
 	
 	bool runAsServer = Quarks::Core::_Instance.isAServer();
 	

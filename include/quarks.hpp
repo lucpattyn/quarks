@@ -135,6 +135,18 @@ namespace Quarks {
 				return _reader;
 			}
 			
+			bool isTcpServer(){
+				return _tcpServer;
+			}
+			
+			bool isTcpClient(){
+				return _tcpClient;
+			}
+			
+			const char* getTcpUrl(){
+				return _tcpUrl.c_str();
+			}
+			
 		private:
 
 			int _argc;
@@ -149,6 +161,10 @@ namespace Quarks {
 			bool _reader;
 			bool _writer;
 			bool _logger;
+			
+			bool _tcpServer;
+			bool _tcpClient;
+			std::string _tcpUrl;
 			
 			std::string _brokerUrl;
 

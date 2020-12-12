@@ -52,6 +52,16 @@ void closeDB(std::string schemaname) {
 
 }
 
+void tokenize(std::string input, char delim, std::vector<std::string>& tokens){
+	std::istringstream ss(input);
+	
+	std::string token;
+	while(std::getline(ss, token, delim)) {
+    	tokens.push_back(token);
+	}
+}
+
+
 // Quarks Cloud 
 
 void qcSave(void* data, size_t size){
@@ -64,17 +74,24 @@ void qcSave(void* data, size_t size){
 	}else{
 		std::string key = x["key"].s();
 		std::string value = x["value"].s();
+		std::string action = x["action"].s();
 		
-		std::cout << "__Writer putting " << key << " , " << value << std::endl;
+		std::cout << "__Writer action - " << action << " : " << key << " , " << value << std::endl;
 
 		rocksdb::Slice keySlice = key;			
 		
 		// modify the database
 		if (dbStatus.ok()) {
 	
-			rocksdb::Status status = db->Put(rocksdb::WriteOptions(), keySlice, value);		
+			rocksdb::Status status;
+			if(action.compare("put")){
+				status = db->Put(rocksdb::WriteOptions(), keySlice, value);					
+			}else{
+				status = db->Delete(rocksdb::WriteOptions(), key);
+			}	
+					
 			if(!status.ok()) {
-				std::cout << "__Writer could not write to db!";
+				std::cout << "__Writer could not operate on db!";
 				
 			}
 		}
@@ -182,7 +199,12 @@ void Core::setEnvironment(int argc, char** argv) {
 	
 	bool sinkFlag = false;
 	
+	bool tcpServerFlag = false;
+	bool tcpClientFlag = false;
+	
 	_broker = _writer = _reader = false;
+	_tcpServer = _tcpClient = false;
+	
 	
 	for(auto v : _argv) {
 		CROW_LOG_INFO << " v = " << v << " ";
@@ -225,6 +247,16 @@ void Core::setEnvironment(int argc, char** argv) {
 			consumerUrl = v;
 			consumerFlag = false;
 			
+		}else if(tcpServerFlag){
+			_tcpUrl = v;
+			_tcpServer = true;
+			tcpServerFlag = false;
+			
+		}else if(tcpClientFlag){
+			_tcpUrl= v;
+			_tcpClient = true;
+			tcpClientFlag = false;
+			
 		}
 
 		if(!v.compare("-db")) {
@@ -245,7 +277,11 @@ void Core::setEnvironment(int argc, char** argv) {
 			producerFlag = true;
 		} else if(!v.compare("-consumer") || (!v.compare("-subscriber"))) {
 			consumerFlag = true;
-		} 
+		} else if(!v.compare("-tcpserver")) {
+			tcpServerFlag = true;
+		} else if(!v.compare("-tcpclient")) {
+			tcpClientFlag = true;
+		}
 	}
 
 	_dbPath = schemaname;
@@ -263,8 +299,15 @@ void Core::run() {
 		try{
 			// Broker is a request receiver from writer as well as a publisher for reader nodes
 			// Broker can also act as sync for multiple consumers
+			
+			std::vector<std::string> tokens;
+			tokenize(_brokerBindUrl, ':', tokens);
+			
+			
+			auto portNumber = tokens.size() > 1 ? std::stoi(tokens[2]) : 5556;
+			
 			if(!producerUrl.compare("")){
-				producerUrl = "tcp://*:5556"; // being treated as a publisherUrl
+				producerUrl = std::string("tcp://*:") + std::to_string(portNumber + 1); // being treated as a publisherUrl
 			}
 			if(!_sinkUrl.compare("x")){
 				_sinkUrl = "tcp://*:5558";
@@ -369,6 +412,24 @@ bool getKeyValuePair(std::string key, std::string& value, std::string& out) {
 }
 
 
+void removeRequest(std::string key){
+	std::lock_guard<std::mutex> _(__put_mtx);
+
+	if(Core::_Instance.isWriterNode()){
+		//CROW_LOG_INFO << "publishing put ..";
+	
+		crow::json::wvalue w;
+		w["value"] = "";
+		w["key"] = key;
+		w["action"] = "remove";
+		
+		std::string data = crow::json::dump(w);
+		
+		__WriterNode.write(data.c_str(), data.size()+1); // 1 added for a trailing zero
+	}
+}
+
+
 void putRequest(std::string key, std::string value){
 	std::lock_guard<std::mutex> _(__put_mtx);
 
@@ -378,12 +439,14 @@ void putRequest(std::string key, std::string value){
 		crow::json::wvalue w;
 		w["value"] = value;
 		w["key"] = key;
+		w["action"] = "put";
 		
 		std::string data = crow::json::dump(w);
 		
 		__WriterNode.write(data.c_str(), data.size()+1); // 1 added for a trailing zero
 	}
 }
+
 
 bool insertKeyValuePair(bool failIfExists, crow::json::rvalue& x, std::string& out) {
 
@@ -1169,6 +1232,8 @@ bool Core::remove(std::string key, std::string& out) {
 
 				if(status.ok()) {
 					ret = true;
+					removeRequest(key);
+					
 					out = R"({"result":1})";
 
 				} else {
@@ -1234,6 +1299,10 @@ int Core::removeAll(std::string wild,  int skip /*= 0*/, int limit /*= -1*/) {
 					if(i > lowerbound && (i < upperbound || limit == -1)) {
 						CROW_LOG_INFO << "w batch del: " << it->key().ToString();
 						batch.Delete(it->key());
+						// needs improvement
+						std::string strKey = it->key().ToString();
+						removeRequest(strKey);
+						
 						out++;
 
 					}
@@ -1250,6 +1319,10 @@ int Core::removeAll(std::string wild,  int skip /*= 0*/, int limit /*= -1*/) {
 			delete it;
 
 			rocksdb::Status s = db->Write(rocksdb::WriteOptions(), &batch);
+			
+			if(!s.ok()){
+				CROW_LOG_INFO << "Batch Delete Error: ";
+			}
 
 		} catch (const std::runtime_error& error) {
 			CROW_LOG_INFO << "Runtime Error: " << out << it->value().ToString();
@@ -1307,39 +1380,6 @@ bool Core::removeAtom(std::string body, std::string& out) {
 
 }
 
-
-/*bool Core::putJson(std::string key, crow::json::rvalue& x, crow::json::wvalue& out) {
-
- bool ret = true;
-
- crow::json::wvalue w = std::move(x);
- std::string value = crow::json::dump(w);
-
- rocksdb::Slice keySlice = key;
-
- // modify the database
- if (dbStatus.ok()){
-
- rocksdb::Status status = db->Put(rocksdb::WriteOptions(), keySlice, value);
- if(!status.ok()){
- key = "";
- ret = false;
- }
-
- }else{
- key = "";
- ret = false;
- }
-
- std::stringstream ss;
- std::string result = ret?"true" : "false";
- ss<< "{" << std::quoted("result") << ":" << std::quoted(result) << "}";
-
- out = crow::json::load(ss.str());
-
- return  ret;
-
- }*/
 
 bool Core::makePair(std::string body, crow::json::wvalue& out) {
 
