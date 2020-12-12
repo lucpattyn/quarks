@@ -84,9 +84,9 @@ void qcSave(void* data, size_t size){
 		if (dbStatus.ok()) {
 	
 			rocksdb::Status status;
-			if(action.compare("put")){
+			if(!action.compare("put")){
 				status = db->Put(rocksdb::WriteOptions(), keySlice, value);					
-			}else{
+			}else if(!action.compare("remove")){
 				status = db->Delete(rocksdb::WriteOptions(), key);
 			}	
 					
