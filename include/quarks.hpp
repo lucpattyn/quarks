@@ -146,6 +146,13 @@ namespace Quarks {
 			const char* getTcpUrl(){
 				return _tcpUrl.c_str();
 			}
+
+			bool hasLogger(){
+				return _hasLogger;
+			}
+			const char* getLoggerUrl(){
+				return _loggerUrl.c_str();
+			}			
 			
 		private:
 
@@ -160,11 +167,13 @@ namespace Quarks {
 			// scaling features
 			bool _reader;
 			bool _writer;
-			bool _logger;
+			
+			bool _hasLogger;
 			
 			bool _tcpServer;
 			bool _tcpClient;
 			std::string _tcpUrl;
+			std::string _loggerUrl;
 			
 			std::string _brokerUrl;
 

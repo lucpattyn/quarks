@@ -1,5 +1,6 @@
 #include <quarks.hpp>
 #include <v8engine.hpp>
+#include <HTTPRequest.hpp>
 
 #include <qsorter.hpp>
 
@@ -202,9 +203,11 @@ void Core::setEnvironment(int argc, char** argv) {
 	bool tcpServerFlag = false;
 	bool tcpClientFlag = false;
 	
+	bool loggerFlag = false;
+	
 	_broker = _writer = _reader = false;
 	_tcpServer = _tcpClient = false;
-	
+	_hasLogger = false;
 	
 	for(auto v : _argv) {
 		CROW_LOG_INFO << " v = " << v << " ";
@@ -257,6 +260,11 @@ void Core::setEnvironment(int argc, char** argv) {
 			_tcpClient = true;
 			tcpClientFlag = false;
 			
+		}else if(loggerFlag){
+			_loggerUrl= v;
+			_hasLogger = true;
+			loggerFlag = false;
+			
 		}
 
 		if(!v.compare("-db")) {
@@ -281,6 +289,8 @@ void Core::setEnvironment(int argc, char** argv) {
 			tcpServerFlag = true;
 		} else if(!v.compare("-tcpclient")) {
 			tcpClientFlag = true;
+		} else if(!v.compare("-log")) {
+			loggerFlag = true;
 		}
 	}
 
@@ -412,12 +422,52 @@ bool getKeyValuePair(std::string key, std::string& value, std::string& out) {
 }
 
 
-void removeRequest(std::string key){
-	std::lock_guard<std::mutex> _(__put_mtx);
+void httpPost(std::string url, std::string key, std::string value){
+	try
+	{
+	    http::Request request(url.c_str());
+	    // pass parameters as a map
+	    //crow::json::wvalue w;
+		//w["value"] = value;
+		//w["key"] = key;
+		
+		//std::string data = crow::json::dump(w);
+		std::string data = std::string("{") + R"("key":")" + key + R"(", "value":)" + value + std::string("}");    
+		const http::Response response = request.send("POST", data, {
+	        "Content-Type: application/json"
+	    });
+	    //const http::Response response = request.send("GET");
+	    std::cout << "httpPost: " << std::string(response.body.begin(), response.body.end()) << '\n'; // print the result
+	}	
+	catch (const std::exception& e)
+	{
+	    std::cerr << "Request failed, error: " << e.what() << '\n';
+	}
+}
 
-	if(Core::_Instance.isWriterNode()){
-		//CROW_LOG_INFO << "publishing put ..";
+void httpGet(std::string url){
+	try
+	{
+	    // you can pass http::InternetProtocol::V6 to Request to make an IPv6 request
+	    http::Request request(url);
 	
+	    // send a get request
+	    const http::Response response = request.send("GET");
+	    std::cout << "httpGet: " << std::string(response.body.begin(), response.body.end()) << '\n'; // print the result
+	}
+	catch (const std::exception& e)
+	{
+	    std::cerr << "Request failed, error: " << e.what() << '\n';
+	}
+}
+
+void removeRequest(std::string key){
+	
+	if(Core::_Instance.isWriterNode()){
+		//CROW_LOG_INFO << "publishing remove ..";
+	
+		std::lock_guard<std::mutex> _(__put_mtx);
+
 		crow::json::wvalue w;
 		w["value"] = "";
 		w["key"] = key;
@@ -427,14 +477,23 @@ void removeRequest(std::string key){
 		
 		__WriterNode.write(data.c_str(), data.size()+1); // 1 added for a trailing zero
 	}
+
+	if(Core::_Instance.hasLogger()){
+		std::string removeUrl = std::string(Core::_Instance.getLoggerUrl()) + "/remove?key=" + key;
+		httpGet(removeUrl);
+	}
+
+
 }
 
 
+
 void putRequest(std::string key, std::string value){
-	std::lock_guard<std::mutex> _(__put_mtx);
 
 	if(Core::_Instance.isWriterNode()){
 		//CROW_LOG_INFO << "publishing put ..";
+
+		std::lock_guard<std::mutex> _(__put_mtx);
 	
 		crow::json::wvalue w;
 		w["value"] = value;
@@ -445,6 +504,12 @@ void putRequest(std::string key, std::string value){
 		
 		__WriterNode.write(data.c_str(), data.size()+1); // 1 added for a trailing zero
 	}
+	
+	if(Core::_Instance.hasLogger()){
+		std::string putUrl = std::string(Core::_Instance.getLoggerUrl()) + "/putjson";
+		httpPost(putUrl, key, value);
+	}
+	
 }
 
 

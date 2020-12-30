@@ -529,7 +529,7 @@ Thanks Kaisar Haq :)
 
 After v8 engine integration and scripting support,
 the next target was to allow listener support through zero mq to communicate with other processes and services
-and creating the Quarks Cloud (partially done).
+and creating the Quarks Cloud which is partially done.
 
 
 ### Quarks Cloud
@@ -583,6 +583,22 @@ Start reader node:
 * There can be multiple readers started in different ports.
 
 Websocket support has been added (Not the strongest point of Quarks yet and needs improvement).
+
+### LOGGER / REPLICATION
+Quarks can send all put and remove requests made in it's core db to a logger
+
+To specify the address of the logger start by specifying the log parameter:
+./ocv_microservice_crow -port 18080 -log http://localhost:18081 
+
+This means a logger has been started at port 18081 and listening to 
+http://localhost:18081/putjson and http://localhost:18081/remove api calls 
+whenever a put or remove operation has been made in the core db 
+
+If you start another quarks server in the 18081 port specifying a new database, it simply becomes a replica node
+./ocv_microservice_crow -port 18081
+
+Instead of a Quarks server, you can start any server which implements and handles
+http://localhost:18081/putjson and http://localhost:18081/remove api calls 
 
 ### WEBSOCKETS
 
