@@ -410,12 +410,13 @@ This provides a way to having multiple results from a well-formed main key item.
 
 ```
 GET:
-http://localhost:18080/getjoinedlist?body={"keys":"roomkeys_*","splitby":"_","selindex":5,
-											"join":[{"prefix":"usercount_","suffix":""}, 
-												    {"prefix":"messagecount_","suffix":""},
-												    {"prefix":"notificationcount_","suffix":"user"}
-												   ]
-										  }
+http://localhost:18080/getjoinedlist?body=
+{ 	"keys":"roomkeys_*","splitby":"_","selindex":5,
+	"join":[{"prefix":"usercount_","suffix":""}, 
+		    {"prefix":"messagecount_","suffix":""},
+		    {"prefix":"notificationcount_","suffix":"user"}
+		   ]
+}
 
 ```
 
