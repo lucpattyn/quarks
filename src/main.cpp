@@ -705,6 +705,44 @@ int main(int argc, char ** argv) {
 
 	};
 	
+	auto route_core_getjoinedlist_callback =
+	[](const crow::request& req) {
+		crow::json::wvalue w;
+		w["result"] = "";
+
+		std::string body = req.body;
+		auto p = req.url_params.get("body");
+		if(p != nullptr) {
+			body = p;
+		}
+
+		auto x = crow::json::load(body);
+		if (!x) {
+			w["error"] = "invalid parameters";
+			return w;
+		}
+
+		auto q = QueryParams::Parse(req);
+
+		std::vector<crow::json::wvalue> jsonResults;
+		bool ret = Quarks::Core::_Instance.getJoinedList(x, jsonResults, std::stoi(q.skip), std::stoi(q.limit));
+
+		//if(jsonResults.size()) {
+			//w["result"] = jsonResults[0].s();
+			//CROW_LOG_INFO << "jsonResults[0] : "
+			//   <<  crow::json::dump(jsonResults[0])
+
+			w["result"] = std::move(jsonResults);
+		//}
+
+		if(!ret) {
+			w["error"] = "runtime error";
+		}
+
+		return w;
+
+	};
+	
 	auto route_core_getkeysafter_callback =
 	[](const crow::request& req) {
 		crow::json::wvalue w;
@@ -1063,6 +1101,9 @@ int main(int argc, char ** argv) {
 
 	CROW_ROUTE(app, "/getlist")
 	.methods("GET"_method, "POST"_method)(route_core_getlist_callback);
+	
+	CROW_ROUTE(app, "/getjoinedlist")
+	.methods("GET"_method, "POST"_method)(route_core_getjoinedlist_callback);
 	
 	CROW_ROUTE(app, "/getkeysafter")
 	.methods("GET"_method, "POST"_method)(route_core_getkeysafter_callback);

@@ -1,12 +1,15 @@
 
 # quarks
-Modern C++ based server side framework for optimal solutions
+A modern C++ based server side framework for optimal solutions
 
-The philosophy and technological guidance behind Quarks can be found in this link:
+Quarks provides a highly scalable and distributable open source system which is easily deployable in closed networks.
+The ultimate aim is to come up with solutions to well known problems like chatting/image & video processing/transcoding/voice recognition etc. 
+without having to depend on cloud platforms like AWS and GCP. Standardized chat and feed systems would eliminate the need to make private data available
+to public social networks, thus  making provision to safeguard user's own valuable data. 
+Adding a new functionality or solution should be easy as spinning up a new Quarks node and integrate it to the system following a few guidelines.
+
+The core implementation concept, architecture and technical guidance can be found in this link:
 [quarks philosophy](https://dev.to/lucpattyn/quarks-a-new-approach-with-a-new-mindset-to-programming-10lk)
-
-We will have a mechanism in later stages to support various plugins. 
-We will provide OpenCV as a readily available plugin.
 
 Thanks Arthur de Araújo Farias for providing a good example of using CROW with OpenCV.
 [arthurafarias/microservice-opencv-filter-gausian]
@@ -395,7 +398,42 @@ BODY:
 
 ```
 
-### Filters and joins
+### Joins and Filters
+
+
+In practical situaions, the need arose to incorporate the getjoinedlist api which joins multiple resultsets in a same query.
+What this api does is take a wildcard argument to iterate a range of keys (main keys).
+Then find a subkey inside each main key by splitting the key with a delimeter (splitby) and selecting one of the split tokens (selindex).
+Next add a prefix and suffix to the subkey and find values mapped against the newly formed key.
+An arrray of prefix, suffix pairs can be supplied to come up with more relevant values.
+This provides a way to having multiple results from a well-formed main key item.
+
+```
+GET:
+http://localhost:18080/getjoinedlist?body={"keys":"roomkeys_*","splitby":"_","selindex":5,
+											"join":[{"prefix":"usercount_","suffix":""}, 
+												    {"prefix":"messagecount_","suffix":""},
+												    {"prefix":"notificationcount_","suffix":"user"}
+												   ]
+										  }
+
+```
+
+```
+POST: http://localhost:18080/getjoinedlist
+BODY:
+{ 	"keys":"roomkeys_*","splitby":"_","selindex":5,
+	"join":[{"prefix":"usercount_","suffix":""}, 
+		    {"prefix":"messagecount_","suffix":""},
+		    {"prefix":"notificationcount_","suffix":"user"}
+		   ]
+}
+
+```
+
+* All attributes (keys, splitby, selindex, join) mentioned above are mandatory but values can be left as empty strings.
+For example, if no prefix or suffix joining is needed, then prefix and suffix can be kept as empty strings.
+
 
 There is also provision to run ORM style queries with searchjson and applying filters
 
@@ -505,15 +543,17 @@ In our example, we named the function - "jsFilter" in main.js.
 
 Quarks will allow minimum usage of scripting to ensure the server side codes remain super optimized.
 
+
+
 ## Backup and Restore
 ```
 For backing up the database try:
 http://0.0.0.0:18080/backup?body={"path":"quarks_backup_1"}
 
-To restore simply run quarks next time using the "db" commandline parameter
- ./ocv_microservice_crow -db quarks_backup_1
+To restore simply run quarks next time using the "store" commandline parameter
+ ./ocv_microservice_crow -store quarks_backup_1
  
- -db followed by the path denotes the rocksdb directory path to use when starting quarks
+ -store followed by the path denotes the rocksdb directory path to use when starting quarks
 
 ```
 
@@ -582,25 +622,31 @@ Start reader node:
 * Listens to broker at port 5556
 * There can be multiple readers started in different ports.
 
-Websocket support has been added (Not the strongest point of Quarks yet and needs improvement).
-
 ### LOGGER / REPLICATION
 Quarks can send all put and remove requests made in it's core db to a logger
 
 To specify the address of the logger start by specifying the log parameter:
+```
 ./ocv_microservice_crow -port 18080 -log http://localhost:18081 
 
+```
+
 This means a logger has been started at port 18081 and listening to 
-http://localhost:18081/putjson and http://localhost:18081/remove api calls 
-whenever a put or remove operation has been made in the core db 
+http://localhost:18081/putjson and http://localhost:18081/remove api calls.
+These apis respectively get invoked whenever a put or remove operation has been made in the core db 
+
 
 If you start another quarks server in the 18081 port specifying a new database, it simply becomes a replica node
-./ocv_microservice_crow -port 18081
+```
+./ocv_microservice_crow -store replica -port 18081
+
+```
 
 Instead of a Quarks server, you can start any server which implements and handles
 http://localhost:18081/putjson and http://localhost:18081/remove api calls 
 
 ### WEBSOCKETS
+Websocket support has been added (Not the strongest point of Quarks yet and needs improvement).
 
 #Initiate a socket:
 ```

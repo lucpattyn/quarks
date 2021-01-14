@@ -89,6 +89,10 @@ namespace Quarks {
 			            std::vector<crow::json::wvalue>& matchedResults,
 			            int skip = 0, int limit = -1);
 			
+			bool getJoinedList(crow::json::rvalue& args,
+			            std::vector<crow::json::wvalue>& matchedResults,
+			            int skip = 0, int limit = -1);
+						
 			bool getAfter(std::string key, std::string prefix, std::vector<crow::json::wvalue>& matchedResults,
 						int skip = 0, int limit = -1);             
 			bool getKeysAfter(crow::json::rvalue& args,
@@ -102,6 +106,7 @@ namespace Quarks {
 			            std::vector<crow::json::wvalue>& matchedResults,
 			            int skip = 0, int limit = -1);
 
+			
 			bool atom(std::string body, std::string& out);
 
 
