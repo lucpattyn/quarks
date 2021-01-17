@@ -1773,7 +1773,7 @@ bool Core::getList(crow::json::rvalue& args,
 	
 }
 */
-bool Core::getJoinedList(crow::json::rvalue& args,
+bool Core::getJoinedMap(crow::json::rvalue& args,
                       std::vector<crow::json::wvalue>& matchedResults,
                       int skip /*= 0*/, int limit /*= -1*/){
 
@@ -1816,6 +1816,10 @@ bool Core::getJoinedList(crow::json::rvalue& args,
 		int lowerbound  = skip - 1;
 		int upperbound = skip + count;
 
+		std::vector<crow::json::wvalue> finalKeys;
+		crow::json::wvalue k;							
+		crow::json::wvalue w;							
+								
 		for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
 
 			if(wildcmp(wild.c_str(), it->key().ToString().c_str())) {
@@ -1837,7 +1841,9 @@ bool Core::getJoinedList(crow::json::rvalue& args,
 					if(selindex < tokens.size()){
 						finalKey = tokens[selindex];
 						//CROW_LOG_INFO << "finalKey : " << finalKey;	
-		
+						crow::json::wvalue f;
+						f = finalKey;							
+						finalKeys.push_back(std::move(f));
 					}				
 					
 					std::string prefix = "";
@@ -1850,14 +1856,14 @@ bool Core::getJoinedList(crow::json::rvalue& args,
 							suffix = v["suffix"].s();							
 							joinedKey = prefix + finalKey + suffix;		
 							
-							crow::json::wvalue w;
 							crow::json::wvalue out;
 	
 							if(getJson(joinedKey, out)) {
-								w["value"] = std::move(out);
-								w["key"] = joinedKey;
+								//w["value"] = std::move(out);
+								//w["key"] = joinedKey;
+								w[joinedKey] = std::move(out);
 						
-								matchedResults.push_back(std::move(w));
+								//matchedResults.push_back(std::move(w));
 							}						
 	
 						} catch (const std::runtime_error& error) {
@@ -1866,6 +1872,7 @@ bool Core::getJoinedList(crow::json::rvalue& args,
 							ret = false;
 						}
 					}
+										
 				}
 
 				if((i == upperbound) && (limit != -1)) {
@@ -1874,6 +1881,12 @@ bool Core::getJoinedList(crow::json::rvalue& args,
 
 			}
 		}
+		
+		k = std::move(finalKeys);
+		
+		matchedResults.push_back(std::move(k));			
+		matchedResults.push_back(std::move(w));
+					
 
 		// do something after loop
 		ret = ret && it->status().ok();

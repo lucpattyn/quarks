@@ -3,15 +3,15 @@
 A modern C++ based server side framework for optimal solutions
 
 Quarks provides a highly scalable and distributable open source system which is easily deployable in closed networks.
-The ultimate aim is to come up with solutions to well known problems like chatting/image & video processing/transcoding/voice recognition etc. 
-without having to depend on cloud platforms like AWS and GCP. Standardized chat and feed systems would eliminate the need to make private data available
-to public social networks, thus  making provision to safeguard user's own valuable data. 
+The ultimate aim is to come up with open source solutions to well known problems like chatting/image & video processing/transcoding/voice recognition etc. 
+thus reducing dependcies on cloud platforms like AWS and GCP. Standardized chat and feed systems would eliminate the need to make private data available
+to public social networks, thus  provisioning to safeguard user's own valuable data. 
 Adding a new functionality or solution should be easy as spinning up a new Quarks node and integrate it to the system following a few guidelines.
 
-The core implementation concept, architecture and technical guidance can be found in this link:
+The core implementation concept, philosophy behind quering techniques, architecture plan and technical guidance can be found in this link:
 [quarks philosophy](https://dev.to/lucpattyn/quarks-a-new-approach-with-a-new-mindset-to-programming-10lk)
 
-Thanks Arthur de Araújo Farias for providing a good example of using CROW with OpenCV.
+Thanks Arthur de Araújo Farias for providing a good example of using CROW with OpenCV to use as a template.
 [arthurafarias/microservice-opencv-filter-gausian]
 
 This current example uses a compiled version of RocksDB, Chrome v8 Engine and ZeroMQ and requires the following packages:
@@ -401,27 +401,35 @@ BODY:
 ### Joins and Filters
 
 
-In practical situaions, the need arose to incorporate the getjoinedlist api which joins multiple resultsets in a same query.
+In practical situaions, the need arose to incorporate the getjoinedmap api which joins multiple resultsets in a single query.
 What this api does is take a wildcard argument to iterate a range of keys (main keys).
-Then find a subkey inside each main key by splitting the key with a delimeter (splitby) and selecting one of the split tokens (selindex).
-Next add a prefix and suffix to the subkey and find values mapped against the newly formed key.
-An arrray of prefix, suffix pairs can be supplied to come up with more relevant values.
+Then find a "subkey" inside each main key by splitting the key with a delimeter (splitby) and selecting one of the split tokens (selindex).
+Next add a prefix and suffix to the "subkey" and find values mapped against the newly "formed key".
+To add prefix, an array of prefix, suffix pairs is supplied to come up with relevant values.
 This provides a way to having multiple results from a well-formed main key item.
+
+The first item in the result set is the array of "subkeys". 
+The second item in the result set is a json object whose attributes are the "formed keys" (from prefix, suffix)
+with relevant values placed against each attribute.
+
+You can specify skip and limit in this query as well.
+
+It's preferable to use the POST method in this case.
 
 ```
 GET:
-http://localhost:18080/getjoinedlist?body=
+http://localhost:18080/getjoinedmap?body=
 { 	"keys":"roomkeys_*","splitby":"_","selindex":5,
 	"join":[{"prefix":"usercount_","suffix":""}, 
 		    {"prefix":"messagecount_","suffix":""},
 		    {"prefix":"notificationcount_","suffix":"user"}
 		   ]
-}
+}&skip=2&limit=3
 
 ```
 
 ```
-POST: http://localhost:18080/getjoinedlist
+POST: http://localhost:18080/getjoinedmap&skip=2&limit=3
 BODY:
 { 	"keys":"roomkeys_*","splitby":"_","selindex":5,
 	"join":[{"prefix":"usercount_","suffix":""}, 

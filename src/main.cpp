@@ -705,7 +705,7 @@ int main(int argc, char ** argv) {
 
 	};
 	
-	auto route_core_getjoinedlist_callback =
+	auto route_core_getjoinedmap_callback =
 	[](const crow::request& req) {
 		crow::json::wvalue w;
 		w["result"] = "";
@@ -725,7 +725,7 @@ int main(int argc, char ** argv) {
 		auto q = QueryParams::Parse(req);
 
 		std::vector<crow::json::wvalue> jsonResults;
-		bool ret = Quarks::Core::_Instance.getJoinedList(x, jsonResults, std::stoi(q.skip), std::stoi(q.limit));
+		bool ret = Quarks::Core::_Instance.getJoinedMap(x, jsonResults, std::stoi(q.skip), std::stoi(q.limit));
 
 		//if(jsonResults.size()) {
 			//w["result"] = jsonResults[0].s();
@@ -1102,8 +1102,8 @@ int main(int argc, char ** argv) {
 	CROW_ROUTE(app, "/getlist")
 	.methods("GET"_method, "POST"_method)(route_core_getlist_callback);
 	
-	CROW_ROUTE(app, "/getjoinedlist")
-	.methods("GET"_method, "POST"_method)(route_core_getjoinedlist_callback);
+	CROW_ROUTE(app, "/getjoinedmap")
+	.methods("GET"_method, "POST"_method)(route_core_getjoinedmap_callback);
 	
 	CROW_ROUTE(app, "/getkeysafter")
 	.methods("GET"_method, "POST"_method)(route_core_getkeysafter_callback);

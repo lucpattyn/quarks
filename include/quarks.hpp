@@ -89,7 +89,7 @@ namespace Quarks {
 			            std::vector<crow::json::wvalue>& matchedResults,
 			            int skip = 0, int limit = -1);
 			
-			bool getJoinedList(crow::json::rvalue& args,
+			bool getJoinedMap(crow::json::rvalue& args,
 			            std::vector<crow::json::wvalue>& matchedResults,
 			            int skip = 0, int limit = -1);
 						
