@@ -12,6 +12,9 @@
 
 #include <qsocket.hpp>
 
+#include <quarkstcp.hpp>
+#include <quarkstaskqueue.hpp>
+
 #ifdef _USE_RAPIDAPI
 
 #include <curl/curl.h>
@@ -701,6 +704,106 @@ int main(int argc, char ** argv) {
 		return w;
 
 	};
+	
+	auto route_core_getjoinedmap_callback =
+	[](const crow::request& req) {
+		crow::json::wvalue w;
+		w["result"] = "";
+
+		std::string body = req.body;
+		auto p = req.url_params.get("body");
+		if(p != nullptr) {
+			body = p;
+		}
+
+		auto x = crow::json::load(body);
+		if (!x) {
+			w["error"] = "invalid parameters";
+			return w;
+		}
+
+		auto q = QueryParams::Parse(req);
+
+		std::vector<crow::json::wvalue> jsonResults;
+		bool ret = Quarks::Core::_Instance.getJoinedMap(x, jsonResults, std::stoi(q.skip), std::stoi(q.limit));
+
+		//if(jsonResults.size()) {
+			//w["result"] = jsonResults[0].s();
+			//CROW_LOG_INFO << "jsonResults[0] : "
+			//   <<  crow::json::dump(jsonResults[0])
+
+			w["result"] = std::move(jsonResults);
+		//}
+
+		if(!ret) {
+			w["error"] = "runtime error";
+		}
+
+		return w;
+
+	};
+	
+	auto route_core_getkeysafter_callback =
+	[](const crow::request& req) {
+		crow::json::wvalue w;
+		w["result"] = "";
+
+		std::string body = req.body;
+		auto p = req.url_params.get("body");
+		if(p != nullptr) {
+			body = p;
+		}
+
+		auto x = crow::json::load(body);
+		if (!x) {
+			w["error"] = "invalid parameters";
+			return w;
+		}
+
+		auto q = QueryParams::Parse(req);
+
+		std::vector<crow::json::wvalue> jsonResults;
+		bool ret = Quarks::Core::_Instance.getKeysAfter(x, jsonResults, std::stoi(q.skip), std::stoi(q.limit));
+
+		w["result"] = std::move(jsonResults);
+
+		if(!ret) {
+			w["error"] = "runtime error";
+		}
+
+		return w;
+
+	};
+
+	auto route_core_getkeyslast_callback =
+	[](const crow::request& req) {
+		crow::json::wvalue w;
+		w["result"] = "";
+
+		std::string body = req.body;
+		auto p = req.url_params.get("body");
+		if(p != nullptr) {
+			body = p;
+		}
+
+		auto x = crow::json::load(body);
+		if (!x) {
+			w["error"] = "invalid parameters";
+			return w;
+		}
+
+		std::vector<crow::json::wvalue> jsonResults;
+		bool ret = Quarks::Core::_Instance.getKeysLast(x, jsonResults);
+
+		w["result"] = std::move(jsonResults);
+
+		if(!ret) {
+			w["error"] = "runtime error";
+		}
+
+		return w;
+
+	};
 
 	auto route_core_incr_callback =
 	[](const crow::request& req) {
@@ -722,7 +825,7 @@ int main(int argc, char ** argv) {
 
 		std::string key = x["key"].s();
 		int stepBy  = x["step"].i();
-		CROW_LOG_INFO << "incr request key, value : " << key << ", " << stepBy ;
+		//CROW_LOG_INFO << "incr request key, value : " << key << ", " << stepBy ;
 
 		Quarks::Core::_Instance.increment(key, stepBy, out);
 
@@ -774,6 +877,37 @@ int main(int argc, char ** argv) {
 
 		atom(body, out);
 
+		return out;
+
+	};
+	
+	auto route_core_backup_callback =
+	[atom](const crow::request& req) {
+
+		std::string out = R"({"result":false})";
+
+		std::string body = req.body;
+
+		auto x = req.url_params.get("body");
+		if(x != nullptr) {
+			body = x;
+		}
+		
+		auto p = crow::json::load(body);
+		if (!p) {
+			out = R"({"result":false, "error":"invalid parameters"})";
+			return out;
+		}
+
+		std::string path = "";
+		if(p.has("path")){
+			path = p["path"].s();			
+		}
+	
+		if(Quarks::Core::_Instance.backup(path)){
+			out = R"({"result":true})";
+		}
+		
 		return out;
 
 	};
@@ -855,13 +989,14 @@ int main(int argc, char ** argv) {
 
 	auto route_ai_callback =
 	[](const crow::request& req) {
+		
+#ifdef _USE_RAPIDAPI
+
 		const char* q = req.url_params.get("msg");
 		std::string params;
 		//uriDecode(q, params);
 
 		//CROW_LOG_INFO << "uri params:" << params << q;
-
-#ifdef _USE_RAPIDAPI
 
 		CURL *curl;
 		//CURLcode cres;
@@ -966,25 +1101,38 @@ int main(int argc, char ** argv) {
 
 	CROW_ROUTE(app, "/getlist")
 	.methods("GET"_method, "POST"_method)(route_core_getlist_callback);
+	
+	CROW_ROUTE(app, "/getjoinedmap")
+	.methods("GET"_method, "POST"_method)(route_core_getjoinedmap_callback);
+	
+	CROW_ROUTE(app, "/getkeysafter")
+	.methods("GET"_method, "POST"_method)(route_core_getkeysafter_callback);
+	
+	CROW_ROUTE(app, "/getkeyslast")
+	.methods("GET"_method, "POST"_method)(route_core_getkeyslast_callback);
 
 	CROW_ROUTE(app, "/incr")
 	.methods("GET"_method, "POST"_method)(route_core_incr_callback);
 
 	CROW_ROUTE(app, "/searchjson")
 	.methods("GET"_method, "POST"_method)(route_core_searchjson_callback);
+	
+	// backup and restore
+	CROW_ROUTE(app, "/backup")
+	.methods("GET"_method, "POST"_method)(route_core_backup_callback);
 
-
+	// experimental
 	CROW_ROUTE(app, "/filetransfer")
 	.methods("GET"_method, "POST"_method)(route_core_filetransfer_callback);
 
-
 	CROW_ROUTE(app, "/opentcpsocket")
 	.methods("GET"_method, "POST"_method)(route_core_opentcpsocket_callback);
-
-
+	// 
+	
 	//auto& v = Quarks::Matrix::_Instance; // we will work with the matrix data struct
 	// in later api calls
-
+	
+	// html serving
 	auto resourceLoader = [](crow::mustache::context& x, std::string filename,
 	const char* base = nullptr) {
 		char name[256];
@@ -1213,6 +1361,27 @@ int main(int argc, char ** argv) {
 
 
 	std::cout << "running main .." << std::endl;
+	
+	if(Quarks::Core::_Instance.isTcpServer()){	
+		std::thread ts([]() {
+			tcpServerStart(Quarks::Core::_Instance.getTcpUrl());				
+		});
+		
+		ts.detach();
+	}
+	
+	if(Quarks::Core::_Instance.isTcpClient()){
+		std::thread tc([]() {
+			tcpClientStart(Quarks::Core::_Instance.getTcpUrl());		
+		});
+		
+		tc.detach();
+	}
+	
+	/*std::thread tq([](){
+		startTaskQueueService();	
+	});
+	tq.detach();*/
 	
 	bool runAsServer = Quarks::Core::_Instance.isAServer();
 	

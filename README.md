@@ -1,14 +1,16 @@
 
 # quarks
-Modern C++ based server side framework for optimal solutions
+A modern C++ based server side framework for optimal solutions
 
-The philosophy and technological guidance behind Quarks can be found in this link:
+Quarks provides a highly scalable and distributable open source system based on actor model which can be easily deployed in closed networks. 
+The ultimate aim is to come up with open source solutions to well known problems like chatting/image & video processing/transcoding/voice recognition etc. thus reducing dependencies on cloud platforms like AWS and GCP. 
+Standardized chat and feed systems would eliminate the need to make private data available to public social networks, thus provisioning to safeguard user's own valuable data. 
+Adding a new functionality or solution should be as easy as spinning up a new Quarks node and integrate it to the system following a few guidelines.
+
+The core implementation concept, philosophy behind quering techniques, architecture plan and technical guidance can be found in this link:
 [quarks philosophy](https://dev.to/lucpattyn/quarks-a-new-approach-with-a-new-mindset-to-programming-10lk)
 
-We will have a mechanism in later stages to support various plugins. 
-We will provide OpenCV as a readily available plugin.
-
-Thanks Arthur de Araújo Farias for providing a good example of using CROW with OpenCV.
+Thanks Arthur de Araújo Farias for providing a good example of using CROW with OpenCV to use as a template.
 [arthurafarias/microservice-opencv-filter-gausian]
 
 This current example uses a compiled version of RocksDB, Chrome v8 Engine and ZeroMQ and requires the following packages:
@@ -42,6 +44,9 @@ cmake .. -G Ninja
 ninja
 ```
 
+Thanks Tareq Ahmed Siraj  (https://github.com/tareqsiraj) for introduing Ninja,
+made life way easier
+
 ### Testing
 
 After initializing by issuing following command
@@ -49,23 +54,8 @@ After initializing by issuing following command
 ```
 ./ocv_microservice_crow
 ```
-In most cases the following apis returns results in Json format
-{"result":true} or {"error":"error description"}
 
 ### GET REQUESTS
-
-Available features:
-    a)  Put a key value pair 
-    b)  Get value object (json or string) against key 
-    c)  List values by wildcard search with keys
-    d)  List sorted values by wildcard search with keys
-    e)  List keys vs values by wildcard search with keys
-    f)   Get count of keys by wildcard search
-    g)  Remove a key
-    h)  Remove keys by wildcard search
-    i)   Check if a key already exists  
-    k)  Execute Atoms: atoms are set of Put and Remove operations which can be executed in a single API call
-    m) Autogenerate key and make a key value pair given a key-prefix and value 
 
 ### Description
 
@@ -118,7 +108,7 @@ http://0.0.0.0:18080/getsorted?keys=g1_u*&skip=0&limit=10&filter={"where":{"mess
 ```
 Apply equal-to filter on a value performing multiple comparisons (using eq_any):
 ```
-http://0.0.0.0:18080/getsorted?keys=g1_u*&sortby=msg&des=true&skip=0&limit=10&filter={"where":{"messageTo":{"eq_any":["u2","u4"]}}}
+http://0.0.0.0:18080/getsorted?keys=g1_u*&filter={"where":{"messageTo":{"eq_any":["u2","u4"]}}}
 
 ```
 
@@ -211,29 +201,47 @@ remove:["g1_u1","g1_u2", "g3_u3"]
    3) If you have a number of put operations and no removes then use  ../put/atom (and not  ../atom)
    4) If you have a number of remove operations and no puts then use  ../remove/atom (and not ../atom)
   
-m) Autogenerate key with prefix and value provided
+m) autogenerate key with prefix and value provided
 
 ``` 
  http://0.0.0.0:18080/make?body={"prefix":"dev_","value":"101"}
+ 
 ```
 * returns the key value pair as json object; if "key" is specified along with prefix 
  then a key is formed with prefix+key and no key generation occurs
 
+n) provide a prefix, key pair for which all keys (along with values) greater than the passed key,
+   starting with the prefix are returned 
+   
+```
+http://0.0.0.0:18080/getkeysafter?body=["key_prefix", "comparekey"]
+
+```
+Multiple prefix, key pair can be provided like the following:
+```
+http://0.0.0.0:18080/getkeysafter?body=["key_pre1", "key1", "key_pre2", "key2", ... "key_preN", "keyN"]
+
+```
+
+o) provide a prefix, key pair for which the highest key (along with values and index) greater than the passed key,
+   starting with the prefix is returned 
+   
+```
+http://0.0.0.0:18080/getkeyslast?body=["key_prefix", "comparekey"]
+
+```
+Multiple prefix, key pair can be provided like the following:
+```
+http://0.0.0.0:18080/getkeyslast?body=["key_pre1", "key1", "key_pre2", "key2", ... "key_preN", "keyN"]
+
+```
   
 ### POST REQUESTS
 
-Available features:
-    i)    Put a json object against key, 
-    ii)   Get that object against key 
-    iii)  Do a wildcard search of keys 
-    iv)  Get a list of key value pair given a list of keys
-    v)   Execute atoms: atoms are set of Put and Remote operations which can be executed in a single API call
-    vi)  Autogenerate key and make a key value pair given a key-prefix and value 
-    vii) Apply filters and joins
 
 ### Description
 
- i) Put a json object against a key:
+i) Put a json object against a key:
  POST: http://0.0.0.0:18080/putjson
 ```
 BODY:
@@ -354,8 +362,88 @@ BODY:
 * returns the key value pair as json object; if "key" is specified along with prefix 
 then a key is formed with prefix+key and no key generation occurs
 
+vii) provide a prefix, key pair for which all keys (along with values) greater than the passed key,
+   starting with the prefix are returned 
+   
+```
+POST: http://0.0.0.0:18080/getkeysafter
+BODY:
+["key_prefix", "key"]
 
-vii) Filters and joins: There is also provision to run ORM style queries with searchjson and applying filters
+```
+Multiple prefix, key pair can be provided like the following:
+```
+POST: http://0.0.0.0:18080/getkeysafter
+BODY:
+["key_pre1", "key1", "key_pre2", "key2", ... "key_preN", "keyN"]
+
+```
+
+viii) provide a prefix, key pair for which the highest key (along with value and index) greater than the passed key,
+   starting with the prefix is returned 
+   
+```
+POST: http://0.0.0.0:18080/getkeyslast
+BODY:
+["key_prefix", "key"]
+
+```
+
+Multiple prefix, key pair can be provided like the following:
+```
+POST: http://0.0.0.0:18080/getkeyslast
+BODY:
+["key_pre1", "key1", "key_pre2", "key2", ... "key_preN", "keyN"]
+
+```
+
+### Joins and Filters
+
+
+In practical situaions, the need arose to incorporate the getjoinedmap api which joins multiple resultsets in a single query.
+What this api does is take a wildcard argument to iterate a range of keys (main keys).
+Then find a "subkey" inside each main key by splitting the key with a delimeter (splitby) and selecting one of the split tokens (selindex).
+Next add a prefix and suffix to the "subkey" and find values mapped against the newly "formed key".
+To add prefix, an array of prefix, suffix pairs is supplied to come up with relevant values.
+This provides a way to having multiple results from a well-formed main key item.
+
+The first item in the result set is the array of "subkeys". 
+The second item in the result set is a json object whose attributes are the "formed keys" (from prefix, suffix)
+with relevant values placed against each attribute.
+
+You can specify skip and limit in this query as well.
+
+It's preferable to use the POST method in this case.
+
+```
+GET:
+http://localhost:18080/getjoinedmap?body=
+{ 	"keys":"roomkeys_*","splitby":"_","selindex":5,
+	"join":[{"prefix":"usercount_","suffix":""}, 
+		    {"prefix":"messagecount_","suffix":""},
+		    {"prefix":"notificationcount_","suffix":"user"}
+		   ]
+}&skip=2&limit=3
+
+```
+
+```
+POST: http://localhost:18080/getjoinedmap&skip=2&limit=3
+BODY:
+{ 	"keys":"roomkeys_*","splitby":"_","selindex":5,
+	"join":[{"prefix":"usercount_","suffix":""}, 
+		    {"prefix":"messagecount_","suffix":""},
+		    {"prefix":"notificationcount_","suffix":"user"}
+		   ]
+}
+
+```
+
+* All attributes (keys, splitby, selindex, join) mentioned above are mandatory but values can be left as empty strings.
+For example, if no prefix or suffix joining is needed, then prefix and suffix can be kept as empty strings.
+
+
+There is also provision to run ORM style queries with searchjson and applying filters
 
 POST: http://0.0.0.0:18080/searchjson
 
@@ -463,9 +551,25 @@ In our example, we named the function - "jsFilter" in main.js.
 
 Quarks will allow minimum usage of scripting to ensure the server side codes remain super optimized.
 
+
+
+## Backup and Restore
+```
+For backing up the database try:
+http://0.0.0.0:18080/backup?body={"path":"quarks_backup_1"}
+
+To restore simply run quarks next time using the "store" commandline parameter
+ ./ocv_microservice_crow -store quarks_backup_1
+ 
+ -store followed by the path denotes the rocksdb directory path to use when starting quarks
+
+```
+
+
 ### BENCHMARKING
 ```
-https://github.com/kaisarh/quarks/tree/dev/benchmark/results?fbclid=IwAR2ea_PuZ6drbdg4PUuFfhirXdHC4rtlQ3I1KDR9G-PSaIJlFfA0FXNjUw8
+https://github.com/kaisarh/quarks/tree/dev/benchmark/results?
+fbclid=IwAR2ea_PuZ6drbdg4PUuFfhirXdHC4rtlQ3I1KDR9G-PSaIJlFfA0FXNjUw8
 
 ```
 Thanks Kaisar Haq :)
@@ -473,7 +577,8 @@ Thanks Kaisar Haq :)
 
 After v8 engine integration and scripting support,
 the next target was to allow listener support through zero mq to communicate with other processes and services
-and creating the Quarks Cloud (partially done).
+and creating the Quarks Cloud which is partially done.
+
 
 ### Quarks Cloud
 
@@ -495,9 +600,10 @@ Reader nodes are dedicated for only data reading related api calls.
 This helps serving huge amount of requests because the readers are plain replica of writer node.
 
 Conceptual flow:
-												 	   |-> [reader]
-user->write api calls(ex. put)-> [writer] -> [broker] -|-> [reader]  <-read api calls(ex. get)<-user
-												       |-> [reader]
+												 	   
+user->write apis-> [writer] -> [broker] -> [reader] <-read apis<-user	
+
+("/put" is an example of write api and "/get" is read api example)								       
 
 Following are the commands to start up broker, writer and readers:
 
@@ -524,9 +630,31 @@ Start reader node:
 * Listens to broker at port 5556
 * There can be multiple readers started in different ports.
 
-Websocket support has been added (Not the strongest point of Quarks yet and needs improvement).
+### LOGGER / REPLICATION
+Quarks can send all put and remove requests made in it's core db to a logger
+
+To specify the address of the logger start by specifying the log parameter:
+```
+./ocv_microservice_crow -port 18080 -log http://localhost:18081 
+
+```
+
+This means a logger has been started at port 18081 and listening to 
+http://localhost:18081/putjson and http://localhost:18081/remove api calls.
+These apis respectively get invoked whenever a put or remove operation has been made in the core db 
+
+
+If you start another quarks server in the 18081 port specifying a new database, it simply becomes a replica node
+```
+./ocv_microservice_crow -store replica -port 18081
+
+```
+
+Instead of a Quarks server, you can start any server which implements and handles
+http://localhost:18081/putjson and http://localhost:18081/remove api calls 
 
 ### WEBSOCKETS
+Websocket support has been added (Not the strongest point of Quarks yet and needs improvement).
 
 #Initiate a socket:
 ```
@@ -615,9 +743,9 @@ Quarks has plans for plugins integration.
 
 ### PLUGINS
 
-Currently, only OpenCV is provided as a plugin.
+Currently, only OpenCV is provided as a plugin (codes commented).
 
-For those interested in testing OpenCV as plugin,
+For those interested in testing OpenCV as plugin (uncommenting the relevant codes),
 you should submit a POST request to http://localhost:18080/filters/gausian. 
 The body of this request should be your binary PNG image. 
 The response should be a gausian filtered image from the submited image.
@@ -625,19 +753,27 @@ The response should be a gausian filtered image from the submited image.
 OpenCV however is a plugin (an additional feature) and not the main purpose behind Quarks.
 Currently it is turned off by using #ifdef _USE_PLUGIN in the codes and if (_USE_PLUGINS) in CMakeLists.txt
 
-### Dependencies installation for Ubuntu 18.04 
+### Quick Start: Dependencies installation for Ubuntu 18.04 
 
- #environment and compiler setup
-
- -$ sudo apt-get install build-essential 
+ environment and compiler setup
+ 
+ -$ sudo apt-get update -y
+ 
+ -$ sudo apt-get install build-essential
+  
  -$ sudo apt-get install ninja-build
+ 
 
- #main dependency libraries installation:
+ main dependency libraries installation:
 
  -$ sudo apt-get install libboost-system-dev
+ 
  -$ sudo apt-get install libv8-dev
+ 
  -$ sudo apt-get install librocksdb-dev
+ 
  -$ sudo apt-get install libzmq3-dev
   
-Check #How to Build section for compilation and binary creation
+ Build and Run:
+ Check #How to Build section for compilation and binary creation and #Testing section for how to run
 

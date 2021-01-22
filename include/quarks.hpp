@@ -82,17 +82,31 @@ namespace Quarks {
 
 
 			bool iterJson(std::string wild,
-			              std::vector<crow::json::wvalue>& matchedResults,
-			              int skip = 0, int limit = -1);
+			            std::vector<crow::json::wvalue>& matchedResults,
+			            int skip = 0, int limit = -1);
 
 			bool getList(crow::json::rvalue& args,
-			             std::vector<crow::json::wvalue>& matchedResults,
-			             int skip = 0, int limit = -1);
-
+			            std::vector<crow::json::wvalue>& matchedResults,
+			            int skip = 0, int limit = -1);
+			
+			bool getJoinedMap(crow::json::rvalue& args,
+			            std::vector<crow::json::wvalue>& matchedResults,
+			            int skip = 0, int limit = -1);
+						
+			bool getAfter(std::string key, std::string prefix, std::vector<crow::json::wvalue>& matchedResults,
+						int skip = 0, int limit = -1);             
+			bool getKeysAfter(crow::json::rvalue& args,
+                   		std::vector<crow::json::wvalue>& matchedResults,
+                   		int skip = 0, int limit = -1);
+            
+            bool getLast(std::string key, std::string prefix, std::vector<crow::json::wvalue>& matchedResults);
+			bool getKeysLast(crow::json::rvalue& args, std::vector<crow::json::wvalue>& matchedResults);
+			
 			bool searchJson(crow::json::rvalue& args,
-			                std::vector<crow::json::wvalue>& matchedResults,
-			                int skip = 0, int limit = -1);
+			            std::vector<crow::json::wvalue>& matchedResults,
+			            int skip = 0, int limit = -1);
 
+			
 			bool atom(std::string body, std::string& out);
 
 
@@ -100,6 +114,10 @@ namespace Quarks {
 			std::mutex mtx;
 			bool increment(std::string key, int stepBy, std::string& out);
 
+			// backup and restore
+			bool backup(std::string path);
+			bool restore(std::string path);
+			
 			/////// r&d ////////////////
 			bool fileTransfer(std::string moduleName, std::string funcName,
 			                  std::string channelName, std::string remoteDescription);
@@ -122,6 +140,25 @@ namespace Quarks {
 				return _reader;
 			}
 			
+			bool isTcpServer(){
+				return _tcpServer;
+			}
+			
+			bool isTcpClient(){
+				return _tcpClient;
+			}
+			
+			const char* getTcpUrl(){
+				return _tcpUrl.c_str();
+			}
+
+			bool hasLogger(){
+				return _hasLogger;
+			}
+			const char* getLoggerUrl(){
+				return _loggerUrl.c_str();
+			}			
+			
 		private:
 
 			int _argc;
@@ -135,13 +172,21 @@ namespace Quarks {
 			// scaling features
 			bool _reader;
 			bool _writer;
-			bool _logger;
+			
+			bool _hasLogger;
+			
+			bool _tcpServer;
+			bool _tcpClient;
+			std::string _tcpUrl;
+			std::string _loggerUrl;
 			
 			std::string _brokerUrl;
 
 			bool _broker;
 			std::string _brokerBindUrl;
 			std::string _sinkUrl;
+			
+			std::string _dbPath;
 			
 	};
 

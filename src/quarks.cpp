@@ -1,11 +1,13 @@
 #include <quarks.hpp>
 #include <v8engine.hpp>
+#include <HTTPRequest.hpp>
 
 #include <qsorter.hpp>
 
 #include <quarkscloud.hpp>
 
 #include "rocksdb/db.h"
+#include "rocksdb/utilities/checkpoint.h"
 
 #include <iomanip>
 
@@ -38,18 +40,28 @@ void openDB(std::string schemaname) {
 	options.create_if_missing = true;
 	dbStatus = rocksdb::DB::Open(options, schemaname, &db);
 
-	CROW_LOG_INFO << "opening schema: " << schemaname;
+	CROW_LOG_INFO << "opening db: " << schemaname;
 
 }
 
 void closeDB(std::string schemaname) {
 
-	CROW_LOG_INFO << "closing schema: " << schemaname;
+	CROW_LOG_INFO << "closing db: " << schemaname;
 
 	// close the database
 	delete db; // deleting causes segmentation fault, let the memory leak take over :(
 
 }
+
+void tokenize(std::string input, char delim, std::vector<std::string>& tokens){
+	std::istringstream ss(input);
+	
+	std::string token;
+	while(std::getline(ss, token, delim)) {
+    	tokens.push_back(token);
+	}
+}
+
 
 // Quarks Cloud 
 
@@ -63,17 +75,24 @@ void qcSave(void* data, size_t size){
 	}else{
 		std::string key = x["key"].s();
 		std::string value = x["value"].s();
+		std::string action = x["action"].s();
 		
-		std::cout << "__Writer putting " << key << " , " << value << std::endl;
+		std::cout << "__Writer action - " << action << " : " << key << " , " << value << std::endl;
 
 		rocksdb::Slice keySlice = key;			
 		
 		// modify the database
 		if (dbStatus.ok()) {
 	
-			rocksdb::Status status = db->Put(rocksdb::WriteOptions(), keySlice, value);		
+			rocksdb::Status status;
+			if(!action.compare("put")){
+				status = db->Put(rocksdb::WriteOptions(), keySlice, value);					
+			}else if(!action.compare("remove")){
+				status = db->Delete(rocksdb::WriteOptions(), key);
+			}	
+					
 			if(!status.ok()) {
-				std::cout << "__Writer could not write to db!";
+				std::cout << "__Writer could not operate on db!";
 				
 			}
 		}
@@ -181,7 +200,14 @@ void Core::setEnvironment(int argc, char** argv) {
 	
 	bool sinkFlag = false;
 	
+	bool tcpServerFlag = false;
+	bool tcpClientFlag = false;
+	
+	bool loggerFlag = false;
+	
 	_broker = _writer = _reader = false;
+	_tcpServer = _tcpClient = false;
+	_hasLogger = false;
 	
 	for(auto v : _argv) {
 		CROW_LOG_INFO << " v = " << v << " ";
@@ -224,9 +250,24 @@ void Core::setEnvironment(int argc, char** argv) {
 			consumerUrl = v;
 			consumerFlag = false;
 			
+		}else if(tcpServerFlag){
+			_tcpUrl = v;
+			_tcpServer = true;
+			tcpServerFlag = false;
+			
+		}else if(tcpClientFlag){
+			_tcpUrl= v;
+			_tcpClient = true;
+			tcpClientFlag = false;
+			
+		}else if(loggerFlag){
+			_loggerUrl= v;
+			_hasLogger = true;
+			loggerFlag = false;
+			
 		}
 
-		if(!v.compare("-schema")) {
+		if(!v.compare("-db") || !v.compare("-store")) {
 			schema = true;
 		} else if(!v.compare("-port")) {
 			port = true;
@@ -244,10 +285,18 @@ void Core::setEnvironment(int argc, char** argv) {
 			producerFlag = true;
 		} else if(!v.compare("-consumer") || (!v.compare("-subscriber"))) {
 			consumerFlag = true;
-		} 
+		} else if(!v.compare("-tcpserver")) {
+			tcpServerFlag = true;
+		} else if(!v.compare("-tcpclient")) {
+			tcpClientFlag = true;
+		} else if(!v.compare("-log")) {
+			loggerFlag = true;
+		}
 	}
 
+	_dbPath = schemaname;
 	openDB(schemaname);
+	
 	_argv.push_back(schemaname);
 
 }
@@ -260,8 +309,15 @@ void Core::run() {
 		try{
 			// Broker is a request receiver from writer as well as a publisher for reader nodes
 			// Broker can also act as sync for multiple consumers
+			
+			std::vector<std::string> tokens;
+			tokenize(_brokerBindUrl, ':', tokens);
+			
+			
+			auto portNumber = tokens.size() > 1 ? std::stoi(tokens[2]) : 5556;
+			
 			if(!producerUrl.compare("")){
-				producerUrl = "tcp://*:5556"; // being treated as a publisherUrl
+				producerUrl = std::string("tcp://*:") + std::to_string(portNumber + 1); // being treated as a publisherUrl
 			}
 			if(!_sinkUrl.compare("x")){
 				_sinkUrl = "tcp://*:5558";
@@ -366,21 +422,96 @@ bool getKeyValuePair(std::string key, std::string& value, std::string& out) {
 }
 
 
-void putRequest(std::string key, std::string value){
-	std::lock_guard<std::mutex> _(__put_mtx);
+void httpPost(std::string url, std::string key, std::string value){
+	try
+	{
+	    http::Request request(url.c_str());
+	    // pass parameters as a map
+	    //crow::json::wvalue w;
+		//w["value"] = value;
+		//w["key"] = key;
+		
+		//std::string data = crow::json::dump(w);
+		std::string data = std::string("{") + R"("key":")" + key + R"(", "value":)" + value + std::string("}");    
+		const http::Response response = request.send("POST", data, {
+	        "Content-Type: application/json"
+	    });
+	    //const http::Response response = request.send("GET");
+	    std::cout << "httpPost: " << std::string(response.body.begin(), response.body.end()) << '\n'; // print the result
+	}	
+	catch (const std::exception& e)
+	{
+	    std::cerr << "Request failed, error: " << e.what() << '\n';
+	}
+}
 
-	if(Core::_Instance.isWriterNode()){
-		//CROW_LOG_INFO << "publishing put ..";
+void httpGet(std::string url){
+	try
+	{
+	    // you can pass http::InternetProtocol::V6 to Request to make an IPv6 request
+	    http::Request request(url);
 	
+	    // send a get request
+	    const http::Response response = request.send("GET");
+	    std::cout << "httpGet: " << std::string(response.body.begin(), response.body.end()) << '\n'; // print the result
+	}
+	catch (const std::exception& e)
+	{
+	    std::cerr << "Request failed, error: " << e.what() << '\n';
+	}
+}
+
+void removeRequest(std::string key){
+	
+	if(Core::_Instance.isWriterNode()){
+		//CROW_LOG_INFO << "publishing remove ..";
+	
+		std::lock_guard<std::mutex> _(__put_mtx);
+
 		crow::json::wvalue w;
-		w["value"] = value;
+		w["value"] = "";
 		w["key"] = key;
+		w["action"] = "remove";
 		
 		std::string data = crow::json::dump(w);
 		
 		__WriterNode.write(data.c_str(), data.size()+1); // 1 added for a trailing zero
 	}
+
+	if(Core::_Instance.hasLogger()){
+		std::string removeUrl = std::string(Core::_Instance.getLoggerUrl()) + "/remove?key=" + key;
+		httpGet(removeUrl);
+	}
+
+
 }
+
+
+
+void putRequest(std::string key, std::string value){
+
+	if(Core::_Instance.isWriterNode()){
+		//CROW_LOG_INFO << "publishing put ..";
+
+		std::lock_guard<std::mutex> _(__put_mtx);
+	
+		crow::json::wvalue w;
+		w["value"] = value;
+		w["key"] = key;
+		w["action"] = "put";
+		
+		std::string data = crow::json::dump(w);
+		
+		__WriterNode.write(data.c_str(), data.size()+1); // 1 added for a trailing zero
+	}
+	
+	if(Core::_Instance.hasLogger()){
+		std::string putUrl = std::string(Core::_Instance.getLoggerUrl()) + "/putjson";
+		httpPost(putUrl, key, value);
+	}
+	
+}
+
 
 bool insertKeyValuePair(bool failIfExists, crow::json::rvalue& x, std::string& out) {
 
@@ -1166,6 +1297,8 @@ bool Core::remove(std::string key, std::string& out) {
 
 				if(status.ok()) {
 					ret = true;
+					removeRequest(key);
+					
 					out = R"({"result":1})";
 
 				} else {
@@ -1231,6 +1364,10 @@ int Core::removeAll(std::string wild,  int skip /*= 0*/, int limit /*= -1*/) {
 					if(i > lowerbound && (i < upperbound || limit == -1)) {
 						CROW_LOG_INFO << "w batch del: " << it->key().ToString();
 						batch.Delete(it->key());
+						// needs improvement
+						std::string strKey = it->key().ToString();
+						removeRequest(strKey);
+						
 						out++;
 
 					}
@@ -1247,6 +1384,10 @@ int Core::removeAll(std::string wild,  int skip /*= 0*/, int limit /*= -1*/) {
 			delete it;
 
 			rocksdb::Status s = db->Write(rocksdb::WriteOptions(), &batch);
+			
+			if(!s.ok()){
+				CROW_LOG_INFO << "Batch Delete Error: ";
+			}
 
 		} catch (const std::runtime_error& error) {
 			CROW_LOG_INFO << "Runtime Error: " << out << it->value().ToString();
@@ -1304,39 +1445,6 @@ bool Core::removeAtom(std::string body, std::string& out) {
 
 }
 
-
-/*bool Core::putJson(std::string key, crow::json::rvalue& x, crow::json::wvalue& out) {
-
- bool ret = true;
-
- crow::json::wvalue w = std::move(x);
- std::string value = crow::json::dump(w);
-
- rocksdb::Slice keySlice = key;
-
- // modify the database
- if (dbStatus.ok()){
-
- rocksdb::Status status = db->Put(rocksdb::WriteOptions(), keySlice, value);
- if(!status.ok()){
- key = "";
- ret = false;
- }
-
- }else{
- key = "";
- ret = false;
- }
-
- std::stringstream ss;
- std::string result = ret?"true" : "false";
- ss<< "{" << std::quoted("result") << ":" << std::quoted(result) << "}";
-
- out = crow::json::load(ss.str());
-
- return  ret;
-
- }*/
 
 bool Core::makePair(std::string body, crow::json::wvalue& out) {
 
@@ -1656,6 +1764,379 @@ bool Core::getList(crow::json::rvalue& args,
 
 }
 
+/* body:
+{
+	"keys":"g1*",
+	"splitby":"_",
+	"selindex":5,
+	join:[{"prefix":"g2","suffix":""}, {"prefix":"g3","suffix":""}],
+	
+}
+*/
+bool Core::getJoinedMap(crow::json::rvalue& args,
+                      std::vector<crow::json::wvalue>& matchedResults,
+                      int skip /*= 0*/, int limit /*= -1*/){
+
+	
+	bool ret = dbStatus.ok(); 
+	if (ret) {
+
+		std::string wild = args["keys"].s();
+		//CROW_LOG_INFO << "keys : " << wild.c_str();
+		
+		std::string splitby = args["splitby"].s();
+		//CROW_LOG_INFO << "splitby : " << splitby;		
+		
+		size_t selindex = (size_t) args["selindex"].i();
+		//CROW_LOG_INFO << "selindex : " << selindex;	
+				
+		const crow::json::rvalue& join = args["join"];
+		
+
+		std::size_t found = wild.find("*");
+		if(found != std::string::npos && found == 0) {
+			return false;
+		}
+
+		// create new iterator
+		rocksdb::ReadOptions ro;
+		rocksdb::Iterator* it = db->NewIterator(ro);
+
+		std::string pre = wild.substr(0, found);
+
+		rocksdb::Slice prefix(pre);
+
+		//rocksdb::Slice prefixPrint = prefix;
+		//CROW_LOG_INFO << "prefix : " << prefixPrint.ToString();
+
+
+		int i  = -1;
+		int count = (limit == -1) ? INT_MAX : limit;
+
+		int lowerbound  = skip - 1;
+		int upperbound = skip + count;
+
+		std::vector<crow::json::wvalue> finalKeys;
+		crow::json::wvalue k;							
+		crow::json::wvalue w;							
+								
+		for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
+
+			if(wildcmp(wild.c_str(), it->key().ToString().c_str())) {
+
+				i++;
+
+				if(i > lowerbound && (i < upperbound || limit == -1)) {
+
+					std::string matchedKey = it->key().ToString();
+					
+					std::vector<std::string> tokens;
+					
+					//CROW_LOG_INFO << "matchedKey : " << matchedKey;
+					tokenize(matchedKey, splitby[0], tokens);
+					
+					//CROW_LOG_INFO << "token size : " << tokens.size();	
+				
+					std::string finalKey = matchedKey;
+					if(selindex < tokens.size()){
+						finalKey = tokens[selindex];
+						//CROW_LOG_INFO << "finalKey : " << finalKey;	
+						crow::json::wvalue f;
+						f = finalKey;							
+						finalKeys.push_back(std::move(f));
+					}				
+					
+					std::string prefix = "";
+					std::string suffix = "";
+					std::string joinedKey = "";
+					
+					for(auto& v : join) {					
+						try {		
+							prefix = v["prefix"].s();
+							suffix = v["suffix"].s();							
+							joinedKey = prefix + finalKey + suffix;		
+							
+							crow::json::wvalue out;
+	
+							if(getJson(joinedKey, out)) {
+								//w["value"] = std::move(out);
+								//w["key"] = joinedKey;
+								w[joinedKey] = std::move(out);
+						
+								//matchedResults.push_back(std::move(w));
+							}						
+	
+						} catch (const std::runtime_error& error) {
+							CROW_LOG_INFO << "Runtime Error: " << i << it->value().ToString();
+	
+							ret = false;
+						}
+					}
+										
+				}
+
+				if((i == upperbound) && (limit != -1)) {
+					break;
+				}
+
+			}
+		}
+		
+		k = std::move(finalKeys);
+		
+		matchedResults.push_back(std::move(k));			
+		matchedResults.push_back(std::move(w));
+					
+
+		// do something after loop
+		ret = ret && it->status().ok();
+		delete it;
+	}
+
+
+	return ret;					  
+}
+
+bool Core::getAfter(std::string key, std::string prefix, std::vector<crow::json::wvalue>& matchedResults,
+						int skip /*= 0*/, int limit /*= -1*/) {
+
+	bool ret = true;
+	if (dbStatus.ok()) {
+
+		// create new iterator
+		rocksdb::ReadOptions ro;
+		rocksdb::Iterator* it = db->NewIterator(ro);
+
+		rocksdb::Slice startKey(key);
+		rocksdb::Slice pre(prefix);
+
+		int i  = -1;
+		int count = (limit == -1) ? INT_MAX : limit;
+
+		int lowerbound  = skip - 1;
+		int upperbound = skip + count;
+
+		it->Seek(startKey);
+		if(it->Valid())
+			it->Next(); // because we are searching after (excluding the key provided)
+		for ( ; it->Valid() && it->key().starts_with(pre); it->Next()) {
+
+			i++;
+
+			if(i > lowerbound && (i < upperbound || limit == -1)) {
+				crow::json::wvalue w;
+
+				try {
+					auto x = crow::json::load(it->value().ToString());
+
+					if(!x) {
+						w["value"] =  crow::json::load(std::string("[\"") +
+						                               it->value().ToString() + std::string("\"]"));
+
+					} else {
+						w["value"] = x;
+					}
+
+				} catch (const std::runtime_error& error) {
+					CROW_LOG_INFO << "Runtime Error: " << i << it->value().ToString();
+
+					w["error"] =  it->value().ToString();
+
+					matchedResults.push_back(std::move(w));
+
+					ret = false;
+				}
+
+				w["key"] = it->key().ToString();
+
+				//CROW_LOG_INFO << "w key fwd: " << crow::json::dump(w) << " skip: "
+				//<< skip << ", limit: " << limit;
+
+				matchedResults.push_back(std::move(w));
+
+			}
+
+			if((i == upperbound) && (limit != -1)) {
+				break;
+			}
+
+		}
+
+
+
+		// do something after loop
+
+		delete it;
+
+	}
+
+	return ret && dbStatus.ok();
+
+	
+}
+
+bool Core::getKeysAfter(crow::json::rvalue& args,
+                   std::vector<crow::json::wvalue>& matchedResults,
+                   int skip /*= 0*/, int limit /*= -1*/) {
+
+
+	bool ret = true;
+
+	if (dbStatus.ok()) {
+
+		try {
+			
+			std::vector<crow::json::wvalue> out;
+			crow::json::wvalue w;
+			
+			bool prefix = false;			
+			std::string lastPrefix = "";
+			// iterate all entries
+			for (auto pair : args) {
+				prefix = !prefix;
+				
+				std::string p = pair.s();
+				if(prefix){
+					lastPrefix = p;					
+				}else{
+					if(getAfter(p, lastPrefix, out, skip, limit)) {
+						w["after"] = std::move(out);
+						w["key"] = p;
+						
+						matchedResults.push_back(std::move(w));
+					} 
+				}
+
+			}
+
+		} catch (const std::runtime_error& error) {
+			ret = false;
+
+		}
+
+	}
+
+	return ret;
+
+}
+
+
+bool Core::getLast(std::string key, std::string prefix, std::vector<crow::json::wvalue>& matchedResults) {
+
+	bool ret = true;
+	if (dbStatus.ok()) {
+
+		// create new iterator
+		rocksdb::ReadOptions ro;
+		rocksdb::Iterator* it = db->NewIterator(ro);
+
+		rocksdb::Slice startKey(key);
+		rocksdb::Slice pre(prefix);
+
+		int count = 0;
+
+		std::string lastKey;
+		
+		it->Seek(startKey);
+		if(it->Valid())
+			it->Next(); // because we are searching after (excluding the key provided)
+		for ( ; it->Valid() && it->key().starts_with(pre); it->Next()) {
+
+			count++;
+
+		}
+
+		if(count > 0){
+			it->Prev();
+			if(it->Valid()){
+				crow::json::wvalue w;
+
+				try {
+					auto x = crow::json::load(it->value().ToString());
+
+					if(!x) {
+						w["value"] =  crow::json::load(std::string("[\"") +
+						                               it->value().ToString() + std::string("\"]"));
+
+					} else {
+						w["value"] = x;
+					}
+
+				} catch (const std::runtime_error& error) {
+					CROW_LOG_INFO << "Runtime Error: " << it->value().ToString();
+
+					w["error"] =  it->value().ToString();
+
+					matchedResults.push_back(std::move(w));
+
+					ret = false;
+				}
+				
+				w["index"] = count-1;
+
+				w["key"] = it->key().ToString();
+
+				
+				matchedResults.push_back(std::move(w));
+			
+			}
+		}
+		
+
+
+		// do something after loop
+		delete it;
+
+	}
+
+	return ret && dbStatus.ok();
+
+	
+}
+
+bool Core::getKeysLast(crow::json::rvalue& args,
+                   std::vector<crow::json::wvalue>& matchedResults) {
+
+
+	bool ret = true;
+
+	if (dbStatus.ok()) {
+
+		try {
+			
+			std::vector<crow::json::wvalue> out;
+			crow::json::wvalue w;
+
+			bool prefix = false;			
+			std::string lastPrefix = "";
+			// iterate all entries
+			for (auto pair : args) {
+				prefix = !prefix;
+				
+				std::string p = pair.s();
+				if(prefix){
+					lastPrefix = p;					
+				}else{
+					if(getLast(p, lastPrefix, out)) {
+						w["last"] = std::move(out);
+						w["key"] = p;
+						
+						matchedResults.push_back(std::move(w));
+					} 
+				}
+
+			}
+
+		} catch (const std::runtime_error& error) {
+			ret = false;
+
+		}
+
+	}
+
+	return ret;
+
+}
 
 
 
@@ -1799,6 +2280,7 @@ bool Core::searchJson(crow::json::rvalue& args,
 
 }
 
+
 bool Core::atom(std::string body, std::string& out) {
 	auto x = crow::json::load(body);
 
@@ -1871,7 +2353,37 @@ bool Core::increment(std::string key, int stepBy, std::string& out) {
 	return ret;
 }
 
+// backup and restore
+bool Core::backup(std::string path){
+	if(!path.compare("")){
+		path = "quarks_backup";
+	}
 
+	rocksdb::Checkpoint* cp;
+	rocksdb::Status status = rocksdb::Checkpoint::Create(db, &cp);
+	
+	if(status.ok()){
+		status = cp->CreateCheckpoint(path);
+	}
+	
+	return status.ok();
+}
+
+bool Core::restore(std::string path){
+	if(!path.compare("")){
+		path = "quarks_backup";
+	}
+
+	//rocksdb::BackupEngine* backup_engine = nullptr;
+	//rocksdb::Status status = rocksdb::BackupEngine::Open(rocksdb::Env::Default(), rocksdb::BackupableDBOptions(path), &backup_engine);
+	//backup_engine->RestoreDBFromLatestBackup(path, path);
+	
+	//delete backup_engine;
+	
+	return true;
+}
+
+// r&d 
 bool Core::fileTransfer(std::string moduleName, std::string funcName, std::string channelName,
                         std::string remoteDescription) {
 
