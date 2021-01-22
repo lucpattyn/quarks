@@ -2,11 +2,10 @@
 # quarks
 A modern C++ based server side framework for optimal solutions
 
-Quarks provides a highly scalable and distributable open source system which is easily deployable in closed networks.
-The ultimate aim is to come up with open source solutions to well known problems like chatting/image & video processing/transcoding/voice recognition etc. 
-thus reducing dependencies on cloud platforms like AWS and GCP. Standardized chat and feed systems would eliminate the need to make private data available
-to public social networks, thus  provisioning to safeguard user's own valuable data. 
-Adding a new functionality or solution should be easy as spinning up a new Quarks node and integrate it to the system following a few guidelines.
+Quarks provides a highly scalable and distributable open source system based on actor model which can be easily deployed in closed networks. 
+The ultimate aim is to come up with open source solutions to well known problems like chatting/image & video processing/transcoding/voice recognition etc. thus reducing dependencies on cloud platforms like AWS and GCP. 
+Standardized chat and feed systems would eliminate the need to make private data available to public social networks, thus provisioning to safeguard user's own valuable data. 
+Adding a new functionality or solution should be as easy as spinning up a new Quarks node and integrate it to the system following a few guidelines.
 
 The core implementation concept, philosophy behind quering techniques, architecture plan and technical guidance can be found in this link:
 [quarks philosophy](https://dev.to/lucpattyn/quarks-a-new-approach-with-a-new-mindset-to-programming-10lk)
