@@ -753,6 +753,18 @@ The response should be a gausian filtered image from the submited image.
 OpenCV however is a plugin (an additional feature) and not the main purpose behind Quarks.
 Currently it is turned off by using #ifdef _USE_PLUGIN in the codes and if (_USE_PLUGINS) in CMakeLists.txt
 
+
+### EDITOR
+
+A browser based editor has been provided to run Quarks queries and visualize and update data in a JSON Editor 
+(Thanks to https://github.com/json-editor/json-editor).
+To view the editor at work,
+Copy the "templates" folder inside "/examples" in the "build" folder and then hit the following in browser:
+http://0.0.0.0:18080/home 
+
+Definitely Quarks has to be running to view the editor
+
+
 ### Quick Start: Dependencies installation for Ubuntu 18.04 
 
  environment and compiler setup

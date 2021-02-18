@@ -100,44 +100,39 @@ server generates a user_id and assigns a user to a channel</p>
 
 <p>2) Querying on data - Quarks will be able to query on the value (as well as key) through&nbsp;<a href="https://en.wikipedia.org/wiki/Object-relational_mapping">ORM</a>&nbsp;style queries and apply business logics on the queried data.</p>
 
-<p>Sample Query Format , ..<br />
-<em>query items which are up for sale with key like item* (i.e item1, item2 etc.) which have rating greater than 3 and are approved, then find the sellers of such items (items has a seller_id field that contains the user_id of the seller) and lastly list all orders associated with the sellers whose delivery type is pickup (not home delivery).<br />
-    Keys for order object looks like ord*_user* (i.e ord1_user1, ord2_user1 etc.)<br />
-    Sellers have user ids in the form of user1, user2 etc.</em></p>
+<p>
+Sample Query Format for "querying items which are up for sale with key like item* (i.e item1, item2 etc.) , 
+then find the sellers of such items (items has a seller_id field that contains the user_id of the seller) "
+</p>
 
 <pre>
-    {
-    filter:
-    [
-    {
-    keys: &quot;item*&quot;,
-    where: [{rating:{gt:3}},{approved:{eq:1}}]
-    filter:
-    {
-    map: {field:&quot;seller_id&quot;, as:&quot;sellers&quot;},
-    filter:
-    {
-    map:
-    {
-    prefix:&quot;ord*_&quot;
-    field:&quot;user_id&quot;,
-    suffix:&quot;&quot; ,
-    as:&quot;orders&quot;
-    },
-    where:{deliveryType:{eq:&quot;pickup&quot;}}
+{
+    "keys":"item*",
+    "include":{
+        "map": {"field":"seller_id", "as":"seller"},
+        "module":"main",
+        "filter":"jsFilter",
+        "params":"{\"approved\":1}"
     }
-    },
-    
-    
-    ]
-    }
-</pre>
 
-<p><em>Here after getting a set of objects through filtering, map specifies how to join/include additional results by forming a wild card search through concatenating of<br />
-    i) a prefix,<br />
-    ii) field value of an existing object given the field name and a<br />
-    iii)suffix.</em><br />
-So, after getting a list of sellers along with the items, we are cleverly querying the orders for those sellers by forming an wildcard compare string which is of the form ord*_user*.</p>
+}
+</pre>
+ 
+
+<p>Here module main is the main.js file residing in the server in the same path as the executable. 
+function is the name of the JS Function which we will use to further filter the data.
+
+The idea is the mentioned script main.js will have a filter function with a predefined form filter(elem, params), 
+or a sort function with predefined form sort(elem1, elem2, params) to further fitler/sort the data.
+
+'elem' is an individual item (one of many) found by the Quarks lookup through "keys":"item*" . 
+We are invoking the JS module and the function while finding and iterating the matching items in C++.
+
+It is up to the user to interpret the params in the server side and write the script codes accordingly.
+
+In our example, we named the function - "jsFilter" in main.js.
+
+Quarks will allow minimum usage of scripting to ensure the server side codes remain super optimized.</p>
 
 <p>Scripting languages like javascript will be allowed to apply business logic in the queried data. We would be able to use plugins too for computation and calculation.</p>
 
@@ -146,12 +141,19 @@ So, after getting a list of sellers along with the items, we are cleverly queryi
 <p>4) Expiry - Efficient data expiry mechanism will be provided in the server side.</p>
 
 <p>Lastly, Quarks can reside on the same memory space along with business logics by means of simple scripts or plugins (dynamically loaded libraries) without the need of having a separate server for storing data. Lightweight servers quering on the data of the same memory space will make results retrieval much faster than traditional systems.</p>
+Also notice the difference in approach:<br/>
+
+Traditional Framework =><br/>
+client->api gateway->backend server logic->makes query to a separate server db (latency occurs)->fetches data->works on the fetched data->produce results->sends back to client
+
+<br/>Quarks Framework =><br/>
+client->api gateway->quarks data lookup(apply business logic while lookup)->sends data back to client <br/>
+..reducing round trip to separate servers and eliminating a few steps in between.
 
 <p>Quarks is up and running!</p>
 
-<p>Try the browser based Quarks console:<br />
-<a href="http://api.quarkshub.com/console">http://api.quarkshub.com/console</a><br />
-Type put, get and getall and follow instructions ..</p>
+<p>Try the browser based Quarks Editor:<br />
+<a href="/home">Editor</a><br />
 
 <h2>Technology</h2>
 
