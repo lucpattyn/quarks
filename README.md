@@ -1,6 +1,6 @@
 
 # quarks
-A modern C++ based off-the-shelf server framework for storing and retrieving data and pluging in business logics.
+A modern C++ based off-the-shelf server framework for storing, retrieving, processing data with high scalability and plugging in business logics.
 
 Quarks provides a highly scalable and distributable open source system based on actor model which can be easily deployed in closed networks. 
 The ultimate aim is to come up with open source solutions to well known problems like chatting, image/video processing, transcoding, voice recognition etc. thus reducing dependencies 
@@ -14,7 +14,8 @@ The core implementation concept, guidance and inspiration behind quarks can be f
 Thanks Arthur de Araújo Farias for providing a good example of using CROW with OpenCV to use as a template.
 [arthurafarias/microservice-opencv-filter-gausian]
 
-This current example uses a compiled version of RocksDB, Chrome v8 Engine and ZeroMQ and requires the following packages:
+The current codebase uses a compiled version of RocksDB, Chrome v8 Engine and ZeroMQ.
+It requires the following packages:
 
 - Crow Library v0.1
 - GCC with support to C++17
