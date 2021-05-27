@@ -1,0 +1,529 @@
+
+
+<!DOCTYPE html>
+<html lang="en" >
+
+<head>
+
+  <meta charset="UTF-8">
+  
+<link rel="apple-touch-icon" type="image/png" href="https://cpwebassets.codepen.io/assets/favicon/apple-touch-icon-5ae1a0698dcc2402e9712f7d01ed509a57814f994c660df9f7a952f3060705ee.png" />
+<meta name="apple-mobile-web-app-title" content="CodePen">
+
+<link rel="shortcut icon" type="image/x-icon" href="https://cpwebassets.codepen.io/assets/favicon/favicon-aec34940fbc1a6e787974dcd360f2c6b63348d4b1f4e06c77743096d55480f33.ico" />
+
+<link rel="mask-icon" type="" href="https://cpwebassets.codepen.io/assets/favicon/logo-pin-8f3771b1072e3c38bd662872f6b673a722f4b3ca2421637d5596661b4e2132cc.svg" color="#111" />
+
+
+  <title>Feed</title>
+  
+  
+  
+  
+<style>
+@import url(https://fonts.googleapis.com/css?family=Lato:300,400);
+@import url(https://maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css);
+*,
+*:before,
+*:after {
+  margin: 0;
+  padding: 0;
+  -webkit-box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+body, html {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  font-family: "Lato", sans-serif;
+  font-size: 1rem;
+  color: #333;
+  background-color: #f4f4f4;
+}
+
+.user_avatar {
+  width: 65px;
+  height: 65px;
+  display: inline-block;
+  vertical-align: middle;
+}
+.user_avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+
+.comment_block {
+  width: 65%;
+  height: 100%;
+  margin: 0 auto;
+  padding: 10px;
+}
+.comment_block .create_new_comment {
+  width: 100%;
+  padding: 20px 0;
+}
+.comment_block .create_new_comment .input_comment {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 10px;
+  width: calc(100% - 75px);
+}
+.comment_block .create_new_comment .input_comment input[type=text] {
+  width: 100%;
+  font-family: "Lato", sans-serif;
+  font-weight: 300;
+  font-size: 1.3rem;
+  padding: 10px;
+  border: none;
+  border-bottom: 2px solid #f2f2f2;
+}
+.comment_block .create_new_comment .input_comment input[type=text]:focus {
+  outline: none;
+  border-bottom: 2px solid #e6e6e6;
+}
+.comment_block .new_comment {
+  width: 100%;
+  height: auto;
+  padding: 20px 0;
+  border-top: 1px solid #e6e6e6;
+}
+.comment_block .new_comment .user_comment {
+  list-style-type: none;
+}
+.comment_block .new_comment .comment_body {
+  display: inline-block;
+  vertical-align: middle;
+  width: calc(100% - 75px);
+  min-height: 65px;
+  margin-left: 10px;
+  padding: 5px 10px;
+  font-size: 0.9rem;
+  color: #555;
+  background-color: #FFF;
+  border-bottom: 2px solid #f2f2f2;
+}
+.comment_block .new_comment .comment_body .replied_to {
+  margin: 5px 0px;
+  background-color: #fafafa;
+  border-bottom: 2px solid #f2f2f2;
+  border-radius: 5px;
+}
+.comment_block .new_comment .comment_body .replied_to p {
+  padding: 5px;
+}
+.comment_block .new_comment .comment_body .replied_to span {
+  color: #6495ED;
+  margin-right: 2px;
+}
+.comment_block .new_comment .comment_toolbar {
+  width: 100%;
+}
+.comment_block .new_comment .comment_toolbar ul {
+  list-style-type: none;
+  padding-left: 75px;
+  font-size: 0;
+}
+.comment_block .new_comment .comment_toolbar ul li {
+  display: inline-block;
+  padding: 5px;
+  font-size: 0.7rem;
+  color: #d9d9d9;
+}
+.comment_block .new_comment .comment_toolbar ul li:hover {
+  cursor: pointer;
+}
+.comment_block .new_comment .comment_toolbar .comment_details {
+  display: inline-block;
+  vertical-align: middle;
+  width: 70%;
+  text-align: left;
+}
+.comment_block .new_comment .comment_toolbar .comment_tools {
+  display: inline-block;
+  vertical-align: middle;
+  width: 30%;
+  text-align: right;
+}
+.comment_block .new_comment .comment_toolbar .comment_tools li:hover {
+  color: #CCC;
+}
+.comment_block .new_comment .user:hover {
+  color: #6495ED;
+  text-decoration: underline;
+}
+.comment_block .new_comment .love:hover {
+  color: #FF6347;
+}
+</style>
+
+  <script>
+  window.console = window.console || function(t) {};
+</script>
+
+  
+  
+  <script>
+  if (document.location.search.match(/type=embed/gi)) {
+    window.parent.postMessage("resize", "*");
+  }
+</script>
+
+
+</head>
+
+<body translate="no" >
+  <!-- comments container -->
+		<div class="comment_block">
+
+		<!-- 
+			Comments are structured in the following way:
+
+			{ul} defines a new comment (singular)
+			{li} defines a new reply to the comment {ul}
+
+			example:
+
+			<ul>
+				<comment>
+					
+				</comment
+
+					<li>
+						<reply>
+							reply 1
+						</reply>
+					</li>
+
+					<li>
+						<reply>
+							reply 2
+						</reply>
+					</li>
+
+					<li>
+						<reply>
+							reply 3
+						</reply>
+					</li>
+			</ul>
+
+		 -->
+
+		 <!-- used by #{user} to create a new comment -->
+		 <div class="create_new_comment">
+
+			<!-- current #{user} avatar -->
+		 	<div class="user_avatar">
+		 		<img src="https://s3.amazonaws.com/uifaces/faces/twitter/BillSKenney/73.jpg">
+		 	</div><!-- the input field --><div class="input_comment">
+		 		<input type="text" placeholder="Join the conversation..">
+		 	</div>
+
+		 </div>
+
+		<!-- dynamic new comment -->
+		 <div class="new_comment">
+
+			<!-- build comment -->
+		 	<ul class="user_comment" id="user_comments">
+		 	<!-- start user replies -->
+		 	
+			 <script id="feed-template" type="x-handlebars-template">
+			 	{{#each this}}
+		 	<li>
+		 		
+		 		<!-- current #{user} avatar -->
+			 	<div class="user_avatar">
+			 		<img src="https://st3.depositphotos.com/6672868/13701/v/600/depositphotos_137014128-stock-illustration-user-profile-icon.jpg">
+			 	</div><!-- the comment body --><div class="comment_body">
+			 	
+				 	<p><div class="replied_to">
+					 		<p><span class="user">{{main_user}}:</span>
+					 			{{main_comment}}
+							</p>
+						</div>
+					
+						<div class="user_avatar">
+			 				<img src="https://www.omnitouchinternational.com/wp-content/uploads/2018/05/user-placeholder.jpg">
+			 			</div>							
+						{{reply_comment}}
+						
+						<div class="replied_to">
+							<span class="user">
+								<!-- comments toolbar -->
+							 	<div class="comment_toolbar">
+				
+							 		<!-- inc. date and time -->
+							 		<div class="comment_details">
+							 			<ul>
+							 				<li><i class="fa fa-clock-o"></i> 19:23</li>
+							 				<li><i class="fa fa-calendar"></i> 14/01/2015</li>
+							 				<li><i class="fa fa-pencil"></i> <span class="user">{{reply_user}}</span></li>
+							 			</ul>
+							 		</div><!-- inc. share/reply and love --><div class="comment_tools">
+							 			<ul>
+							 				<li><i class="fa fa-share-alt"></i></li>
+							 				<li><i class="fa fa-reply"></i></li>
+							 				<li><i class="fa fa-heart love"><span class="love_amt"> 12</span></i></li>
+							 			</ul>
+							 		</div>
+				
+							 	</div>
+
+								</span>							
+						</div>
+						
+						
+						
+					</p>
+					
+					<!-- used by #{user} to create a new comment -->
+					 <div class="create_new_comment">
+			
+						<!-- current #{user} avatar -->
+					 	<div class="user_avatar">
+					 		<img src="https://s3.amazonaws.com/uifaces/faces/twitter/BillSKenney/73.jpg">
+					 	</div><!-- the input field --><div class="input_comment">
+					 		<input type="text" placeholder="Join the conversation..">
+					 	</div>
+			
+					 </div>
+			 	</div>
+
+		 	</li>
+		 			{{/each }}
+			</script>
+		 	
+			</ul>
+
+		 </div>
+
+
+		 <!-- new comment -->
+		 <div class="new_comment">
+
+			<!-- build comment -->
+		 	<ul class="user_comment">
+		 		<!-- start user replies -->
+		 	<li>
+		 		
+		 		<!-- current #{user} avatar -->
+			 	<div class="user_avatar">
+			 		<img src="https://st3.depositphotos.com/6672868/13701/v/600/depositphotos_137014128-stock-illustration-user-profile-icon.jpg">
+			 	</div><!-- the comment body --><div class="comment_body">
+			 	
+				 	<p><div class="replied_to">
+					 		<p><span class="user">John Smith:</span>
+					 			Gastropub cardigan jean shorts,<br/> kogi Godard PBR&B lo-fi locavore. 
+							</p>
+						</div>
+					
+						<div class="user_avatar">
+			 				<img src="https://st3.depositphotos.com/6672868/13701/v/600/depositphotos_137014128-stock-illustration-user-profile-icon.jpg">
+			 			</div>							
+						That's awesome!
+						
+						<div class="replied_to">
+							<span class="user">
+								<!-- comments toolbar -->
+							 	<div class="comment_toolbar">
+				
+							 		<!-- inc. date and time -->
+							 		<div class="comment_details">
+							 			<ul>
+							 				<li><i class="fa fa-clock-o"></i> 19:23</li>
+							 				<li><i class="fa fa-calendar"></i> 14/01/2015</li>
+							 				<li><i class="fa fa-pencil"></i> <span class="user">Andrew Johnson</span></li>
+							 			</ul>
+							 		</div><!-- inc. share/reply and love --><div class="comment_tools">
+							 			<ul>
+							 				<li><i class="fa fa-share-alt"></i></li>
+							 				<li><i class="fa fa-reply"></i></li>
+							 				<li><i class="fa fa-heart love"><span class="love_amt"> 12</span></i></li>
+							 			</ul>
+							 		</div>
+				
+							 	</div>
+
+								</span>							
+						</div>
+						
+						
+						<div class="user_avatar">
+			 				<img src="https://st3.depositphotos.com/6672868/13701/v/600/depositphotos_137014128-stock-illustration-user-profile-icon.jpg">
+			 			</div>	
+						
+						That's killer!
+						
+						<div class="replied_to">
+							<span class="user">
+								<!-- comments toolbar -->
+							 	<div class="comment_toolbar">
+				
+							 		<!-- inc. date and time -->
+							 		<div class="comment_details">
+							 			<ul>
+							 				<li><i class="fa fa-clock-o"></i> 19:23</li>
+							 				<li><i class="fa fa-calendar"></i> 14/01/2015</li>
+							 				<li><i class="fa fa-pencil"></i> <span class="user">John Wick</span></li>
+							 			</ul>
+							 		</div><!-- inc. share/reply and love --><div class="comment_tools">
+							 			<ul>
+							 				<li><i class="fa fa-share-alt"></i></li>
+							 				<li><i class="fa fa-reply"></i></li>
+							 				<li><i class="fa fa-heart love"><span class="love_amt"> 12</span></i></li>
+							 			</ul>
+							 		</div>
+				
+							 	</div>
+
+								</span>
+							
+						</div>
+
+					</p>
+					
+					<!-- used by #{user} to create a new comment -->
+					 <div class="create_new_comment">
+			
+						<!-- current #{user} avatar -->
+					 	<div class="user_avatar">
+					 		<img src="https://s3.amazonaws.com/uifaces/faces/twitter/BillSKenney/73.jpg">
+					 	</div><!-- the input field --><div class="input_comment">
+					 		<input type="text" placeholder="Join the conversation..">
+					 	</div>
+			
+					 </div>
+			 	</div>
+
+		 	</li>
+
+		 	</ul>
+
+		 </div>
+
+<!-- new comment -->
+		 <div class="new_comment">
+
+			<!-- build comment -->
+		 	<ul class="user_comment">
+
+		 		<!-- current #{user} avatar -->
+			 	<div class="user_avatar">
+			 		<img src="https://s3.amazonaws.com/uifaces/faces/twitter/kfriedson/73.jpg">
+			 	</div><!-- the comment body --><div class="comment_body">
+			 		<p>Gastropub cardigan jean shorts, kogi Godard PBR&B lo-fi locavore. Organic chillwave vinyl Neutra. Bushwick Helvetica cred freegan, crucifix Godard craft beer deep v mixtape cornhole Truffaut master cleanse pour-over Odd Future beard. Portland polaroid iPhone.</p>
+			 	</div>
+
+			 	<!-- comments toolbar -->
+			 	<div class="comment_toolbar">
+
+			 		<!-- inc. date and time -->
+			 		<div class="comment_details">
+			 			<ul>
+			 				<li><i class="fa fa-clock-o"></i> 13:94</li>
+			 				<li><i class="fa fa-calendar"></i> 04/01/2015</li>
+			 				<li><i class="fa fa-pencil"></i> <span class="user">Sarah Walkman</span></li>
+			 			</ul>
+			 		</div><!-- inc. share/reply and love --><div class="comment_tools">
+			 			<ul>
+			 				<li><i class="fa fa-share-alt"></i></li>
+			 				<li><i class="fa fa-reply"></i></li>
+			 				<li><i class="fa fa-heart love"></i></li>
+			 			</ul>
+			 		</div>
+
+			 	</div>
+
+			 	<!-- start user replies -->
+		 	<li>
+		 		
+		 		<!-- current #{user} avatar -->
+			 	<div class="user_avatar">
+			 		<img src="https://s3.amazonaws.com/uifaces/faces/twitter/cbillins/73.jpg">
+			 	</div><!-- the comment body --><div class="comment_body">
+			 		<p><div class="replied_to"><p><span class="user">Sarah Walkman:</span>Pork belly migas flexitarian messenger bag Brooklyn gluten-free. Tilde kitsch skateboard Helvetica, lumbersexual four loko direct trade pour-over. Cronut deep v keffiyeh cornhole food truck</p></div>I'm tired, does anybody know a good place to buy extra strength coffee?</p>
+			 	</div>
+
+			 	<!-- comments toolbar -->
+			 	<div class="comment_toolbar">
+
+			 		<!-- inc. date and time -->
+			 		<div class="comment_details">
+			 			<ul>
+			 				<li><i class="fa fa-clock-o"></i> 19:23</li>
+			 				<li><i class="fa fa-calendar"></i> 14/01/2015</li>
+			 				<li><i class="fa fa-pencil"></i> <span class="user">Blake Anderson</span></li>
+			 			</ul>
+			 		</div><!-- inc. share/reply and love --><div class="comment_tools">
+			 			<ul>
+			 				<li><i class="fa fa-share-alt"></i></li>
+			 				<li><i class="fa fa-reply"></i></li>
+			 				<li><i class="fa fa-heart love"><span class="love_amt"> 12</span></i></li>
+			 			</ul>
+			 		</div>
+
+			 	</div>
+
+
+		 	</li>
+
+		 	</ul>
+
+		 </div>
+
+		</div>
+  
+  
+  
+<!-- Include Handlebars from a CDN -->
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.js"></script>
+<script>
+  // compile the template
+  var template = Handlebars.compile("Handlebars <b>{{doesWhat}}</b>");
+  // execute the compiled template and print the output to the console
+  console.log(template({ doesWhat: "rocks!" }));
+  
+  var theTemplateScript = document.getElementById("feed-template").innerHTML;
+  //Compile the template​
+  var theTemplate = Handlebars.compile (theTemplateScript);
+  
+  var data = 
+  	[
+	  {
+	    "id": 1,
+	    "main_user": "John J Cale",
+	    "price": 899,
+	    "specs": {
+	      "manufacturer": "Sony",
+	      "storage": 16,
+	      "os": "Android",
+	      "camera": 15
+	    },
+	    "main_comment": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam tristique ipsum in efficitur pharetra. Maecenas luctus ante in neque maximus, sed viverra sem posuere. Vestibulum lectus nisi, laoreet vel suscipit nec, feugiat at odio. Etiam eget tellus arcu.",
+	    "reply_user": "John Wick",
+	    "reply_comment": "killing Time",
+	    "image": {
+	      "small": "?q=templates/spa/assets/images/sony-xperia-z3.jpg",
+	      "large": "?q=templates/spa/assets/images/sony-xperia-z3-large.jpg"
+	    }
+	  }
+	];
+  
+  
+  var feedlist = theTemplate(data); 
+  console.log(feedlist);
+  
+  document.getElementById("user_comments").innerHTML = feedlist;
+
+</script>  
+
+</body>
+
+</html>
+ 
+
