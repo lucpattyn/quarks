@@ -394,14 +394,14 @@ let createModal = (modalContent) => {
 								 		<!-- inc. date and time -->
 								 		<div class="comment_details">
 								 			<ul>
-								 				<li><i class="fa fa-clock-o"></i> 19:23</li>
-								 				<li><i class="fa fa-calendar"></i> 14/01/2015</li>
+								 				<li><i class="fa fa-clock-o"></i> {{value.time}}</li>
+								 				<li><i class="fa fa-calendar"></i> {{value.date}}</li>
 								 				<li><i class="fa fa-pencil"></i> <span class="user">{{value.username}}</span></li>
 								 			</ul>
 								 		</div><!-- inc. share/reply and love --><div class="comment_tools">
 								 			<ul>
 								 				<li><i class="fa fa-share-alt"></i></li>
-								 				<li><i class="fa fa-reply"></i></li>
+								 				<!--li onclick="modalReply(this.id)" id="{{value.itemid}}"><i class="fa fa-reply"></i></li-->
 								 				<li><i class="fa fa-heart love"><span class="love_amt"> 12</span></i></li>
 								 			</ul>
 								 		</div>
@@ -434,14 +434,14 @@ let createModal = (modalContent) => {
 							 		<!-- inc. date and time -->
 							 		<div class="comment_details">
 							 			<ul>
-							 				<li><i class="fa fa-clock-o"></i> 19:23</li>
-							 				<li><i class="fa fa-calendar"></i> 14/01/2015</li>
+							 				<li><i class="fa fa-clock-o"></i> {{value.time}}</li>
+							 				<li><i class="fa fa-calendar"></i> {{value.date}}</li>
 							 				<li><i class="fa fa-pencil"></i> <span class="user">{{reply_user}}</span></li>
 							 			</ul>
 							 		</div><!-- inc. share/reply and love --><div class="comment_tools">
 							 			<ul>
 							 				<li><i class="fa fa-share-alt"></i></li>
-							 				<li><i class="fa fa-reply"></i></li>
+							 				<li onclick="modalReply(this.id)" id="{{value.itemid}}"><i class="fa fa-reply"></i></li>
 							 				<li><i class="fa fa-heart love"><span class="love_amt"> 12</span></i></li>
 							 			</ul>
 							 		</div>
@@ -746,13 +746,13 @@ function getFeedList(skip, limit){
 
 function postFeedItem(userInfo, content){
 	
+	var user = userInfo;
+	
 	// generate feed id using timestamp, so feed is automatically sorted by time in Quarks
 	var d = new Date();
 	var t = d.getTime();
-	var feedId = "feed_" + t + "_" + user;
+	var feedId = "feed_" + t + "_" + user.id;
 		
-	var user = userInfo;
-			
 	var postdata = {};
 	postdata.key = feedId;
 	
@@ -761,7 +761,22 @@ function postFeedItem(userInfo, content){
 	feeditem.userid = user.id;
 	feeditem.username = user.name;
 	feeditem.content = content;
-	feeditem.timestamp = d.getTime();
+	feeditem.timestamp = d.getTime();		
+	var date = new Date(feeditem.timestamp);
+	/*console.log("Date: "+date.getDate()+
+          "/"+(date.getMonth()+1)+
+          "/"+date.getFullYear()+
+          " "+date.getHours()+
+          ":"+date.getMinutes()+
+          ":"+date.getSeconds());*/
+
+	feeditem.time = date.getHours()+
+          ":"+date.getMinutes()+
+          ":"+date.getSeconds();
+          
+    feeditem.date = date.getDate()+
+          "/"+(date.getMonth()+1)+
+          "/"+date.getFullYear();
 	
 	postdata.value = feeditem;
 	
@@ -777,13 +792,13 @@ function postFeedItem(userInfo, content){
 }
 
 function postFeedReply(feedId, userInfo, content){
+	var user = userInfo;
+	
 	var d = new Date();
 	var t = d.getTime();
 	// forming the key with feedId so reply can be easily related with feed
 	var replyId =  "feedreply_" + feedId + "_" + "rep_" + t; 
-	
-	var user = userInfo;
-				
+					
 	var postdata = {};
 	postdata.key = replyId;
 	
@@ -793,6 +808,22 @@ function postFeedReply(feedId, userInfo, content){
 	replyitem.username = user.name;
 	replyitem.content = content;
 	replyitem.timestamp = d.getTime();
+	
+	var date = new Date(replyitem.timestamp);
+	/*console.log("Date: "+date.getDate()+
+          "/"+(date.getMonth()+1)+
+          "/"+date.getFullYear()+
+          " "+date.getHours()+
+          ":"+date.getMinutes()+
+          ":"+date.getSeconds());*/
+
+	replyitem.time = date.getHours()+
+          ":"+date.getMinutes()+
+          ":"+date.getSeconds();
+          
+    replyitem.date = date.getDate()+
+          "/"+(date.getMonth()+1)+
+          "/"+date.getFullYear();
 	
 	postdata.value = replyitem;
 	
