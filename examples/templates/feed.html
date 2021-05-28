@@ -234,79 +234,36 @@ body {
 
 <script>
 
-var qurl = "http://localhost:18080/";
+var isReply = false;
+var currentId = null;
 
-function getJson(url, callback){
-	var xmlhtpp = new XMLHttpRequest();
-  	xmlhtpp.onreadystatechange = function() {
-    	if (this.readyState == 4) {
-      		callback(this.responseText, this.status);
-    	}
-  	};
-  
-  	xmlhtpp.open("GET", url, true);
-  	xmlhtpp.send();
+function modalReply(feedId){
+	isReply = true;
+	currentId = feedId;
+	
+	createModal('');
 }
-
-function postJson(url, data, callback){
-	var xmlhttp = new XMLHttpRequest();   // new HttpRequest instance 
-	xmlhttp.open("POST", url);
-	xmlhttp.setRequestHeader("Content-Type", "application/json");
-	//xmlhttp.withCredentials = true;
-	
-	xmlhttp.onreadystatechange = function () {
-    	if (this.readyState == 4) {
-  			callback(this.responseText, this.status);
-		}
-	};
-	
-	xmlhttp.send(JSON.stringify(data));
-}
-
-
-
-// middle layer apis 
-
-function postComment(username, comment){
-	var d = new Date();
-	var t = d.getTime();
-	var r = Math.floor(Math.random() * 100000); 
-
-	var user = "user_" + username;
-	
-	var feedId = "feed_" + t + "_" + r;
-		
-	var data = {};
-	data.key = feedId + "_" + user;
-	
-	var feeditem = {};;
-	feeditem.id = data.key;
-	feeditem.comment = comment;
-	feeditem.user = user;
-	
-	data.value = feeditem;
-	
-	console.log(data);
-	
-	postJson(qurl + "putjson", data, function(response, status){
-		console.log("quarks response: " + response);
-		console.log("status: " + status);
-	});
-	
-}
-
-
 
 function modalPost(){
   	var name = document.getElementById("namebox").value;
-  	var comment = document.getElementById("commentbox").value;
+  	var content = document.getElementById("contentbox").value;
+  
+  	var userInfo = {};
+  	userInfo.id = "user_" + name;
+  	userInfo.name = name;
   	
-  	postComment(name, comment);
+  	setUserInfo(userInfo.id, userInfo);
+  
+  	if(isReply){
+  		isReply = false;
+  		postFeedReply(currentId, userInfo, content);
+	} else{
+  		postFeedItem(userInfo, content);
+	}
 }
+
   
-let createModal = (modalContent) => {
-  
-  
+let createModal = (modalContent) => {  
   // Definitions
   let modal = document.createElement("div"),
       modalStyle = document.createElement("style"),
@@ -318,7 +275,7 @@ let createModal = (modalContent) => {
   // Add content and attributes to the modal
   modal.setAttribute("class", "js-modal");
   modal.innerHTML = '<div class="js-modal-inner">' + modalContent + 
-  						'Type Name: <input id="namebox" />' + '<br/>Comment: <textarea id="commentbox"></textarea> &nbsp;' +  modalClose + '</div>';
+  						'User Name: <input id="namebox" />' + '<br/>Comment: <textarea id="contentbox"></textarea> &nbsp;' +  modalClose + '</div>';
   theBody.appendChild(modal);
 
   modalClose = document.querySelector("#js_modal_close");
@@ -338,10 +295,9 @@ let createModal = (modalContent) => {
       modalStyle.remove();
     });
   }
-  
-  
-  
+   
 }
+
 </script>
 
 </head>
@@ -389,16 +345,16 @@ let createModal = (modalContent) => {
 
 			<!-- current #{user} avatar -->
 		 	<div class="user_avatar">
-		 		<img src="https://s3.amazonaws.com/uifaces/faces/twitter/BillSKenney/73.jpg">
+		 		<img src="https://cdn1.vectorstock.com/i/thumb-large/82/55/anonymous-user-circle-icon-vector-18958255.jpg">
 		 	</div><!-- the input field --><div class="input_comment">
 		 		<input type="text" placeholder="Join the conversation.." 
 				 onclick="createModal('')" />
 		 	</div>
-
+		 	
 		 </div>
 
-		<!-- dynamic new comment -->
-		 <div class="new_comment">
+		<!-- dynamic new post -->
+		 <!--div class="new_comment"-->
 
 			<!-- build comment -->
 		 	<ul class="user_comment" id="user_comments">
@@ -407,25 +363,71 @@ let createModal = (modalContent) => {
 			 <script id="feed-template" type="x-handlebars-template">
 			 	{{#each this}}
 		 	<li>
-		 		
-		 		<!-- current #{user} avatar -->
-			 	<div class="user_avatar">
-			 		<img src="https://st3.depositphotos.com/6672868/13701/v/600/depositphotos_137014128-stock-illustration-user-profile-icon.jpg">
-			 	</div><!-- the comment body --><div class="comment_body">
-			 	
-				 	<p><div class="replied_to">
-					 		<p><span class="user">{{value.user}}:</span>
-					 			{{value.comment}}
-							</p>
-						</div>
+		 		<div class="new_comment">
+				 		
+			 		<!-- current #{user} avatar -->
+				 	<div class="user_avatar">
+				 		<img src="https://www.pngrepo.com/png/130092/512/user.png">
+				 	</div><!-- the comment body --><div class="comment_body">
+				 	
+					 	<p><div class="replied_to">
+						 		<p><span class="user">{{value.username}}:</span>
+						 			{{value.content}}
+								</p>
+							</div>							
+							
+							{{#each value.replies}}
+							
+														
+							<div class="user_avatar">
+				 				<img src="https://st3.depositphotos.com/6672868/13701/v/600/depositphotos_137014128-stock-illustration-user-profile-icon.jpg">
+				 			</div>
+							
+							
+							{{value.content}}
+							
+							<div class="replied_to">
+								<span class="user">
+									<!-- comments toolbar -->
+								 	<div class="comment_toolbar">
 					
-						<div class="user_avatar">
-			 				<img src="https://www.omnitouchinternational.com/wp-content/uploads/2018/05/user-placeholder.jpg">
-			 			</div>							
-						{{reply_comment}}
+								 		<!-- inc. date and time -->
+								 		<div class="comment_details">
+								 			<ul>
+								 				<li><i class="fa fa-clock-o"></i> 19:23</li>
+								 				<li><i class="fa fa-calendar"></i> 14/01/2015</li>
+								 				<li><i class="fa fa-pencil"></i> <span class="user">{{value.username}}</span></li>
+								 			</ul>
+								 		</div><!-- inc. share/reply and love --><div class="comment_tools">
+								 			<ul>
+								 				<li><i class="fa fa-share-alt"></i></li>
+								 				<li><i class="fa fa-reply"></i></li>
+								 				<li><i class="fa fa-heart love"><span class="love_amt"> 12</span></i></li>
+								 			</ul>
+								 		</div>
+					
+								 	</div>
+	
+								</span>							
+							</div>
+							
+							{{/each }}
+							
+						</p>
 						
-						<div class="replied_to">
-							<span class="user">
+						<!-- used by #{user} to create a new comment -->
+						 <div class="create_new_comment">
+				
+							<!-- current #{user} avatar -->
+						 	<div class="user_avatar">
+						 		<img src="https://cdn1.vectorstock.com/i/thumb-large/82/55/anonymous-user-circle-icon-vector-18958255.jpg">
+						 	</div><!-- the input field --><div class="input_comment">
+						 		<input id="{{value.itemid}}" onclick="modalReply(this.id)" type="text" placeholder="write a reply..">
+						 	</div>
+				
+						 </div>
+						 
+						  	<span class="user">
 								<!-- comments toolbar -->
 							 	<div class="comment_toolbar">
 				
@@ -445,34 +447,18 @@ let createModal = (modalContent) => {
 							 		</div>
 				
 							 	</div>
-
-								</span>							
-						</div>
-						
-						
-						
-					</p>
-					
-					<!-- used by #{user} to create a new comment -->
-					 <div class="create_new_comment">
-			
-						<!-- current #{user} avatar -->
-					 	<div class="user_avatar">
-					 		<img src="https://s3.amazonaws.com/uifaces/faces/twitter/BillSKenney/73.jpg">
-					 	</div><!-- the input field --><div class="input_comment">
-					 		<input type="text" placeholder="Join the conversation..">
-					 	</div>
-			
-					 </div>
-			 	</div>
-
+	
+							</span>	
+	
+				 	</div>
+				</div> <!-- new comment -->
 		 	</li>
 		 			{{/each }}
 			</script>
 		 	
-			</ul>
+			</ul> 
 
-		 </div>
+		 <!--/div-->
 
 
 		 <!-- new comment -->
@@ -564,7 +550,7 @@ let createModal = (modalContent) => {
 			
 						<!-- current #{user} avatar -->
 					 	<div class="user_avatar">
-					 		<img src="https://s3.amazonaws.com/uifaces/faces/twitter/BillSKenney/73.jpg">
+					 		<img src="https://cdn1.vectorstock.com/i/thumb-large/82/55/anonymous-user-circle-icon-vector-18958255.jpg">
 					 	</div><!-- the input field --><div class="input_comment">
 					 		<input type="text" placeholder="Join the conversation..">
 					 	</div>
@@ -650,6 +636,208 @@ let createModal = (modalContent) => {
 
 		</div>
   
+
+<script>
+
+// Quarks Section
+
+// get/post utility functions
+
+function getJson(url, callback){
+	var xmlhtpp = new XMLHttpRequest();
+  	xmlhtpp.onreadystatechange = function() {
+    	if (this.readyState == 4) {
+      		callback(this.responseText, this.status);
+    	}
+  	};
+  
+  	xmlhtpp.open("GET", url, true);
+  	xmlhtpp.send();
+}
+
+function postJson(url, data, callback){
+	var xmlhttp = new XMLHttpRequest();   // new HttpRequest instance 
+	xmlhttp.open("POST", url);
+	xmlhttp.setRequestHeader("Content-Type", "application/json");
+	//xmlhttp.withCredentials = true;
+	
+	xmlhttp.onreadystatechange = function () {
+    	if (this.readyState == 4) {
+  			callback(this.responseText, this.status);
+		}
+	};
+	
+	xmlhttp.send(JSON.stringify(data));
+}
+
+var updating = false;
+var needsFurtherUpdating = false;
+
+///////////////////////////////////////////////////////////////
+// middle layer apis and functions that communicate with Quarks
+
+var baseUrl = "http://localhost:18080";
+
+var fetchFeedListAPI = "/getkeys?keys=feed_*&reverse=true";
+var fetchFeedRepliesAPI = "/getkeys?keys=feedreply_";
+
+var postFeedItemAPI = "/putjson";
+var postFeedReplyAPI = "/putjson";
+
+var feeddata = null;
+
+// Retrieving Data Section
+
+function getFeedReplies(feeditem, skip, limit){
+  
+  getJson(baseUrl + fetchFeedRepliesAPI + feeditem.itemid + "_*&skip=" + skip + "&limit=" + limit , function(response, status){
+		console.log("response: " + response);
+		console.log("status: " + status);
+		
+		var jsonResponse = JSON.parse(response);
+		feeditem.replies = jsonResponse.result;
+	
+		if(updating){
+			needsFurtherUpdating = true;
+		}
+		
+		if(!updating){
+			updating = true;
+			// update UI after response received
+			var feedlist = theTemplate(feeddata); 
+	  		//console.log(feedlist);  
+	  		document.getElementById("user_comments").innerHTML = feedlist;
+	  		
+	  		updating = false;	  		
+	  		// when API calling updating finished, check if further updating is needed which were on hold
+	  		
+	  		if(needsFurtherUpdating){
+	  			feedlist = theTemplate(feeddata); 
+	  			//console.log(feedlist);  
+	  			document.getElementById("user_comments").innerHTML = feedlist;
+	  		
+	  			needsFurtherUpdating = false;
+			}
+  		}
+	});  
+}
+
+function getFeedList(skip, limit){
+  
+  getJson(baseUrl + fetchFeedListAPI + "&skip=" + skip + "&limit=" + limit , function(response, status){
+		console.log("response: " + response);
+		console.log("status: " + status);
+		
+		var jsonResponse = JSON.parse(response);
+		feeddata = jsonResponse.result;
+		
+		// update UI after response received
+		var feedlist = theTemplate(feeddata); 
+  		//console.log(feedlist);  
+  		document.getElementById("user_comments").innerHTML = feedlist;
+  		
+  		for(i=0; i< feeddata.length; i++){
+  			getFeedReplies(feeddata[i].value, skip, limit);
+  		}
+	});  
+}
+
+// Storing Data Section
+
+function postFeedItem(userInfo, content){
+	
+	// generate feed id using timestamp, so feed is automatically sorted by time in Quarks
+	var d = new Date();
+	var t = d.getTime();
+	var feedId = "feed_" + t + "_" + user;
+		
+	var user = userInfo;
+			
+	var postdata = {};
+	postdata.key = feedId;
+	
+	var feeditem = {};
+	feeditem.itemid = postdata.key;
+	feeditem.userid = user.id;
+	feeditem.username = user.name;
+	feeditem.content = content;
+	feeditem.timestamp = d.getTime();
+	
+	postdata.value = feeditem;
+	
+	//console.log(data);
+	
+	postJson(baseUrl + postFeedItemAPI , postdata, function(response, status){
+		console.log("response: " + response);
+		console.log("status: " + status);
+		
+		getFeedList(0, 10);
+	});
+	
+}
+
+function postFeedReply(feedId, userInfo, content){
+	var d = new Date();
+	var t = d.getTime();
+	// forming the key with feedId so reply can be easily related with feed
+	var replyId =  "feedreply_" + feedId + "_" + "rep_" + t; 
+	
+	var user = userInfo;
+				
+	var postdata = {};
+	postdata.key = replyId;
+	
+	var replyitem = {};
+	replyitem.itemid = postdata.key;
+	replyitem.userid = user.id;
+	replyitem.username = user.name;
+	replyitem.content = content;
+	replyitem.timestamp = d.getTime();
+	
+	postdata.value = replyitem;
+	
+	//console.log(data);
+	
+	postJson(baseUrl + postFeedReplyAPI , postdata, function(response, status){
+		console.log("response: " + response);
+		console.log("status: " + status);
+		
+		getFeedList(0, 10);
+	});
+	
+}
+
+// User Info Fetching and Storing
+
+function getUserInfo(userId){
+	getJson(baseUrl + "/get?key=" + userId , function(response, status){
+		console.log("response: " + response);
+		console.log("status: " + status);
+		
+		var userInfo = JSON.parse(response);
+		
+		return userInfo;
+	}); 
+}
+
+function setUserInfo(userId, userInfo){
+
+	var postdata = {};
+	postdata.key = userId;
+	postdata.value = userInfo;
+
+	postJson(baseUrl + "/putjson" , postdata, function(response, status){
+		console.log("response: " + response);
+		console.log("status: " + status);
+	});
+}
+
+// end of middle layer apis and functions
+//////////////////////////////////////////////
+
+// end of Quarks Section
+
+</script>
   
   
 <!-- Include Handlebars from a CDN -->
@@ -663,46 +851,8 @@ let createModal = (modalContent) => {
   var theTemplateScript = document.getElementById("feed-template").innerHTML;
   //Compile the template​
   var theTemplate = Handlebars.compile (theTemplateScript);
-  
-  /*var data = 
-  	[
-	  {
-	    "id": 1,
-	    "main_user": "John J Cale",
-	    "price": 899,
-	    "specs": {
-	      "manufacturer": "Sony",
-	      "storage": 16,
-	      "os": "Android",
-	      "camera": 15
-	    },
-	    "main_comment": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam tristique ipsum in efficitur pharetra. Maecenas luctus ante in neque maximus, sed viverra sem posuere. Vestibulum lectus nisi, laoreet vel suscipit nec, feugiat at odio. Etiam eget tellus arcu.",
-	    "reply_user": "John Wick",
-	    "reply_comment": "killing Time",
-	    "image": {
-	      "small": "?q=templates/spa/assets/images/sony-xperia-z3.jpg",
-	      "large": "?q=templates/spa/assets/images/sony-xperia-z3-large.jpg"
-	    }
-	  }
-	];*/
 	
-  var data = "";
-
-  getJson(qurl + "getkeys?keys=feed*&reverse=true", function(response, status){
-		console.log("quarks response: " + response);
-		console.log("status: " + status);
-		
-		debugger;
-		var response = JSON.parse(response);
-		data = response.result;
-		
-		var feedlist = theTemplate(data); 
-  		console.log(feedlist);
-  
-  		document.getElementById("user_comments").innerHTML = feedlist;
-	});  
-
-  
+  getFeedList(0, 10);
 
 </script>  
 
