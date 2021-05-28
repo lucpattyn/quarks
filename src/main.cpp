@@ -1324,6 +1324,17 @@ int main(int argc, char ** argv) {
 
 		return res;
 	});
+	
+	CROW_ROUTE(app, "/readme")
+	([&readFile](const crow::request& req) {
+		auto result = readFile("templates/README.md");
+		std::ostringstream os;
+		os << result;
+
+		auto res = crow::response {os.str()};
+
+		return res;
+	});
 
 	CROW_ROUTE(app, "/home/<int>")
 	([&resourceLoader](int resId) {

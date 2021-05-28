@@ -270,18 +270,20 @@ function postJson(url, data, callback){
 function postComment(username, comment){
 	var d = new Date();
 	var t = d.getTime();
-
 	var r = Math.floor(Math.random() * 100000); 
 
 	var user = "user_" + username;
-	var feedId = "feed_" + user + "_" + t + "_" + r; 
 	
-	
+	var feedId = "feed_" + t + "_" + r;
+		
 	var data = {};
-	data.key = feedId;
+	data.key = feedId + "_" + user;
 	
 	var feeditem = {};;
+	feeditem.id = data.key;
 	feeditem.comment = comment;
+	feeditem.user = user;
+	
 	data.value = feeditem;
 	
 	console.log(data);
@@ -412,8 +414,8 @@ let createModal = (modalContent) => {
 			 	</div><!-- the comment body --><div class="comment_body">
 			 	
 				 	<p><div class="replied_to">
-					 		<p><span class="user">{{main_user}}:</span>
-					 			{{main_comment}}
+					 		<p><span class="user">{{value.user}}:</span>
+					 			{{value.comment}}
 							</p>
 						</div>
 					
@@ -662,7 +664,7 @@ let createModal = (modalContent) => {
   //Compile the template​
   var theTemplate = Handlebars.compile (theTemplateScript);
   
-  var data = 
+  /*var data = 
   	[
 	  {
 	    "id": 1,
@@ -682,13 +684,25 @@ let createModal = (modalContent) => {
 	      "large": "?q=templates/spa/assets/images/sony-xperia-z3-large.jpg"
 	    }
 	  }
-	];
+	];*/
+	
+  var data = "";
+
+  getJson(qurl + "getkeys?keys=feed*&reverse=true", function(response, status){
+		console.log("quarks response: " + response);
+		console.log("status: " + status);
+		
+		debugger;
+		var response = JSON.parse(response);
+		data = response.result;
+		
+		var feedlist = theTemplate(data); 
+  		console.log(feedlist);
   
+  		document.getElementById("user_comments").innerHTML = feedlist;
+	});  
+
   
-  var feedlist = theTemplate(data); 
-  console.log(feedlist);
-  
-  document.getElementById("user_comments").innerHTML = feedlist;
 
 </script>  
 
