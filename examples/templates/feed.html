@@ -235,7 +235,7 @@ body {
 <script>
 
 var isReply = false;
-var currentId = null;
+var currentId = "";
 
 function modalReply(feedId){
 	isReply = true;
@@ -243,6 +243,11 @@ function modalReply(feedId){
 	
 	createModal('');
 }
+
+function like(itemid){
+	incrmentLikeCount(itemid, 1);
+}
+
 
 function modalPost(){
   	var name = document.getElementById("namebox").value;
@@ -255,11 +260,13 @@ function modalPost(){
   	setUserInfo(userInfo.id, userInfo);
   
   	if(isReply){
-  		isReply = false;
   		postFeedReply(currentId, userInfo, content);
 	} else{
   		postFeedItem(userInfo, content);
 	}
+	
+	isReply = false;
+  	currentId = "";	
 }
 
   
@@ -291,7 +298,9 @@ let createModal = (modalContent) => {
   // Close the modal on button-click
   if(modalClose) {
     modalClose.addEventListener('click', function() {
-      modal.remove();
+      isReply = false;
+      
+	  modal.remove();
       modalStyle.remove();
     });
   }
@@ -402,7 +411,7 @@ let createModal = (modalContent) => {
 								 			<ul>
 								 				<li><i class="fa fa-share-alt"></i></li>
 								 				<!--li onclick="modalReply(this.id)" id="{{value.itemid}}"><i class="fa fa-reply"></i></li-->
-								 				<li><i class="fa fa-heart love"><span class="love_amt"> 12</span></i></li>
+								 				<li onclick="like(this.id)" id="{{value.itemid}}"><i class="fa fa-heart love"><span class="love_amt"> {{value.points}}</span></i></li>
 								 			</ul>
 								 		</div>
 					
@@ -442,7 +451,7 @@ let createModal = (modalContent) => {
 							 			<ul>
 							 				<li><i class="fa fa-share-alt"></i></li>
 							 				<li onclick="modalReply(this.id)" id="{{value.itemid}}"><i class="fa fa-reply"></i></li>
-							 				<li><i class="fa fa-heart love"><span class="love_amt"> 12</span></i></li>
+							 				<li onclick="like(this.id)" id="{{value.itemid}}"><i class="fa fa-heart love"><span class="love_amt"> {{value.points}}</span></i></li>
 							 			</ul>
 							 		</div>
 				
@@ -684,6 +693,9 @@ var fetchFeedRepliesAPI = "/getkeys?keys=feedreply_";
 var postFeedItemAPI = "/putjson";
 var postFeedReplyAPI = "/putjson";
 
+var fetchLikeCountAPI = "/get";
+var incrLikeCountAPI = "/putjson";
+
 var feeddata = null;
 
 // Retrieving Data Section
@@ -701,7 +713,7 @@ function getFeedReplies(feeditem, skip, limit){
 			needsFurtherUpdating = true;
 		}
 		
-		if(!updating){
+		if(!updating && (feeditem.replies.length > 0)){
 			updating = true;
 			// update UI after response received
 			var feedlist = theTemplate(feeddata); 
@@ -761,6 +773,7 @@ function postFeedItem(userInfo, content){
 	feeditem.userid = user.id;
 	feeditem.username = user.name;
 	feeditem.content = content;
+	feeditem.points = 0;
 	feeditem.timestamp = d.getTime();		
 	var date = new Date(feeditem.timestamp);
 	/*console.log("Date: "+date.getDate()+
@@ -786,7 +799,7 @@ function postFeedItem(userInfo, content){
 		console.log("response: " + response);
 		console.log("status: " + status);
 		
-		getFeedList(0, 10);
+		getFeedList(0, defaultLimit);
 	});
 	
 }
@@ -807,6 +820,7 @@ function postFeedReply(feedId, userInfo, content){
 	replyitem.userid = user.id;
 	replyitem.username = user.name;
 	replyitem.content = content;
+	replyitem.points = 0;
 	replyitem.timestamp = d.getTime();
 	
 	var date = new Date(replyitem.timestamp);
@@ -833,10 +847,39 @@ function postFeedReply(feedId, userInfo, content){
 		console.log("response: " + response);
 		console.log("status: " + status);
 		
-		getFeedList(0, 10);
+		getFeedList(0, defaultLimit);
 	});
 	
 }
+
+// likes and gamification
+
+function incrmentLikeCount(itemid, incrementby){
+
+	getJson(baseUrl + fetchLikeCountAPI + "?key=" + itemid , function(response, status){
+		console.log("response: " + response);
+		console.log("status: " + status);
+		
+		var item = JSON.parse(response);
+		
+		points = item.points;
+		
+		var postdata = {};
+		postdata.key = itemid;
+		postdata.value = {};
+		postdata.value.points = points + incrementby;
+	
+		postJson(baseUrl + incrLikeCountAPI, postdata, function(response, status){
+			console.log("response: " + response);
+			console.log("status: " + status);
+		
+			getFeedList(0, defaultLimit);
+		});
+		
+		
+	}); 
+}
+
 
 // User Info Fetching and Storing
 
@@ -852,7 +895,6 @@ function getUserInfo(userId){
 }
 
 function setUserInfo(userId, userInfo){
-
 	var postdata = {};
 	postdata.key = userId;
 	postdata.value = userInfo;
@@ -882,9 +924,19 @@ function setUserInfo(userId, userInfo){
   var theTemplateScript = document.getElementById("feed-template").innerHTML;
   //Compile the template​
   var theTemplate = Handlebars.compile (theTemplateScript);
-	
-  getFeedList(0, 10);
 
+  var defaultLimit = 100;	
+  getFeedList(0, defaultLimit);
+
+  // dummy self info (will be populated through login in real apps)
+  var selfId = "user_xxx";
+  
+  var selfInfo = {};
+  selfInfo.id = "user_" + "vin_diesel";
+  selfInfo.name = "vin_diesel";
+    
+  setUserInfo(selfInfo.id, selfInfo);
+    
 </script>  
 
 </body>
