@@ -152,14 +152,11 @@ http://0.0.0.0:18080/incr?body={"key":"somecounter","step":5}
 Note: Value to increment must be saved as integer with a previous call to put -
 http://0.0.0.0:18081/put?body={"key":"somecounter", "value":1}
 ``` 
-
 The more advance version is incrval where you can specify the specific attribute (must be integer) to increment
-
 ```
-
 http://0.0.0.0:18080/incrval?body={"key":"feed_user_johnwick", "value":{"points":3}}
 ```
-In the above example if points were previously set as 7, after the API call it becomes 10
+In the above example if points were previously set as 7, after the API call it becomes 10. 
 Both incr and incrval works with POST methods as well
 
 l) Execute Atoms: Atoms are set of Put and Remove operations which can be executed in a single API call
