@@ -694,7 +694,7 @@ var postFeedItemAPI = "/putjson";
 var postFeedReplyAPI = "/putjson";
 
 var fetchLikeCountAPI = "/get";
-var incrLikeCountAPI = "/putjson";
+var incrLikeCountAPI = "/incrval";
 
 var feeddata = null;
 
@@ -856,28 +856,18 @@ function postFeedReply(feedId, userInfo, content){
 
 function incrmentLikeCount(itemid, incrementby){
 
-	getJson(baseUrl + fetchLikeCountAPI + "?key=" + itemid , function(response, status){
+	var postdata = {};
+	postdata.key = itemid;
+	postdata.value = {};
+	postdata.value.points = 1;
+		
+	postJson(baseUrl + incrLikeCountAPI, postdata, function(response, status){
 		console.log("response: " + response);
 		console.log("status: " + status);
-		
-		var item = JSON.parse(response);
-		
-		points = item.points;
-		
-		var postdata = {};
-		postdata.key = itemid;
-		postdata.value = {};
-		postdata.value.points = points + incrementby;
 	
-		postJson(baseUrl + incrLikeCountAPI, postdata, function(response, status){
-			console.log("response: " + response);
-			console.log("status: " + status);
-		
-			getFeedList(0, defaultLimit);
-		});
-		
-		
-	}); 
+		getFeedList(0, defaultLimit);
+	});
+	
 }
 
 
