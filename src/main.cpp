@@ -832,7 +832,23 @@ int main(int argc, char ** argv) {
 		return out;
 
 	};
+	
+	auto route_core_incrvalue_callback =
+	[](const crow::request& req) {
+		std::string out;
 
+		std::string body = req.body;
+		auto p = req.url_params.get("body");
+		if(p != nullptr) {
+			body = p;
+		}
+		CROW_LOG_INFO << "incr value request body : " << body;
+
+		Quarks::Core::_Instance.incrementValue(body, out);
+
+		return out;
+
+	};
 
 	auto route_core_searchjson_callback =
 	[](const crow::request& req) {
@@ -1113,6 +1129,9 @@ int main(int argc, char ** argv) {
 
 	CROW_ROUTE(app, "/incr")
 	.methods("GET"_method, "POST"_method)(route_core_incr_callback);
+
+	CROW_ROUTE(app, "/incrval")
+	.methods("GET"_method, "POST"_method)(route_core_incrvalue_callback);
 
 	CROW_ROUTE(app, "/searchjson")
 	.methods("GET"_method, "POST"_method)(route_core_searchjson_callback);
