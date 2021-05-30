@@ -149,7 +149,7 @@ v8Engine::v8Engine(std::function<void (std::string)> logFunc /*= nullptr*/){
     _logFunc = logFunc;
 }
 
-namespace {
+/*namespace {
 v8::Isolate* getCurrentIsolate() {
      v8::Isolate* isolate = v8::Isolate::GetCurrent();
      if(!isolate) {
@@ -159,7 +159,7 @@ v8::Isolate* getCurrentIsolate() {
 
      return isolate;
 }
-} // anonymous namespace
+} // anonymous namespace*/
 
 // Reads a file into a v8 string.
 v8::Handle<v8::String> v8Engine::_ReadFile(const char* name)
@@ -180,8 +180,10 @@ v8::Handle<v8::String> v8Engine::_ReadFile(const char* name)
         i += read;
     }
     fclose(file);
-    v8::Handle<v8::String>  result = v8::String::NewFromUtf8(getCurrentIsolate(), chars);
-    delete[] chars;
+    //v8::Handle<v8::String>  result = v8::String::NewFromUtf8(getCurrentIsolate(), chars);
+    v8::Handle<v8::String>  result = v8::String::New(chars);
+
+	delete[] chars;
     return result;
     
 }
@@ -189,12 +191,16 @@ v8::Handle<v8::String> v8Engine::_ReadFile(const char* name)
 int v8Engine::load(std::string fileName, std::function<int (v8Engine::v8Context&)> onLoad){
     int ret = 0;
     
-     v8::Isolate* isolate = getCurrentIsolate();
+    //v8::Isolate* isolate = getCurrentIsolate();
+	v8::Isolate* isolate = v8::Isolate::GetCurrent();
+    if(!isolate) {
+    	isolate = v8::Isolate::New();
+    	isolate->Enter();
+	}
+	// Create a stack-allocated handle scope.
+    v8::HandleScope handle_scope;
 
-  // Create a stack-allocated handle scope.
-     v8::HandleScope handle_scope;
-
-     v8::Persistent<v8::Context> context = v8::Context::New();
+    v8::Persistent<v8::Context> context = v8::Context::New();
     v8::Context::Scope context_scope(context);
     
     //context->AllowCodeGenerationFromStrings(true);

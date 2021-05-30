@@ -411,7 +411,15 @@ int main(int argc, char ** argv) {
 			handle_runtime_error(error, out, jsonResults);
 		}
 
-		return out;
+		std::ostringstream os;
+		os << crow::json::dump(out);
+
+		auto res = crow::response{os.str()};
+	    res.add_header("Access-Control-Allow-Origin", "*");
+	    //res.add_header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
+	    //res.add_header("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+
+		return res;
 
 	};
 
@@ -592,8 +600,18 @@ int main(int argc, char ** argv) {
 
 		std::string out;
 		put(req.body, out);
+		
+		std::ostringstream os;
+		os << out;
 
-		return out;
+		auto res = crow::response{os.str()};
+	    res.add_header("Access-Control-Allow-Origin", "*");
+	    //res.add_header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
+	    //res.add_header("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+
+		return res;
+
+		//return out;
 
 		/*auto x = crow::json::load(req.body);
 		if (!x){

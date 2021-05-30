@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 <html lang="en" >
 
@@ -15,7 +16,7 @@
 <link rel="mask-icon" type="" href="https://cpwebassets.codepen.io/assets/favicon/logo-pin-8f3771b1072e3c38bd662872f6b673a722f4b3ca2421637d5596661b4e2132cc.svg" color="#111" />
 
 
-  <title>Feed</title>
+  <title>CodePen - Simple Comments Section Template</title>
   
   
   
@@ -173,66 +174,15 @@ body {
 </script>
 
 
-<style>
-.js-modal {
-  /* Take the box out of the flow, so that it could look like a modal box */
-  position: absolute;
-
-  /* Avoid the awkwardly stretchy box on bigger screens */
-  max-width: 450px;
-
-  /* Aligning it to the absolute center of the page */
-  top: 15%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  top-margin: -100px;	
-  /* Some cosmetics */
-  border-radius: 4px;
-  background-color: rgba(0, 0, 0, .1);
-}
-
-.js-modal-hidden {
-  display: none;
-}
-
-/* Make the media inside the box adapt the width of the parent */
-.js-modal img,
-.js-modal iframe,
-.js-modal video {
-  max-width: 100%;
-}
-
-/* Make the inner element relatively-positioned to contain the close button */
-.js-modal-inner {
-  position: relative;
-  padding: 10px;
-}
-
-/* Close button */
-.js-modal-close {
-  font-size: 10px;
-
-  /* Take it out of the flow, and align to the top-left corner */
-  position: absolute;
-  top: -10px;
-  right: -10px;
-
-  /* Size it up */
-  width: 24px;
-  height: 24px;
-
-  /* Text-alignment */
-  text-align: center;
-
-  /* Cosmetics */
-  color: #eee;
-  border-width: 0;
-  border-radius: 100%;
-  background-color: black;
-}
-</style>
-
 <script>
+
+// UI modal stuff
+var modalbox = null 
+function modalComment(){
+  if(!modalbox){		
+		createModal('');
+  	};
+}
 
 var isReply = false;
 var currentId = "";
@@ -240,18 +190,16 @@ var currentId = "";
 function modalReply(feedId){
 	isReply = true;
 	currentId = feedId;
-	
-	createModal('');
-}
 
-function like(itemid){
-	incrmentLikeCount(itemid, 1);
-}
+	if(!modalbox){		
+		createModal('');
+  	};
 
+}
 
 function modalPost(){
   	var name = document.getElementById("namebox").value;
-  	var content = document.getElementById("contentbox").value;
+	var content = document.getElementById("contentbox").value;
   
   	var userInfo = {};
   	userInfo.id = "user_" + name;
@@ -268,9 +216,10 @@ function modalPost(){
 	isReply = false;
   	currentId = "";	
 }
-
   
 let createModal = (modalContent) => {  
+	alert(isReply);
+  
   // Definitions
   let modal = document.createElement("div"),
       modalStyle = document.createElement("style"),
@@ -294,7 +243,14 @@ let createModal = (modalContent) => {
       modalStyle.appendChild(document.createTextNode(modalCSS));
   }
   theHead.appendChild(modalStyle);
-
+	
+  modalbox = modal;
+  setTimeout(function(){
+	var name = document.getElementById("namebox");
+	name.focus();	
+  
+  }, 1);
+  
   // Close the modal on button-click
   if(modalClose) {
     modalClose.addEventListener('click', function() {
@@ -302,354 +258,127 @@ let createModal = (modalContent) => {
       
 	  modal.remove();
       modalStyle.remove();
+      
+      modalbox = null;
     });
   }
    
 }
 
+// UI Like 
+function like(itemid){
+	incrmentLikeCount(itemid, 1);
+}
+
+// end of UI stuff
 </script>
 
 </head>
 
 <body translate="no" >
-  <!-- comments container -->
-		<div class="comment_block">
+	<!-- comments container -->
+	<div class="comment_block">
+		
+	 <!-- used by #{user} to create a new comment -->
+	 <div class="create_new_comment">
+	
+		<!-- current #{user} avatar -->
+	 	<div class="user_avatar">
+	 		<img src="https://www.pngrepo.com/png/130092/512/user.png">
+	 	</div><!-- the input field --><div class="input_comment">
+	 		<input type="text" onclick="modalComment()" placeholder="Start a topic..">
+	 	</div>
+	
+	 </div>
 
-		<!-- 
-			Comments are structured in the following way:
+	<!--div class="new_comment"-->
 
-			{ul} defines a new comment (singular)
-			{li} defines a new reply to the comment {ul}
+			<!-- build comment -->
+			<ul class="user_comment" id="user_comments">
+				<script id="feed-template" type="x-handlebars-template">
+				{{#each this}}
+				
+			 	<li>		
+				 	<div class="new_comment">	 		
+			 		<!-- current #{user} avatar -->
+						<div class="user_avatar">
+							<img src="https://www.pngrepo.com/png/130092/512/user.png">
+						</div><div class="comment_body">
+							<div class="replied_to">
+							 	<p><span class="user">{{value.username}}:</span>
+								 {{value.content}}</p>
+							</div>	
+						
+							<div class="create_new_comment">
+						
+							<!-- current #{user} avatar -->
+						 	<!-- the input field --><div class="input_comment">
+						 		<input type="text" id="{{value.itemid}}" onclick="modalReply(this.id)" placeholder="Join the conversation..">
+						 	</div>
+						
+						</div>					
+						
+						<!-- comments toolbar -->
+						<div class="comment_toolbar">
+						 	
+							<!-- inc. date and time -->
+					 		<div class="comment_details">
+					 			<ul>
+					 				<li><i class="fa fa-clock-o"></i> {{value.time}}</li>
+					 				<li><i class="fa fa-calendar"></i> {{value.date}}</li>
+					 				<li><i class="fa fa-pencil"></i> <span class="user">author</span></li>
+					 			</ul>
+					 		</div><!-- inc. share/reply and love --><div class="comment_tools">
+					 			<ul>
+					 				<li><i class="fa fa-share-alt"></i></li>
+					 				<!--li onclick="modalReply(this.id)" id="{{value.itemid}}"><i class="fa fa-reply"></i></li-->
+					 				<li onclick="like(this.id)" id="{{value.itemid}}"><i class="fa fa-heart love"><span class="love_amt"> {{value.points}}</span></i></li>
+					 			</ul>
+					 		</div>
+						
+						</div>
+						
+						{{#each value.replies}}						
+						<div class="replied_to"><p>
+							<span class="user">{{value.username}}:</span>
+							{{value.content}}
+						</div>
+						<!-- comments toolbar -->						
+						<div class="comment_toolbar" >
+						
+							<!-- inc. date and time -->
+					 		<div class="comment_details">
+					 			<ul>
+					 				<li><i class="fa fa-clock-o"></i> {{value.time}}</li>
+					 				<li><i class="fa fa-calendar"></i> {{value.date}}</li>
+					 				<li><i class="fa fa-pencil"></i> <span class="user">replied</span></li>
+					 			</ul>
+					 		</div><!-- inc. share/reply and love --><div class="comment_tools">
+					 			<ul>
+					 				<li><i class="fa fa-share-alt"></i></li>
+					 				<!--li onclick="modalReply(this.id)" id="{{value.itemid}}"><i class="fa fa-reply"></i></li-->
+					 				<li onclick="like(this.id)" id="{{value.itemid}}"><i class="fa fa-heart love"><span class="love_amt"> {{value.points}}</span></i></li>
+					 			</ul>
+					 		</div>
+			
+						</div>						
+						{{/each }}
+						
+					</div> <!-- </div><div class="comment_body"> -->
 
-			example:
+				{{/each }}
+				</script>	
+				</div>		
+				</li>
 
-			<ul>
-				<comment>
-					
-				</comment
-
-					<li>
-						<reply>
-							reply 1
-						</reply>
-					</li>
-
-					<li>
-						<reply>
-							reply 2
-						</reply>
-					</li>
-
-					<li>
-						<reply>
-							reply 3
-						</reply>
-					</li>
 			</ul>
 
-		 -->
-
-		 <!-- used by #{user} to create a new comment -->
-		 <div class="create_new_comment">
-
-			<!-- current #{user} avatar -->
-		 	<div class="user_avatar">
-		 		<img src="https://cdn1.vectorstock.com/i/thumb-large/82/55/anonymous-user-circle-icon-vector-18958255.jpg">
-		 	</div><!-- the input field --><div class="input_comment">
-		 		<input type="text" placeholder="Join the conversation.." 
-				 onclick="createModal('')" />
-		 	</div>
-		 	
-		 </div>
-
-		<!-- dynamic new post -->
-		 <!--div class="new_comment"-->
-
-			<!-- build comment -->
-		 	<ul class="user_comment" id="user_comments">
-		 	<!-- start user replies -->
-		 	
-			 <script id="feed-template" type="x-handlebars-template">
-			 	{{#each this}}
-		 	<li>
-		 		<div class="new_comment">
-				 		
-			 		<!-- current #{user} avatar -->
-				 	<div class="user_avatar">
-				 		<img src="https://www.pngrepo.com/png/130092/512/user.png">
-				 	</div><!-- the comment body --><div class="comment_body">
-				 	
-					 	<p><div class="replied_to">
-						 		<p><span class="user">{{value.username}}:</span>
-						 			{{value.content}}
-								</p>
-							</div>							
-							
-							{{#each value.replies}}
-							
-														
-							<div class="user_avatar">
-				 				<img src="https://st3.depositphotos.com/6672868/13701/v/600/depositphotos_137014128-stock-illustration-user-profile-icon.jpg">
-				 			</div>
-							
-							
-							{{value.content}}
-							
-							<div class="replied_to">
-								<span class="user">
-									<!-- comments toolbar -->
-								 	<div class="comment_toolbar">
-					
-								 		<!-- inc. date and time -->
-								 		<div class="comment_details">
-								 			<ul>
-								 				<li><i class="fa fa-clock-o"></i> {{value.time}}</li>
-								 				<li><i class="fa fa-calendar"></i> {{value.date}}</li>
-								 				<li><i class="fa fa-pencil"></i> <span class="user">{{value.username}}</span></li>
-								 			</ul>
-								 		</div><!-- inc. share/reply and love --><div class="comment_tools">
-								 			<ul>
-								 				<li><i class="fa fa-share-alt"></i></li>
-								 				<!--li onclick="modalReply(this.id)" id="{{value.itemid}}"><i class="fa fa-reply"></i></li-->
-								 				<li onclick="like(this.id)" id="{{value.itemid}}"><i class="fa fa-heart love"><span class="love_amt"> {{value.points}}</span></i></li>
-								 			</ul>
-								 		</div>
-					
-								 	</div>
-	
-								</span>							
-							</div>
-							
-							{{/each }}
-							
-						</p>
-						
-						<!-- used by #{user} to create a new comment -->
-						 <div class="create_new_comment">
-				
-							<!-- current #{user} avatar -->
-						 	<div class="user_avatar">
-						 		<img src="https://cdn1.vectorstock.com/i/thumb-large/82/55/anonymous-user-circle-icon-vector-18958255.jpg">
-						 	</div><!-- the input field --><div class="input_comment">
-						 		<input id="{{value.itemid}}" onclick="modalReply(this.id)" type="text" placeholder="write a reply..">
-						 	</div>
-				
-						 </div>
-						 
-						  	<span class="user">
-								<!-- comments toolbar -->
-							 	<div class="comment_toolbar">
-				
-							 		<!-- inc. date and time -->
-							 		<div class="comment_details">
-							 			<ul>
-							 				<li><i class="fa fa-clock-o"></i> {{value.time}}</li>
-							 				<li><i class="fa fa-calendar"></i> {{value.date}}</li>
-							 				<li><i class="fa fa-pencil"></i> <span class="user">{{reply_user}}</span></li>
-							 			</ul>
-							 		</div><!-- inc. share/reply and love --><div class="comment_tools">
-							 			<ul>
-							 				<li><i class="fa fa-share-alt"></i></li>
-							 				<li onclick="modalReply(this.id)" id="{{value.itemid}}"><i class="fa fa-reply"></i></li>
-							 				<li onclick="like(this.id)" id="{{value.itemid}}"><i class="fa fa-heart love"><span class="love_amt"> {{value.points}}</span></i></li>
-							 			</ul>
-							 		</div>
-				
-							 	</div>
-	
-							</span>	
-	
-				 	</div>
-				</div> <!-- new comment -->
-		 	</li>
-		 			{{/each }}
-			</script>
-		 	
-			</ul> 
-
 		 <!--/div-->
-
-
-		 <!-- new comment -->
-		 <div class="new_comment">
-
-			<!-- build comment -->
-		 	<ul class="user_comment">
-		 		<!-- start user replies -->
-		 	<li>
-		 		
-		 		<!-- current #{user} avatar -->
-			 	<div class="user_avatar">
-			 		<img src="https://st3.depositphotos.com/6672868/13701/v/600/depositphotos_137014128-stock-illustration-user-profile-icon.jpg">
-			 	</div><!-- the comment body --><div class="comment_body">
-			 	
-				 	<p><div class="replied_to">
-					 		<p><span class="user">John Smith:</span>
-					 			Gastropub cardigan jean shorts,<br/> kogi Godard PBR&B lo-fi locavore. 
-							</p>
-						</div>
-					
-						<div class="user_avatar">
-			 				<img src="https://st3.depositphotos.com/6672868/13701/v/600/depositphotos_137014128-stock-illustration-user-profile-icon.jpg">
-			 			</div>							
-						That's awesome!
-						
-						<div class="replied_to">
-							<span class="user">
-								<!-- comments toolbar -->
-							 	<div class="comment_toolbar">
-				
-							 		<!-- inc. date and time -->
-							 		<div class="comment_details">
-							 			<ul>
-							 				<li><i class="fa fa-clock-o"></i> 19:23</li>
-							 				<li><i class="fa fa-calendar"></i> 14/01/2015</li>
-							 				<li><i class="fa fa-pencil"></i> <span class="user">Andrew Johnson</span></li>
-							 			</ul>
-							 		</div><!-- inc. share/reply and love --><div class="comment_tools">
-							 			<ul>
-							 				<li><i class="fa fa-share-alt"></i></li>
-							 				<li><i class="fa fa-reply"></i></li>
-							 				<li><i class="fa fa-heart love"><span class="love_amt"> 12</span></i></li>
-							 			</ul>
-							 		</div>
-				
-							 	</div>
-
-								</span>							
-						</div>
-						
-						
-						<div class="user_avatar">
-			 				<img src="https://st3.depositphotos.com/6672868/13701/v/600/depositphotos_137014128-stock-illustration-user-profile-icon.jpg">
-			 			</div>	
-						
-						That's killer!
-						
-						<div class="replied_to">
-							<span class="user">
-								<!-- comments toolbar -->
-							 	<div class="comment_toolbar">
-				
-							 		<!-- inc. date and time -->
-							 		<div class="comment_details">
-							 			<ul>
-							 				<li><i class="fa fa-clock-o"></i> 19:23</li>
-							 				<li><i class="fa fa-calendar"></i> 14/01/2015</li>
-							 				<li><i class="fa fa-pencil"></i> <span class="user">John Wick</span></li>
-							 			</ul>
-							 		</div><!-- inc. share/reply and love --><div class="comment_tools">
-							 			<ul>
-							 				<li><i class="fa fa-share-alt"></i></li>
-							 				<li><i class="fa fa-reply"></i></li>
-							 				<li><i class="fa fa-heart love"><span class="love_amt"> 12</span></i></li>
-							 			</ul>
-							 		</div>
-				
-							 	</div>
-
-								</span>
-							
-						</div>
-
-					</p>
-					
-					<!-- used by #{user} to create a new comment -->
-					 <div class="create_new_comment">
-			
-						<!-- current #{user} avatar -->
-					 	<div class="user_avatar">
-					 		<img src="https://cdn1.vectorstock.com/i/thumb-large/82/55/anonymous-user-circle-icon-vector-18958255.jpg">
-					 	</div><!-- the input field --><div class="input_comment">
-					 		<input type="text" placeholder="Join the conversation..">
-					 	</div>
-			
-					 </div>
-			 	</div>
-
-		 	</li>
-
-		 	</ul>
-
-		 </div>
-
-<!-- new comment -->
-		 <div class="new_comment">
-
-			<!-- build comment -->
-		 	<ul class="user_comment">
-
-		 		<!-- current #{user} avatar -->
-			 	<div class="user_avatar">
-			 		<img src="https://s3.amazonaws.com/uifaces/faces/twitter/kfriedson/73.jpg">
-			 	</div><!-- the comment body --><div class="comment_body">
-			 		<p>Gastropub cardigan jean shorts, kogi Godard PBR&B lo-fi locavore. Organic chillwave vinyl Neutra. Bushwick Helvetica cred freegan, crucifix Godard craft beer deep v mixtape cornhole Truffaut master cleanse pour-over Odd Future beard. Portland polaroid iPhone.</p>
-			 	</div>
-
-			 	<!-- comments toolbar -->
-			 	<div class="comment_toolbar">
-
-			 		<!-- inc. date and time -->
-			 		<div class="comment_details">
-			 			<ul>
-			 				<li><i class="fa fa-clock-o"></i> 13:94</li>
-			 				<li><i class="fa fa-calendar"></i> 04/01/2015</li>
-			 				<li><i class="fa fa-pencil"></i> <span class="user">Sarah Walkman</span></li>
-			 			</ul>
-			 		</div><!-- inc. share/reply and love --><div class="comment_tools">
-			 			<ul>
-			 				<li><i class="fa fa-share-alt"></i></li>
-			 				<li><i class="fa fa-reply"></i></li>
-			 				<li><i class="fa fa-heart love"></i></li>
-			 			</ul>
-			 		</div>
-
-			 	</div>
-
-			 	<!-- start user replies -->
-		 	<li>
-		 		
-		 		<!-- current #{user} avatar -->
-			 	<div class="user_avatar">
-			 		<img src="https://s3.amazonaws.com/uifaces/faces/twitter/cbillins/73.jpg">
-			 	</div><!-- the comment body --><div class="comment_body">
-			 		<p><div class="replied_to"><p><span class="user">Sarah Walkman:</span>Pork belly migas flexitarian messenger bag Brooklyn gluten-free. Tilde kitsch skateboard Helvetica, lumbersexual four loko direct trade pour-over. Cronut deep v keffiyeh cornhole food truck</p></div>I'm tired, does anybody know a good place to buy extra strength coffee?</p>
-			 	</div>
-
-			 	<!-- comments toolbar -->
-			 	<div class="comment_toolbar">
-
-			 		<!-- inc. date and time -->
-			 		<div class="comment_details">
-			 			<ul>
-			 				<li><i class="fa fa-clock-o"></i> 19:23</li>
-			 				<li><i class="fa fa-calendar"></i> 14/01/2015</li>
-			 				<li><i class="fa fa-pencil"></i> <span class="user">Blake Anderson</span></li>
-			 			</ul>
-			 		</div><!-- inc. share/reply and love --><div class="comment_tools">
-			 			<ul>
-			 				<li><i class="fa fa-share-alt"></i></li>
-			 				<li><i class="fa fa-reply"></i></li>
-			 				<li><i class="fa fa-heart love"><span class="love_amt"> 12</span></i></li>
-			 			</ul>
-			 		</div>
-
-			 	</div>
-
-
-		 	</li>
-
-		 	</ul>
-
-		 </div>
-
-		</div>
+	</div> <!-- comment block -->
   
 
-<script>
-
+<script>	
 // Quarks Section
-
 // get/post utility functions
 
 function getJson(url, callback){
@@ -667,7 +396,7 @@ function getJson(url, callback){
 function postJson(url, data, callback){
 	var xmlhttp = new XMLHttpRequest();   // new HttpRequest instance 
 	xmlhttp.open("POST", url);
-	xmlhttp.setRequestHeader("Content-Type", "application/json");
+	//xmlhttp.setRequestHeader("Content-Type", "application/json");
 	//xmlhttp.withCredentials = true;
 	
 	xmlhttp.onreadystatechange = function () {
@@ -898,10 +627,9 @@ function setUserInfo(userId, userInfo){
 // end of middle layer apis and functions
 //////////////////////////////////////////////
 
-// end of Quarks Section
-
+// end of Quarks Section 
 </script>
-  
+
   
 <!-- Include Handlebars from a CDN -->
 <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.js"></script>
@@ -912,7 +640,7 @@ function setUserInfo(userId, userInfo){
   console.log(template({ doesWhat: "rocks!" }));
   
   var theTemplateScript = document.getElementById("feed-template").innerHTML;
-  //Compile the template​
+  //Compile the template?
   var theTemplate = Handlebars.compile (theTemplateScript);
 
   var defaultLimit = 100;	
