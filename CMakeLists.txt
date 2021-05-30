@@ -52,6 +52,11 @@ file(GLOB ocv_microservice_crow_SOURCES
 )
 
 add_executable( ocv_microservice_crow ${ocv_microservice_crow_SOURCES} )
+target_include_directories(
+    ocv_microservice_crow
+    PRIVATE
+    /usr/include/node
+)
 
 set(CROW_ROOT_DIR PATH "${PROJECT_SOURCE_DIR}/third-party/crow")
 

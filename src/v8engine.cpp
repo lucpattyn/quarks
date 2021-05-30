@@ -149,6 +149,18 @@ v8Engine::v8Engine(std::function<void (std::string)> logFunc /*= nullptr*/){
     _logFunc = logFunc;
 }
 
+namespace {
+v8::Isolate* getCurrentIsolate() {
+     v8::Isolate* isolate = v8::Isolate::GetCurrent();
+     if(!isolate) {
+    	isolate = v8::Isolate::New();
+    	isolate->Enter();
+     }
+
+     return isolate;
+}
+} // anonymous namespace
+
 // Reads a file into a v8 string.
 v8::Handle<v8::String> v8Engine::_ReadFile(const char* name)
 {
@@ -168,7 +180,7 @@ v8::Handle<v8::String> v8Engine::_ReadFile(const char* name)
         i += read;
     }
     fclose(file);
-    v8::Handle<v8::String>  result = v8::String::New(chars);
+    v8::Handle<v8::String>  result = v8::String::NewFromUtf8(getCurrentIsolate(), chars);
     delete[] chars;
     return result;
     
@@ -177,11 +189,7 @@ v8::Handle<v8::String> v8Engine::_ReadFile(const char* name)
 int v8Engine::load(std::string fileName, std::function<int (v8Engine::v8Context&)> onLoad){
     int ret = 0;
     
-     v8::Isolate* isolate = v8::Isolate::GetCurrent();
-     if(!isolate) {
-    	isolate = v8::Isolate::New();
-    	isolate->Enter();
-     }
+     v8::Isolate* isolate = getCurrentIsolate();
 
   // Create a stack-allocated handle scope.
      v8::HandleScope handle_scope;

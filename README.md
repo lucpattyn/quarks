@@ -2,10 +2,10 @@
 # quarks
 A modern C++ based off-the-shelf server framework for storing, retrieving, processing data with high scalability and plugging in business logics.
 
-Quarks provides a highly scalable and distributable open source system based on actor model which can be easily deployed in closed networks. 
-The ultimate aim is to come up with open source solutions to well known problems like chatting, image/video processing, transcoding, voice recognition etc. thus reducing dependencies 
-on cloud platforms like AWS and GCP. 
-Standardized chat and feed systems would eliminate the need to make private data available to public social networks, thus provisioning to safeguard user's own valuable data. 
+Quarks provides a highly scalable and distributable open source system based on actor model which can be easily deployed in closed networks.
+The ultimate aim is to come up with open source solutions to well known problems like chatting, image/video processing, transcoding, voice recognition etc. thus reducing dependencies
+on cloud platforms like AWS and GCP.
+Standardized chat and feed systems would eliminate the need to make private data available to public social networks, thus provisioning to safeguard user's own valuable data.
 Adding a new functionality or solution should be as easy as spinning up a new Quarks node and integrate it to the system following a few guidelines.
 
 The core implementation concept, guidance and inspiration behind quarks can be found in this link:
@@ -23,7 +23,7 @@ It requires the following packages:
 - Boost::System
 - RocksDB
 - v8 Javascript Engine
-- ZeroMQ 
+- ZeroMQ
 - OpenCV 4.0.0 (Optional)
 - Curl (Experimental Optional)
 
@@ -53,7 +53,7 @@ After running the executable, perform get and post requests as follows:
 
 ### Description
 
-a)  Put key vs value 
+a)  Put key vs value
 
 ```
  http://0.0.0.0:18080/put?body={"key":"g1_u1","value":{"msg":"m1"}}
@@ -65,12 +65,12 @@ a)  Put key vs value
  var url = "put?body=" + encodeURIComponent(JSON.stringify(jsonobj));
 
  $.get(url, function( data ) {
-     $( ".result" ).html( data );    
+     $( ".result" ).html( data );
  });
 
 ```
  *If request is successful then the key would be returned as result
- 
+
  However, GET type of requests have a limitation with parameter lengths and body param cannot be too big.
  In those cases you have to use the methods in POST section (putjson, postjson etc.)
 
@@ -83,16 +83,16 @@ b) Get value against key
 
 c) List values by wildcard search with keys (you can specifiy skip and limit optionally)
 ```
- http://0.0.0.0:18080/getall?keys=g1_u*&skip=5&limit=10 
+ http://0.0.0.0:18080/getall?keys=g1_u*&skip=5&limit=10
 ```
 d) List sorted values by wildcard search with keys (you can specifiy skip and limit optionally)
 ```
- http://0.0.0.0:18080/getsorted?keys=g1_u*&sortby=msg&skip=5&limit=10   
+ http://0.0.0.0:18080/getsorted?keys=g1_u*&sortby=msg&skip=5&limit=10
 
 ```
   You can reverse the order by specifying des=true
 ```
- http://0.0.0.0:18080/getsorted?keys=g1_u*&sortby=msg&des=true&skip=5&limit=10 
+ http://0.0.0.0:18080/getsorted?keys=g1_u*&sortby=msg&des=true&skip=5&limit=10
 
 ```
 Apply equal-to filter on a value (using eq) :
@@ -109,14 +109,14 @@ http://0.0.0.0:18080/getsorted?keys=g1_u*&filter={"where":{"messageTo":{"eq_any"
 e) List keys vs values by wildcard search with keys (you can specifiy skip and limit optionally)
 
 ```
- http://0.0.0.0:18080/getkeys?keys=g1_u*&skip=5&limit=10 
+ http://0.0.0.0:18080/getkeys?keys=g1_u*&skip=5&limit=10
 ```
-To get the keys in reverse order run 
+To get the keys in reverse order run
 ```
-http://0.0.0.0:18080/getkeys?keys=g1_u*&skip=5&limit=10&reverse=true 
+http://0.0.0.0:18080/getkeys?keys=g1_u*&skip=5&limit=10&reverse=true
 ```
 
-f) Get count of keys matched by wildcard search 
+f) Get count of keys matched by wildcard search
 ```
 http://0.0.0.0:18080/getcount?keys=g1*
 ```
@@ -130,19 +130,19 @@ number of keys successfully deleted would be returned
 h) remove keys by wildcard search
 ```
 http://0.0.0.0:18080/removeall?keys=g1_u*
-``` 
+```
 
 number of keys successfully deleted would be returned
 
 i) check if a key already exists
 ```
 http://0.0.0.0:18080/exists?key=g1_u1
-``` 
+```
 
 j) get a list of key value pair given a list of keys
 ```
 http://0.0.0.0:18080/getlist?body=["g1_u1", "g2_u2"]
-``` 
+```
 (You can specify skip and limit to this as well but should not need it)
 
 k) increment a value saved as integer by a specified amount
@@ -151,12 +151,12 @@ http://0.0.0.0:18080/incr?body={"key":"somecounter","step":5}
 
 Note: Value to increment must be saved as integer with a previous call to put -
 http://0.0.0.0:18081/put?body={"key":"somecounter", "value":1}
-``` 
+```
 The more advance version is incrval where you can specify the specific attribute (must be integer) to increment
 ```
 http://0.0.0.0:18080/incrval?body={"key":"feed_user_johnwick", "value":{"points":3}}
 ```
-In the above example if points were previously set as 7, after the API call it becomes 10. 
+In the above example if points were previously set as 7, after the API call it becomes 10.
 Both incr and incrval works with POST methods as well
 
 l) Execute Atoms: Atoms are set of Put and Remove operations which can be executed in a single API call
@@ -189,7 +189,7 @@ put:[
 {"key":"g2_u2", "value":{"msg":"m2"}},
 {"key":"g3_u3", "value":{"msg":"m3"}}
 }],
-remove:["g1_u1","g1_u2", "g3_u3"]   
+remove:["g1_u1","g1_u2", "g3_u3"]
 
 }
 
@@ -200,19 +200,19 @@ remove:["g1_u1","g1_u2", "g3_u3"]
       use the put/remove apis provided for the specific purpose, not atomic ones
    3) If you have a number of put operations and no removes then use  ../put/atom (and not  ../atom)
    4) If you have a number of remove operations and no puts then use  ../remove/atom (and not ../atom)
-  
+
 m) autogenerate key with prefix and value provided
 
-``` 
- http://0.0.0.0:18080/make?body={"prefix":"dev_","value":"101"}
- 
 ```
-* returns the key value pair as json object; if "key" is specified along with prefix 
+ http://0.0.0.0:18080/make?body={"prefix":"dev_","value":"101"}
+
+```
+* returns the key value pair as json object; if "key" is specified along with prefix
  then a key is formed with prefix+key and no key generation occurs
 
 n) provide a prefix, key pair for which all keys (along with values) greater than the passed key,
-   starting with the prefix are returned 
-   
+   starting with the prefix are returned
+
 ```
 http://0.0.0.0:18080/getkeysafter?body=["key_prefix", "comparekey"]
 
@@ -224,8 +224,8 @@ http://0.0.0.0:18080/getkeysafter?body=["key_pre1", "key1", "key_pre2", "key2", 
 ```
 
 o) provide a prefix, key pair for which the highest key (along with values and index) greater than the passed key,
-   starting with the prefix is returned 
-   
+   starting with the prefix is returned
+
 ```
 http://0.0.0.0:18080/getkeyslast?body=["key_prefix", "comparekey"]
 
@@ -235,7 +235,7 @@ Multiple prefix, key pair can be provided like the following:
 http://0.0.0.0:18080/getkeyslast?body=["key_pre1", "key1", "key_pre2", "key2", ... "key_preN", "keyN"]
 
 ```
-  
+
 ### POST REQUESTS
 
 
@@ -272,7 +272,7 @@ POST: http://0.0.0.0:18080/iterjson
 BODY: {"keys":"g3_u*"}
 ```
 To test this API,
-You could  post a few values against keys with putjson, for example 
+You could  post a few values against keys with putjson, for example
 
 ```
 BODY:
@@ -288,7 +288,7 @@ BODY:
 {"key":"g3_u3", "value":{"msg":"m3"}}
 
 ```
-and then check the results by 
+and then check the results by
 ```
 POST: http://0.0.0.0:18080/iterjson
 BODY: {"keys":"g3_u*"}
@@ -339,7 +339,7 @@ put:[
     {"key":"g2_u2", "value":{"msg":"m2"}},
     {"key":"g3_u3", "value":{"msg":"m3"}}
     }],
-remove:["g1_u1","g1_u2", "g3_u3"]   
+remove:["g1_u1","g1_u2", "g3_u3"]
 
 }
 
@@ -352,19 +352,19 @@ remove:["g1_u1","g1_u2", "g3_u3"]
  4) If you have a number of remove operations and no puts then use  ../remove/atom (and not ../atom)
 
 
-vi) Autogenerate key and make a key value pair given a key-prefix and value 
-``` 
+vi) Autogenerate key and make a key value pair given a key-prefix and value
+```
 POST: http://0.0.0.0:18080/make
 BODY:
 {"prefix":"MSGID_","value":"101"}
 
 ```
-* returns the key value pair as json object; if "key" is specified along with prefix 
+* returns the key value pair as json object; if "key" is specified along with prefix
 then a key is formed with prefix+key and no key generation occurs
 
 vii) provide a prefix, key pair for which all keys (along with values) greater than the passed key,
-   starting with the prefix are returned 
-   
+   starting with the prefix are returned
+
 ```
 POST: http://0.0.0.0:18080/getkeysafter
 BODY:
@@ -380,8 +380,8 @@ BODY:
 ```
 
 viii) provide a prefix, key pair for which the highest key (along with value and index) greater than the passed key,
-   starting with the prefix is returned 
-   
+   starting with the prefix is returned
+
 ```
 POST: http://0.0.0.0:18080/getkeyslast
 BODY:
@@ -407,7 +407,7 @@ Next add a prefix and suffix to the "subkey" and find values mapped against the 
 To add prefix, an array of prefix, suffix pairs is supplied to come up with relevant values.
 This provides a way to having multiple results from a well-formed main key item.
 
-The first item in the result set is the array of "subkeys". 
+The first item in the result set is the array of "subkeys".
 The second item in the result set is a json object whose attributes are the "formed keys" (from prefix, suffix)
 with relevant values placed against each attribute.
 
@@ -419,7 +419,7 @@ It's preferable to use the POST method in this case.
 GET:
 http://localhost:18080/getjoinedmap?body=
 { 	"keys":"roomkeys_*","splitby":"_","selindex":5,
-	"join":[{"prefix":"usercount_","suffix":""}, 
+	"join":[{"prefix":"usercount_","suffix":""},
 		    {"prefix":"messagecount_","suffix":""},
 		    {"prefix":"notificationcount_","suffix":"user"}
 		   ]
@@ -431,7 +431,7 @@ http://localhost:18080/getjoinedmap?body=
 POST: http://localhost:18080/getjoinedmap&skip=2&limit=3
 BODY:
 { 	"keys":"roomkeys_*","splitby":"_","selindex":5,
-	"join":[{"prefix":"usercount_","suffix":""}, 
+	"join":[{"prefix":"usercount_","suffix":""},
 		    {"prefix":"messagecount_","suffix":""},
 		    {"prefix":"notificationcount_","suffix":"user"}
 		   ]
@@ -462,7 +462,7 @@ Sample Query Format for
 
 }
 
- 
+
 ```
 
 To test it out,
@@ -498,14 +498,14 @@ BODY:
 }
 ```
 
-Finally, check the results by 
+Finally, check the results by
 POST: http://0.0.0.0:18080/searchjson
 
 So we are able to iterate items (by "keys":"item*") and then run a join operation with the filter attribute ("filter":...) through the keyword map ({"map": {"field":"seller_id", "as":"seller"}})
 
-v8 engine has been integrated to support scripting in server side to further filter/sort queried results. 
+v8 engine has been integrated to support scripting in server side to further filter/sort queried results.
 
-Now the post body looks like the following 
+Now the post body looks like the following
 with the js based extended filtering:
 
 ```
@@ -530,7 +530,7 @@ function jsFilter() {
     var args = JSON.parse(arguments[1]);
     var match = 0;
     if(elem.approved == args.approved) {
-        match = 1;        
+        match = 1;
     }
 
     return match;
@@ -547,7 +547,7 @@ We are invoking the JS module and the function while finding and iterating the m
 
 It is up to the user to interpret the params in the server side and write the script codes accordingly.
 
-In our example, we named the function - "jsFilter" in main.js. 
+In our example, we named the function - "jsFilter" in main.js.
 
 Quarks will allow minimum usage of scripting to ensure the server side codes remain super optimized.
 
@@ -600,17 +600,17 @@ Reader nodes are dedicated for only data reading related api calls.
 This helps serving huge amount of requests because the readers are plain replica of writer node.
 
 Conceptual flow:
-												 	   
-user->write apis-> [writer] -> [broker] -> [reader] <-read apis<-user	
 
-("/put" is an example of write api and "/get" is read api example)								       
+user->write apis-> [writer] -> [broker] -> [reader] <-read apis<-user
+
+("/put" is an example of write api and "/get" is read api example)
 
 Following are the commands to start up broker, writer and readers:
 
 Start broker node:
 ```
  ./ocv_microservice_crow -port 18081 -broker tcp://*:5555
- 
+
 ```
 * Opens a socket for communication in port 5555 to accept writer requests
   Opens a publisher at port 5556 port for subscribers(i.e readers) to listen to
@@ -635,13 +635,13 @@ Quarks can send all put and remove requests made in it's core db to a logger
 
 To specify the address of the logger start by specifying the log parameter:
 ```
-./ocv_microservice_crow -port 18080 -log http://localhost:18081 
+./ocv_microservice_crow -port 18080 -log http://localhost:18081
 
 ```
 
-This means a logger has been started at port 18081 and listening to 
+This means a logger has been started at port 18081 and listening to
 http://localhost:18081/putjson and http://localhost:18081/remove api calls.
-These apis respectively get invoked whenever a put or remove operation has been made in the core db 
+These apis respectively get invoked whenever a put or remove operation has been made in the core db
 
 
 If you start another quarks server in the 18081 port specifying a new database, it simply becomes a replica node
@@ -651,7 +651,7 @@ If you start another quarks server in the 18081 port specifying a new database, 
 ```
 
 Instead of a Quarks server, you can start any server which implements and handles
-http://localhost:18081/putjson and http://localhost:18081/remove api calls 
+http://localhost:18081/putjson and http://localhost:18081/remove api calls
 
 ### WEBSOCKETS
 Websocket support has been added (Not the strongest point of Quarks yet and needs improvement).
@@ -670,7 +670,7 @@ sock.onopen = ()=>{
     console.log('open')
     var joinData = {"join":"defaultroom"};
     sock.send(JSON.stringify(joinData));
-    
+
     // if needed to broadcast to the room about joining/presence and leave (optional)
     // add broadcast attribute.
     // ex. var joinData = {"join":"defaultroom", "broadcast":"online", "notifyOnLeave":"true"};
@@ -695,17 +695,17 @@ sock.onclose = ()=>{
 $("#send").click(()=>{
     var msgbody = $("#msg").val();
 
-    var dataToSend = {"payload": 
+    var dataToSend = {"payload":
                         {
                             "room":"defaultroom",
-                            "to":""+friendId                        
+                            "to":""+friendId
                         },
                       "data":"" + msgBody
                   };
 
     sock.send(JSON.stringify(dataToSend));
     $("#msg").val("");
-    
+
 });
 
 $("#msg").keypress(function(e){
@@ -746,8 +746,8 @@ Quarks has plans for plugins integration.
 Currently, only OpenCV is provided as a plugin (codes commented).
 
 For those interested in testing OpenCV as plugin (uncommenting the relevant codes),
-you should submit a POST request to http://localhost:18080/filters/gausian. 
-The body of this request should be your binary PNG image. 
+you should submit a POST request to http://localhost:18080/filters/gausian.
+The body of this request should be your binary PNG image.
 The response should be a gausian filtered image from the submited image.
 
 OpenCV however is a plugin (an additional feature) and not the main purpose behind Quarks.
@@ -756,47 +756,47 @@ Currently it is turned off by using #ifdef _USE_PLUGIN in the codes and if (_USE
 
 ### EDITOR
 
-A browser based editor has been provided to run Quarks queries and visualize and update data in a JSON Editor 
+A browser based editor has been provided to run Quarks queries and visualize and update data in a JSON Editor
 (Thanks to https://github.com/json-editor/json-editor).
 To view the editor at work,
 Copy the "templates" folder inside "/examples" in the "build" folder and then hit the following in browser:
-http://0.0.0.0:18080/home 
+http://0.0.0.0:18080/home
 
 Definitely Quarks has to be running to view the editor
 
 
-### Quick Start: Dependencies installation for Ubuntu 18.04 
+### Quick Start: Dependencies installation for Ubuntu 18.04
 
  environment setup (assuming cmake already installed):
- 
+
  -$ sudo apt-get update -y
- 
+
  -$ sudo apt-get install build-essential
-  
+
  -$ sudo apt-get install ninja-build
- 
+
 
  main dependency libraries installation:
 
  -$ sudo apt-get install libboost-system-dev
- 
+
  -$ sudo apt-get install libv8-dev
- 
+
  -$ sudo apt-get install librocksdb-dev
- 
+
  -$ sudo apt-get install libzmq3-dev
-  
+
  Build and Run:
  Check #How to Build section for compilation and binary creation and #Run section for how to run
- 
- ## Docker setup (Currently disfunctional):
+
+ ## Docker setup:
  To build the docker image:
  ```
- docker build -t quarks:disco-gcc8
+ docker build -t quarks:ubuntu-21.04 .
  ```
 
  To run the docker image:
  ```
- docker run -it -v $PWD:/quarks -p 18080:18080 --cap-add sys_ptrace quarks:disco-gcc
+ docker run -it -v $PWD:/quarks -p 18080:18080 --cap-add sys_ptrace quarks:ubuntu-21.04
  ```
 

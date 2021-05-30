@@ -7,12 +7,12 @@
 #include <string>
 #include <functional>
 
-#define _V8_NO_LATEST
+#define _V8_LATEST
 
-#include "v8.h"
+#include <v8.h>
 
 #ifdef _V8_LATEST
-#include "libplatform/libplatform.h"
+#include <libplatform/libplatform.h>
 #endif
 
 
