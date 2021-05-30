@@ -1,19 +1,21 @@
 
 # quarks
-A modern C++ based server side framework for optimal solutions
+A modern C++ based off-the-shelf server framework for storing, retrieving, processing data with high scalability and plugging in business logics.
 
 Quarks provides a highly scalable and distributable open source system based on actor model which can be easily deployed in closed networks. 
-The ultimate aim is to come up with open source solutions to well known problems like chatting/image & video processing/transcoding/voice recognition etc. thus reducing dependencies on cloud platforms like AWS and GCP. 
+The ultimate aim is to come up with open source solutions to well known problems like chatting, image/video processing, transcoding, voice recognition etc. thus reducing dependencies 
+on cloud platforms like AWS and GCP. 
 Standardized chat and feed systems would eliminate the need to make private data available to public social networks, thus provisioning to safeguard user's own valuable data. 
 Adding a new functionality or solution should be as easy as spinning up a new Quarks node and integrate it to the system following a few guidelines.
 
-The core implementation concept, philosophy behind quering techniques, architecture plan and technical guidance can be found in this link:
+The core implementation concept, guidance and inspiration behind quarks can be found in this link:
 [quarks philosophy](https://dev.to/lucpattyn/quarks-a-new-approach-with-a-new-mindset-to-programming-10lk)
 
 Thanks Arthur de Araújo Farias for providing a good example of using CROW with OpenCV to use as a template.
 [arthurafarias/microservice-opencv-filter-gausian]
 
-This current example uses a compiled version of RocksDB, Chrome v8 Engine and ZeroMQ and requires the following packages:
+The current codebase uses a compiled version of RocksDB, Chrome v8 Engine and ZeroMQ.
+It requires the following packages:
 
 - Crow Library v0.1
 - GCC with support to C++17
@@ -24,17 +26,6 @@ This current example uses a compiled version of RocksDB, Chrome v8 Engine and Ze
 - ZeroMQ 
 - OpenCV 4.0.0 (Optional)
 - Curl (Experimental Optional)
-
-## Docker setup
-To build the docker image:
-```
-docker build -t quarks:disco-gcc8
-```
-
-To run the docker image:
-```
-docker run -it -v $PWD:/quarks -p 18080:18080 --cap-add sys_ptrace quarks:disco-gcc
-```
 
 ## How to build
 ```
@@ -47,13 +38,16 @@ ninja
 Thanks Tareq Ahmed Siraj  (https://github.com/tareqsiraj) for introduing Ninja,
 made life way easier
 
-### Testing
-
-After initializing by issuing following command
+### Run
 
 ```
 ./ocv_microservice_crow
 ```
+
+### Testing
+
+After running the executable, perform get and post requests as follows:
+
 
 ### GET REQUESTS
 
@@ -158,6 +152,12 @@ http://0.0.0.0:18080/incr?body={"key":"somecounter","step":5}
 Note: Value to increment must be saved as integer with a previous call to put -
 http://0.0.0.0:18081/put?body={"key":"somecounter", "value":1}
 ``` 
+The more advance version is incrval where you can specify the specific attribute (must be integer) to increment
+```
+http://0.0.0.0:18080/incrval?body={"key":"feed_user_johnwick", "value":{"points":3}}
+```
+In the above example if points were previously set as 7, after the API call it becomes 10. 
+Both incr and incrval works with POST methods as well
 
 l) Execute Atoms: Atoms are set of Put and Remove operations which can be executed in a single API call
 
@@ -572,7 +572,7 @@ https://github.com/kaisarh/quarks/tree/dev/benchmark/results?
 fbclid=IwAR2ea_PuZ6drbdg4PUuFfhirXdHC4rtlQ3I1KDR9G-PSaIJlFfA0FXNjUw8
 
 ```
-Thanks Kaisar Haq :)
+Thanks Kaisar Haq (https://github.com/kaisarh) :)
 
 
 After v8 engine integration and scripting support,
@@ -753,9 +753,21 @@ The response should be a gausian filtered image from the submited image.
 OpenCV however is a plugin (an additional feature) and not the main purpose behind Quarks.
 Currently it is turned off by using #ifdef _USE_PLUGIN in the codes and if (_USE_PLUGINS) in CMakeLists.txt
 
+
+### EDITOR
+
+A browser based editor has been provided to run Quarks queries and visualize and update data in a JSON Editor 
+(Thanks to https://github.com/json-editor/json-editor).
+To view the editor at work,
+Copy the "templates" folder inside "/examples" in the "build" folder and then hit the following in browser:
+http://0.0.0.0:18080/home 
+
+Definitely Quarks has to be running to view the editor
+
+
 ### Quick Start: Dependencies installation for Ubuntu 18.04 
 
- environment and compiler setup
+ environment setup (assuming cmake already installed):
  
  -$ sudo apt-get update -y
  
@@ -775,5 +787,16 @@ Currently it is turned off by using #ifdef _USE_PLUGIN in the codes and if (_USE
  -$ sudo apt-get install libzmq3-dev
   
  Build and Run:
- Check #How to Build section for compilation and binary creation and #Testing section for how to run
+ Check #How to Build section for compilation and binary creation and #Run section for how to run
+ 
+ ## Docker setup (Currently disfunctional):
+ To build the docker image:
+ ```
+ docker build -t quarks:disco-gcc8
+ ```
+
+ To run the docker image:
+ ```
+ docker run -it -v $PWD:/quarks -p 18080:18080 --cap-add sys_ptrace quarks:disco-gcc
+ ```
 

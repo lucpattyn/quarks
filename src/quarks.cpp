@@ -630,7 +630,7 @@ bool Core::put(std::string body, std::string& out) {
 
 }
 
-bool Core::put(std::string key, std::string value, std::string& out) {
+bool Core::dump(std::string key, std::string value, std::string& out) {
 	
 	bool ret = false;
 	
@@ -2316,6 +2316,7 @@ bool Core::atom(std::string body, std::string& out) {
 }
 
 /// counting stuff
+
 bool Core::increment(std::string key, int stepBy, std::string& out) {
 	std::lock_guard<std::mutex> _(mtx);
 
@@ -2351,6 +2352,85 @@ bool Core::increment(std::string key, int stepBy, std::string& out) {
 	}
 
 	return ret;
+}
+
+bool Core::incrementValue(std::string body, std::string& out) {
+	
+	auto x = crow::json::load(body);
+
+	if (!x) {
+		CROW_LOG_INFO << "invalid put body" << body;
+		//out = "invalid put body";
+
+		out = "{\"error\": \"Invalid put body\"}";
+
+		return false;
+
+	}
+	
+	std::string key = x["key"].s();
+	//CROW_LOG_INFO << "key found :  " << key;
+
+	std::string result = "true";
+	std::string error = "";
+
+	std::string readValue;
+	bool foundKey = getKeyValuePair(key, readValue, out);
+	if(!foundKey) {
+			result = "false";
+			error = ",\"error\":\"key does not exist\"";
+
+			out = std::string("{") + R"("result":)" + result + error + std::string("}");
+
+			return false;
+	}
+
+	const crow::json::rvalue& xvalue = x["value"];
+	crow::json::wvalue putValue = x["value"];
+	
+	crow::json::rvalue read = crow::json::load(readValue);
+	crow::json::wvalue existingValues = read;
+	
+	std::vector<std::string> putValueKeys = putValue.keys();
+	
+	crow::json::wvalue w;
+	
+	int affected = 0;
+	bool ret = false;
+	// if put values is not an array then check and increment
+	if(putValueKeys.size() > 0) {
+		std::vector<std::string> existingKeys = existingValues.keys();
+
+		for(auto e : existingKeys) {
+			CROW_LOG_INFO << "existing key " << e;
+			
+			if(xvalue.has(e)){
+			
+				const crow::json::rvalue& evalue = read[e];
+				int value = evalue.i();
+				
+				const crow::json::rvalue& pvalue = xvalue[e];				
+				value += pvalue.i();
+					
+				w[e] = value;
+				affected++;		
+					
+			} else{
+				w[e] = std::move(existingValues[e]);
+			}
+			
+		}	
+		
+		std::string writeValue = crow::json::dump(w);
+		ret = dump(key, writeValue, out);
+	}
+
+	if(ret){
+		out = std::string("{") + R"("result":)" + std::to_string(affected) + std::string("}");
+	}
+	
+	return  true;
+
 }
 
 // backup and restore

@@ -36,8 +36,13 @@ namespace Quarks {
 			bool insert(bool failIfExists, std::string body, std::string& out);
 			bool post(std::string body, std::string& out);
 			bool put(std::string body, std::string& out);
-			bool put(std::string key, std::string value, std::string& out);
-
+			
+			// dump is direct dump to db
+			bool dump(std::string key, std::string value, std::string& out); 
+			inline bool put(std::string key, std::string value, std::string& out){
+				return dump(key, value, out);
+			}
+		
 			bool putPair(crow::json::rvalue& pair, std::string& out);
 
 			bool putAtom(crow::json::rvalue& x, std::string& out);
@@ -113,6 +118,7 @@ namespace Quarks {
 			/// counting stuff
 			std::mutex mtx;
 			bool increment(std::string key, int stepBy, std::string& out);
+			bool incrementValue(std::string body, std::string& out);
 
 			// backup and restore
 			bool backup(std::string path);
