@@ -1,0 +1,673 @@
+<html>
+<body>
+<!-- #######  YAY, I AM THE SOURCE EDITOR! #########-->
+<h1>quarks</h1>
+<p>A modern C++ based off-the-shelf server framework for storing, retrieving, processing data with high scalability and plugging in business logics.</p>
+<p>Quarks provides a highly scalable and distributable open source system based on actor model which can be easily deployed in closed networks. The ultimate aim is to come up with open source solutions to well known problems like chatting, image/video processing, transcoding, voice recognition etc. thus reducing dependencies on cloud platforms like AWS and GCP. Standardized chat and feed systems would eliminate the need to make private data available to public social networks, thus provisioning to safeguard user's own valuable data. Adding a new functionality or solution should be as easy as spinning up a new Quarks node and integrate it to the system following a few guidelines.</p>
+<p>The core implementation concept, guidance and inspiration behind quarks can be found in this link:&nbsp;<a href="https://dev.to/lucpattyn/quarks-a-new-approach-with-a-new-mindset-to-programming-10lk" rel="nofollow">quarks philosophy</a></p>
+<p>Thanks Arthur de Ara&uacute;jo Farias for providing a good example of using CROW with OpenCV to use as a template. [arthurafarias/microservice-opencv-filter-gausian]</p>
+<p>The current codebase uses a compiled version of RocksDB, Chrome v8 Engine and ZeroMQ. It requires the following packages:</p>
+<ul>
+<li>Crow Library v0.1</li>
+<li>GCC with support to C++17</li>
+<li>Cmake 1.13</li>
+<li>Boost::System</li>
+<li>RocksDB</li>
+<li>v8 Javascript Engine</li>
+<li>ZeroMQ</li>
+<li>OpenCV 4.0.0 (Optional)</li>
+<li>Curl (Experimental Optional)</li>
+</ul>
+<h2><a id="user-content-how-to-build" class="anchor" href="https://github.com/lucpattyn/quarks#how-to-build" aria-hidden="true"></a>How to build</h2>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>mkdir build
+cd build
+cmake .. -G Ninja
+ninja
+</code></pre>
+</div>
+<p>Thanks Tareq Ahmed Siraj (<a href="https://github.com/tareqsiraj">https://github.com/tareqsiraj</a>) for introduing Ninja, made life way easier</p>
+<h3><a id="user-content-run" class="anchor" href="https://github.com/lucpattyn/quarks#run" aria-hidden="true"></a>Run</h3>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>./ocv_microservice_crow
+</code></pre>
+</div>
+<h3><a id="user-content-testing" class="anchor" href="https://github.com/lucpattyn/quarks#testing" aria-hidden="true"></a>Testing</h3>
+<p>After running the executable, perform get and post requests as follows:</p>
+<h3><a id="user-content-get-requests" class="anchor" href="https://github.com/lucpattyn/quarks#get-requests" aria-hidden="true"></a>GET REQUESTS</h3>
+<h3><a id="user-content-description" class="anchor" href="https://github.com/lucpattyn/quarks#description" aria-hidden="true"></a>Description</h3>
+<p>a) Put key vs value</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code> http://0.0.0.0:18080/put?body={"key":"g1_u1","value":{"msg":"m1"}}
+</code></pre>
+</div>
+<p>It is recommended to "URI encode" the body parameters . Example JS codes:</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code> jsonobj = {"key":"g1_u1", "value":{"msg":"m1"}}
+ var url = "put?body=" + encodeURIComponent(JSON.stringify(jsonobj));
+
+ $.get(url, function( data ) {
+     $( ".result" ).html( data );
+ });
+
+</code></pre>
+</div>
+<p>*If request is successful then the key would be returned as result</p>
+<p>However, GET type of requests have a limitation with parameter lengths and body param cannot be too big. In those cases you have to use the methods in POST section (putjson, postjson etc.)</p>
+<p>b) Get value against key</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code> http://0.0.0.0:18080/get?key=g1_u1
+</code></pre>
+</div>
+<p>c) List values by wildcard search with keys (you can specifiy skip and limit optionally)</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code> http://0.0.0.0:18080/getall?keys=g1_u*&amp;skip=5&amp;limit=10
+</code></pre>
+</div>
+<p>d) List sorted values by wildcard search with keys (you can specifiy skip and limit optionally)</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code> http://0.0.0.0:18080/getsorted?keys=g1_u*&amp;sortby=msg&amp;skip=5&amp;limit=10
+
+</code></pre>
+</div>
+<p>You can reverse the order by specifying des=true</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code> http://0.0.0.0:18080/getsorted?keys=g1_u*&amp;sortby=msg&amp;des=true&amp;skip=5&amp;limit=10
+
+</code></pre>
+</div>
+<p>Apply equal-to filter on a value (using eq) :</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>http://0.0.0.0:18080/getsorted?keys=g1_u*&amp;skip=0&amp;limit=10&amp;filter={"where":{"messageTo":{"eq":"u2"}}}
+
+</code></pre>
+</div>
+<p>Apply equal-to filter on a value performing multiple comparisons (using eq_any):</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>http://0.0.0.0:18080/getsorted?keys=g1_u*&amp;filter={"where":{"messageTo":{"eq_any":["u2","u4"]}}}
+
+</code></pre>
+</div>
+<p>e) List keys vs values by wildcard search with keys (you can specifiy skip and limit optionally)</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code> http://0.0.0.0:18080/getkeys?keys=g1_u*&amp;skip=5&amp;limit=10
+</code></pre>
+</div>
+<p>To get the keys in reverse order run</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>http://0.0.0.0:18080/getkeys?keys=g1_u*&amp;skip=5&amp;limit=10&amp;reverse=true
+</code></pre>
+</div>
+<p>f) Get count of keys matched by wildcard search</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>http://0.0.0.0:18080/getcount?keys=g1*
+</code></pre>
+</div>
+<p>g) remove a key</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>http://0.0.0.0:18080/remove?key=g1_u1
+</code></pre>
+</div>
+<p>number of keys successfully deleted would be returned</p>
+<p>h) remove keys by wildcard search</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>http://0.0.0.0:18080/removeall?keys=g1_u*
+</code></pre>
+</div>
+<p>number of keys successfully deleted would be returned</p>
+<p>i) check if a key already exists</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>http://0.0.0.0:18080/exists?key=g1_u1
+</code></pre>
+</div>
+<p>j) get a list of key value pair given a list of keys</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>http://0.0.0.0:18080/getlist?body=["g1_u1", "g2_u2"]
+</code></pre>
+</div>
+<p>(You can specify skip and limit to this as well but should not need it)</p>
+<p>k) increment a value saved as integer by a specified amount</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>http://0.0.0.0:18080/incr?body={"key":"somecounter","step":5}
+
+Note: Value to increment must be saved as integer with a previous call to put -
+http://0.0.0.0:18081/put?body={"key":"somecounter", "value":1}
+</code></pre>
+</div>
+<p>The more advance version is incrval where you can specify the specific attribute (must be integer) to increment</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>http://0.0.0.0:18080/incrval?body={"key":"feed_user_johnwick", "value":{"points":3}}
+</code></pre>
+</div>
+<p>In the above example if points were previously set as 7, after the API call it becomes 10. Both incr and incrval works with POST methods as well</p>
+<p>l) Execute Atoms: Atoms are set of Put and Remove operations which can be executed in a single API call</p>
+<p>To run a set of put operations together, run:</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>POST: http://0.0.0.0:18080/put/atom?body=
+[
+{"key":"g1_u2", "value":{"msg":"m1"}},
+{"key":"g2_u2", "value":{"msg":"m2"}},
+{"key":"g3_u3", "value":{"msg":"m3"}}
+]
+
+</code></pre>
+</div>
+<p>To run a set of remove operations together, run:</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>POST: http://0.0.0.0:18080/remove/atom?body=
+["g1_u1","g1_u2", "g3_u3"]
+
+</code></pre>
+</div>
+<p>To run a set of remove operations followed by a set of put operations, run:</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>POST: http://0.0.0.0:18080/atom?body=
+{
+put:[
+{"key":"g1_u2", "value":{"msg":"m1"}},
+{"key":"g2_u2", "value":{"msg":"m2"}},
+{"key":"g3_u3", "value":{"msg":"m3"}}
+}],
+remove:["g1_u1","g1_u2", "g3_u3"]
+
+}
+
+</code></pre>
+</div>
+<ul>
+<li>Notes about Atoms,
+<ol>
+<li>"Remove" operations will always be executed before "Put" in ../atom call</li>
+<li>Atoms should be used sparingly - if you have only a single put/remove operation then, use the put/remove apis provided for the specific purpose, not atomic ones</li>
+<li>If you have a number of put operations and no removes then use ../put/atom (and not ../atom)</li>
+<li>If you have a number of remove operations and no puts then use ../remove/atom (and not ../atom)</li>
+</ol>
+</li>
+</ul>
+<p>m) autogenerate key with prefix and value provided</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code> http://0.0.0.0:18080/make?body={"prefix":"dev_","value":"101"}
+
+</code></pre>
+</div>
+<ul>
+<li>returns the key value pair as json object; if "key" is specified along with prefix then a key is formed with prefix+key and no key generation occurs</li>
+</ul>
+<p>n) provide a prefix, key pair for which all keys (along with values) greater than the passed key, starting with the prefix are returned</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>http://0.0.0.0:18080/getkeysafter?body=["key_prefix", "comparekey"]
+
+</code></pre>
+</div>
+<p>Multiple prefix, key pair can be provided like the following:</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>http://0.0.0.0:18080/getkeysafter?body=["key_pre1", "key1", "key_pre2", "key2", ... "key_preN", "keyN"]
+
+</code></pre>
+</div>
+<p>o) provide a prefix, key pair for which the highest key (along with values and index) greater than the passed key, starting with the prefix is returned</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>http://0.0.0.0:18080/getkeyslast?body=["key_prefix", "comparekey"]
+
+</code></pre>
+</div>
+<p>Multiple prefix, key pair can be provided like the following:</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>http://0.0.0.0:18080/getkeyslast?body=["key_pre1", "key1", "key_pre2", "key2", ... "key_preN", "keyN"]
+
+</code></pre>
+</div>
+<h3><a id="user-content-post-requests" class="anchor" href="https://github.com/lucpattyn/quarks#post-requests" aria-hidden="true"></a>POST REQUESTS</h3>
+<h3><a id="user-content-description-1" class="anchor" href="https://github.com/lucpattyn/quarks#description-1" aria-hidden="true"></a>Description</h3>
+<p>i) Put a json object against a key: POST:&nbsp;<a href="http://0.0.0.0:18080/putjson" rel="nofollow">http://0.0.0.0:18080/putjson</a></p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>BODY:
+{"key":"g3_u3", "value":{ "msg":"m3"}}
+</code></pre>
+</div>
+<p>Note: In the json body, it is required to have a "key" attribute and a "value" attribute as a part of the json object. The json object {"msg":"m3"} under attribute "value" is saved against the key "g3_u3" in the persistent storage</p>
+<p>If the intention is to insert only if the key doesn't exist then use the following api:</p>
+<p>POST:&nbsp;<a href="http://0.0.0.0:18080/postjson" rel="nofollow">http://0.0.0.0:18080/postjson</a></p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>BODY:
+{"key":"g3_u3", "value":{ "msg":"m3"}}
+</code></pre>
+</div>
+<p>If the key already exists then the call fails. This is more useful than calling the "exists" api to check if key exists and then call putjson, since it's reduces an extra api call</p>
+<p>ii) Retrieve the json object by key: POST:&nbsp;<a href="http://0.0.0.0:18080/getjson" rel="nofollow">http://0.0.0.0:18080/getjson</a></p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>BODY: {"key":"g3_u3"}
+</code></pre>
+</div>
+<p>iii) Retrieve an array of json objects by wildcard matching of keys.. POST:&nbsp;<a href="http://0.0.0.0:18080/iterjson" rel="nofollow">http://0.0.0.0:18080/iterjson</a></p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>BODY: {"keys":"g3_u*"}
+</code></pre>
+</div>
+<p>To test this API, You could post a few values against keys with putjson, for example</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>BODY:
+POST: http://0.0.0.0:18080/putjson
+{"key":"g1_u2", "value":{"msg":"m1"}}
+
+POST: http://0.0.0.0:18080/putjson
+BODY:
+{"key":"g2_u2", "value":{"msg":"m2"}}
+
+POST: http://0.0.0.0:18080/putjson
+BODY:
+{"key":"g3_u3", "value":{"msg":"m3"}}
+
+</code></pre>
+</div>
+<p>and then check the results by</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>POST: http://0.0.0.0:18080/iterjson
+BODY: {"keys":"g3_u*"}
+</code></pre>
+</div>
+<p>iv) Get a list of key value pair given a list of keys</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>POST: http://0.0.0.0:18080/getlist
+BODY: ["g1_u1", "g2_u2"]
+
+</code></pre>
+</div>
+<p>(You can specify skip and limit as query parameters but should not need it)</p>
+<p>v) Execute Atoms: Atoms are set of Put and Remove operations which can be executed in a single API call</p>
+<p>To run a set of put operations together, run:</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>POST: http://0.0.0.0:18080/put/atom
+
+BODY:
+[
+    {"key":"g1_u2", "value":{"msg":"m1"}},
+    {"key":"g2_u2", "value":{"msg":"m2"}},
+    {"key":"g3_u3", "value":{"msg":"m3"}}
+]
+
+</code></pre>
+</div>
+<p>To run a set of remove operations together, run:</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>POST: http://0.0.0.0:18080/remove/atom
+
+BODY:
+["g1_u1","g1_u2", "g3_u3"]
+
+</code></pre>
+</div>
+<p>To run a set of remove operations followed by a set of put operations, run:</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>POST: http://0.0.0.0:18080/atom
+
+BODY:
+{
+put:[
+    {"key":"g1_u2", "value":{"msg":"m1"}},
+    {"key":"g2_u2", "value":{"msg":"m2"}},
+    {"key":"g3_u3", "value":{"msg":"m3"}}
+    }],
+remove:["g1_u1","g1_u2", "g3_u3"]
+
+}
+
+</code></pre>
+</div>
+<ul>
+<li>Notes about Atoms,</li>
+</ul>
+<ol>
+<li>"Remove" operations will always be executed before "Put" in ../atom call</li>
+<li>Atoms should be used sparingly - if you have only a single put/remove operation then, use the put/remove apis provided for the specific purpose, not atomic ones</li>
+<li>If you have a number of put operations and no removes then use ../put/atom (and not ../atom)</li>
+<li>If you have a number of remove operations and no puts then use ../remove/atom (and not ../atom)</li>
+</ol>
+<p>vi) Autogenerate key and make a key value pair given a key-prefix and value</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>POST: http://0.0.0.0:18080/make
+BODY:
+{"prefix":"MSGID_","value":"101"}
+
+</code></pre>
+</div>
+<ul>
+<li>returns the key value pair as json object; if "key" is specified along with prefix then a key is formed with prefix+key and no key generation occurs</li>
+</ul>
+<p>vii) provide a prefix, key pair for which all keys (along with values) greater than the passed key, starting with the prefix are returned</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>POST: http://0.0.0.0:18080/getkeysafter
+BODY:
+["key_prefix", "key"]
+
+</code></pre>
+</div>
+<p>Multiple prefix, key pair can be provided like the following:</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>POST: http://0.0.0.0:18080/getkeysafter
+BODY:
+["key_pre1", "key1", "key_pre2", "key2", ... "key_preN", "keyN"]
+
+</code></pre>
+</div>
+<p>viii) provide a prefix, key pair for which the highest key (along with value and index) greater than the passed key, starting with the prefix is returned</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>POST: http://0.0.0.0:18080/getkeyslast
+BODY:
+["key_prefix", "key"]
+
+</code></pre>
+</div>
+<p>Multiple prefix, key pair can be provided like the following:</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>POST: http://0.0.0.0:18080/getkeyslast
+BODY:
+["key_pre1", "key1", "key_pre2", "key2", ... "key_preN", "keyN"]
+
+</code></pre>
+</div>
+<h3><a id="user-content-joins-and-filters" class="anchor" href="https://github.com/lucpattyn/quarks#joins-and-filters" aria-hidden="true"></a>Joins and Filters</h3>
+<p>In practical situaions, the need arose to incorporate the getjoinedmap api which joins multiple resultsets in a single query. What this api does is take a wildcard argument to iterate a range of keys (main keys). Then find a "subkey" inside each main key by splitting the key with a delimeter (splitby) and selecting one of the split tokens (selindex). Next add a prefix and suffix to the "subkey" and find values mapped against the newly "formed key". To add prefix, an array of prefix, suffix pairs is supplied to come up with relevant values. This provides a way to having multiple results from a well-formed main key item.</p>
+<p>The first item in the result set is the array of "subkeys". The second item in the result set is a json object whose attributes are the "formed keys" (from prefix, suffix) with relevant values placed against each attribute.</p>
+<p>You can specify skip and limit in this query as well.</p>
+<p>It's preferable to use the POST method in this case.</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>GET:
+http://localhost:18080/getjoinedmap?body=
+{ 	"keys":"roomkeys_*","splitby":"_","selindex":5,
+	"join":[{"prefix":"usercount_","suffix":""},
+		    {"prefix":"messagecount_","suffix":""},
+		    {"prefix":"notificationcount_","suffix":"user"}
+		   ]
+}&amp;skip=2&amp;limit=3
+
+</code></pre>
+</div>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>POST: http://localhost:18080/getjoinedmap&amp;skip=2&amp;limit=3
+BODY:
+{ 	"keys":"roomkeys_*","splitby":"_","selindex":5,
+	"join":[{"prefix":"usercount_","suffix":""},
+		    {"prefix":"messagecount_","suffix":""},
+		    {"prefix":"notificationcount_","suffix":"user"}
+		   ]
+}
+
+</code></pre>
+</div>
+<ul>
+<li>All attributes (keys, splitby, selindex, join) mentioned above are mandatory but values can be left as empty strings. For example, if no prefix or suffix joining is needed, then prefix and suffix can be kept as empty strings.</li>
+</ul>
+<p>There is also provision to run ORM style queries with searchjson and applying filters</p>
+<p>POST:&nbsp;<a href="http://0.0.0.0:18080/searchjson" rel="nofollow">http://0.0.0.0:18080/searchjson</a></p>
+<p>Sample Query Format for "querying items which are up for sale with key like item* (i.e item1, item2 etc.) , then find the sellers of such items (items has a seller_id field that contains the user_id of the seller) "</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>{
+    "keys":"item*",
+    "include":{
+        "map": {"field":"seller_id", "as":"seller"},
+        "module":"main",
+        "filter":"jsFilter",
+        "params":"{\"approved\":1}"
+    }
+
+}
+
+
+</code></pre>
+</div>
+<p>To test it out, First insert some users-&gt;</p>
+<p>POST:&nbsp;<a href="http://0.0.0.0:18080/putjson" rel="nofollow">http://0.0.0.0:18080/putjson</a>&nbsp;BODY:</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>{"key":"user1", "value":{"name":"u1", "age":34}}
+{"key":"user2", "value":{"name":"u2", "age":43}}
+</code></pre>
+</div>
+<p>then insert some items-&gt; POST:&nbsp;<a href="http://0.0.0.0:18080/putjson" rel="nofollow">http://0.0.0.0:18080/putjson</a>&nbsp;BODY:</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>{
+"key":"item1",
+"value":{
+"id": "item1",
+"seller_id": "user1",
+"rating": 4,
+"approved": "1"
+}
+
+{
+"key":"item2",
+"value":{
+"id": "item2",
+"seller_id": "user2",
+"rating": 3,
+"approved": "1"
+}
+</code></pre>
+</div>
+<p>Finally, check the results by POST:&nbsp;<a href="http://0.0.0.0:18080/searchjson" rel="nofollow">http://0.0.0.0:18080/searchjson</a></p>
+<p>So we are able to iterate items (by "keys":"item*") and then run a join operation with the filter attribute ("filter":...) through the keyword map ({"map": {"field":"seller_id", "as":"seller"}})</p>
+<p>v8 engine has been integrated to support scripting in server side to further filter/sort queried results.</p>
+<p>Now the post body looks like the following with the js based extended filtering:</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>{
+"keys":"item*",
+    "include":{
+        "map": {"field":"seller_id", "as":"seller"},
+        "module":"main",
+        "filter":"jsFilter",
+        "params":"{\"approved\":1}"
+    }
+
+}
+
+</code></pre>
+</div>
+<p>And the JS in server side looks like this:</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>function jsFilter() {
+    var elem = JSON.parse(arguments[0]);
+    var args = JSON.parse(arguments[1]);
+    var match = 0;
+    if(elem.approved == args.approved) {
+        match = 1;
+    }
+
+    return match;
+}
+</code></pre>
+</div>
+<p>Here module main is the main.js file residing in the server in the same path as the executable. function is the name of the JS Function which we will use to further filter the data.</p>
+<p>The idea is the mentioned script main.js will have a filter function with a predefined form filter(elem, params), or a sort function with predefined form sort(elem1, elem2, params) to further fitler/sort the data.</p>
+<p>'elem' is an individual item (one of many) found by the Quarks lookup through "keys":"item*" . We are invoking the JS module and the function while finding and iterating the matching items in C++.</p>
+<p>It is up to the user to interpret the params in the server side and write the script codes accordingly.</p>
+<p>In our example, we named the function - "jsFilter" in main.js.</p>
+<p>Quarks will allow minimum usage of scripting to ensure the server side codes remain super optimized.</p>
+<h2><a id="user-content-backup-and-restore" class="anchor" href="https://github.com/lucpattyn/quarks#backup-and-restore" aria-hidden="true"></a>Backup and Restore</h2>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>For backing up the database try:
+http://0.0.0.0:18080/backup?body={"path":"quarks_backup_1"}
+
+To restore simply run quarks next time using the "store" commandline parameter
+ ./ocv_microservice_crow -store quarks_backup_1
+ 
+ -store followed by the path denotes the rocksdb directory path to use when starting quarks
+
+</code></pre>
+</div>
+<h3><a id="user-content-benchmarking" class="anchor" href="https://github.com/lucpattyn/quarks#benchmarking" aria-hidden="true"></a>BENCHMARKING</h3>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>https://github.com/kaisarh/quarks/tree/dev/benchmark/results?
+fbclid=IwAR2ea_PuZ6drbdg4PUuFfhirXdHC4rtlQ3I1KDR9G-PSaIJlFfA0FXNjUw8
+
+</code></pre>
+</div>
+<p>Thanks Kaisar Haq (<a href="https://github.com/kaisarh">https://github.com/kaisarh</a>) :)</p>
+<p>After v8 engine integration and scripting support, the next target was to allow listener support through zero mq to communicate with other processes and services and creating the Quarks Cloud which is partially done.</p>
+<h3><a id="user-content-quarks-cloud" class="anchor" href="https://github.com/lucpattyn/quarks#quarks-cloud" aria-hidden="true"></a>Quarks Cloud</h3>
+<p>Quarks Cloud provides the functionalities for scaling and replicating nodes (through extensive use of ZeroMQ).</p>
+<p>Genearlly each Quarks server is called a core. When we are using the cloud features the cores are called nodes.</p>
+<p>There are three types of nodes:</p>
+<ol>
+<li>Broker Node</li>
+<li>Writer Node</li>
+<li>Reader Node</li>
+</ol>
+<p>Broker nodes are used to publish data across multiple nodes. All writes through api calls are written to a writer node. The writer node sends the message to broker node which publishes to multiple reader nodes. Reader nodes are dedicated for only data reading related api calls. This helps serving huge amount of requests because the readers are plain replica of writer node.</p>
+<p>Conceptual flow:</p>
+<p>user-&gt;write apis-&gt; [writer] -&gt; [broker] -&gt; [reader] &lt;-read apis&lt;-user</p>
+<p>("/put" is an example of write api and "/get" is read api example)</p>
+<p>Following are the commands to start up broker, writer and readers:</p>
+<p>Start broker node:</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code> ./ocv_microservice_crow -port 18081 -broker tcp://*:5555
+
+</code></pre>
+</div>
+<ul>
+<li>Opens a socket for communication in port 5555 to accept writer requests Opens a publisher at port 5556 port for subscribers(i.e readers) to listen to</li>
+</ul>
+<p>Start writer node:</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>./ocv_microservice_crow -port 18082 -writer tcp://localhost:5555
+
+</code></pre>
+</div>
+<ul>
+<li>Connects to broker at port 5555</li>
+</ul>
+<p>Start reader node:</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>./ocv_microservice_crow -port 18083 -reader tcp://localhost:5556
+
+</code></pre>
+</div>
+<ul>
+<li>Listens to broker at port 5556</li>
+<li>There can be multiple readers started in different ports.</li>
+</ul>
+<h3><a id="user-content-logger--replication" class="anchor" href="https://github.com/lucpattyn/quarks#logger--replication" aria-hidden="true"></a>LOGGER / REPLICATION</h3>
+<p>Quarks can send all put and remove requests made in it's core db to a logger</p>
+<p>To specify the address of the logger start by specifying the log parameter:</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>./ocv_microservice_crow -port 18080 -log http://localhost:18081
+
+</code></pre>
+</div>
+<p>This means a logger has been started at port 18081 and listening to&nbsp;<a href="http://localhost:18081/putjson" rel="nofollow">http://localhost:18081/putjson</a>&nbsp;and&nbsp;<a href="http://localhost:18081/remove" rel="nofollow">http://localhost:18081/remove</a>&nbsp;api calls. These apis respectively get invoked whenever a put or remove operation has been made in the core db</p>
+<p>If you start another quarks server in the 18081 port specifying a new database, it simply becomes a replica node</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>./ocv_microservice_crow -store replica -port 18081
+
+</code></pre>
+</div>
+<p>Instead of a Quarks server, you can start any server which implements and handles&nbsp;<a href="http://localhost:18081/putjson" rel="nofollow">http://localhost:18081/putjson</a>&nbsp;and&nbsp;<a href="http://localhost:18081/remove" rel="nofollow">http://localhost:18081/remove</a>&nbsp;api calls</p>
+<h3><a id="user-content-websockets" class="anchor" href="https://github.com/lucpattyn/quarks#websockets" aria-hidden="true"></a>WEBSOCKETS</h3>
+<p>Websocket support has been added (Not the strongest point of Quarks yet and needs improvement).</p>
+<p>#Initiate a socket:</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>var sock = new WebSocket("ws://0.0.0.0:18080/ws?_id=" + userId );
+</code></pre>
+</div>
+<p>*Here userId is the id which would be used to uniquely identify a user, otherwise socket chat fails Usually this id would be used by the other party (i.e a messege sender) to send messages to this user</p>
+<p>#Room join (must join a room to initiate chat):</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>sock.onopen = ()=&gt;{
+    console.log('open')
+    var joinData = {"join":"defaultroom"};
+    sock.send(JSON.stringify(joinData));
+
+    // if needed to broadcast to the room about joining/presence and leave (optional)
+    // add broadcast attribute.
+    // ex. var joinData = {"join":"defaultroom", "broadcast":"online", "notifyOnLeave":"true"};
+}
+
+</code></pre>
+</div>
+<p>#Error Handling</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>sock.onerror = (e)=&gt;{
+    console.log('error',e)
+}
+sock.onclose = ()=&gt;{
+    console.log('close')
+}
+
+</code></pre>
+</div>
+<p>#Message Sending:</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>$("#send").click(()=&gt;{
+    var msgbody = $("#msg").val();
+
+    var dataToSend = {"payload":
+                        {
+                            "room":"defaultroom",
+                            "to":""+friendId
+                        },
+                      "data":"" + msgBody
+                  };
+
+    sock.send(JSON.stringify(dataToSend));
+    $("#msg").val("");
+
+});
+
+$("#msg").keypress(function(e){
+    if (e.which == 13)
+    {
+        $("#send").click();
+    }
+});
+
+</code></pre>
+</div>
+<p>#Message Handling:</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>sock.onmessage = (e)=&gt;{
+    $("#log").val(
+    e.data +"\n" + $("#log").val());
+}
+
+</code></pre>
+</div>
+<p>#List Users in a Room :</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>sock.send(JSON.stringify({"list":""+roomname}));
+sock.onmessage = (e)=&gt;{
+    $("#log").val(
+    "Userlist in room " + roomname + " : " + e.data +"\n" + $("#log").val());
+}
+
+</code></pre>
+</div>
+<p>Quarks has plans for plugins integration.</p>
+<h3><a id="user-content-plugins" class="anchor" href="https://github.com/lucpattyn/quarks#plugins" aria-hidden="true"></a>PLUGINS</h3>
+<p>Currently, only OpenCV is provided as a plugin (codes commented).</p>
+<p>For those interested in testing OpenCV as plugin (uncommenting the relevant codes), you should submit a POST request to&nbsp;<a href="http://localhost:18080/filters/gausian" rel="nofollow">http://localhost:18080/filters/gausian</a>. The body of this request should be your binary PNG image. The response should be a gausian filtered image from the submited image.</p>
+<p>OpenCV however is a plugin (an additional feature) and not the main purpose behind Quarks. Currently it is turned off by using #ifdef _USE_PLUGIN in the codes and if (_USE_PLUGINS) in CMakeLists.txt</p>
+<h3><a id="user-content-editor" class="anchor" href="https://github.com/lucpattyn/quarks#editor" aria-hidden="true"></a>EDITOR</h3>
+<p>A browser based editor has been provided to run Quarks queries and visualize and update data in a JSON Editor (Thanks to&nbsp;<a href="https://github.com/json-editor/json-editor">https://github.com/json-editor/json-editor</a>). To view the editor at work, Copy the "templates" folder inside "/examples" in the "build" folder and then hit the following in browser:&nbsp;<a href="http://0.0.0.0:18080/home" rel="nofollow">http://0.0.0.0:18080/home</a></p>
+<p>Definitely Quarks has to be running to view the editor</p>
+<h3><a id="user-content-quick-start-dependencies-installation-for-ubuntu-1804" class="anchor" href="https://github.com/lucpattyn/quarks#quick-start-dependencies-installation-for-ubuntu-1804" aria-hidden="true"></a>Quick Start: Dependencies installation for Ubuntu 18.04</h3>
+<p>environment setup (assuming cmake already installed):</p>
+<p>-$ sudo apt-get update -y</p>
+<p>-$ sudo apt-get install build-essential</p>
+<p>-$ sudo apt-get install ninja-build</p>
+<p>main dependency libraries installation:</p>
+<p>-$ sudo apt-get install libboost-system-dev</p>
+<p>-$ sudo apt-get install libv8-dev</p>
+<p>-$ sudo apt-get install librocksdb-dev</p>
+<p>-$ sudo apt-get install libzmq3-dev</p>
+<p>Build and Run: Check #How to Build section for compilation and binary creation and #Run section for how to run</p>
+<h2><a id="user-content-docker-setup" class="anchor" href="https://github.com/lucpattyn/quarks#docker-setup" aria-hidden="true"></a>Docker setup:</h2>
+<p>To build the docker image:</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>docker build -t quarks:ubuntu-21.04 .
+</code></pre>
+</div>
+<p>To run the docker image:</p>
+<div class="snippet-clipboard-content position-relative">
+<pre><code>docker run -it -v $PWD:/quarks -p 18080:18080 --cap-add sys_ptrace quarks:ubuntu-21.04</code></pre>
+</div>
+</body>
+</html>

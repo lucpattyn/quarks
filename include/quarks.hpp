@@ -219,6 +219,9 @@ namespace Quarks {
 			void onClose(crow::websocket::connection& conn);
 			bool onMessage(crow::websocket::connection& conn,
 			               const std::string& data, bool is_binary);
+			               
+			bool onQueryMessage(crow::websocket::connection& conn,
+                                  const crow::json::rvalue& rdata, bool is_binary);
 
 
 			Core& Quarks() {

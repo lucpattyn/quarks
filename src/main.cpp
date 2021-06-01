@@ -129,7 +129,7 @@ int main(int argc, char ** argv) {
 
 	QSocket qsock(CROW_ROUTE(app, "/ws"), interceptor);
 
-	QSocket qsockFileUploader(CROW_ROUTE(app, "/ws/files/upload"), QSocket::FileInterceptor("upload"));
+	//QSocket qsockFileUploader(CROW_ROUTE(app, "/ws/files/upload"), QSocket::FileInterceptor("upload"));
 	// end websockets
 
 
@@ -1347,7 +1347,7 @@ int main(int argc, char ** argv) {
 
 	CROW_ROUTE(app, "/chat")
 	([&defaultPageLoader](const crow::request& req) {
-		auto res = defaultPageLoader(req, "ws.html");
+		auto res = defaultPageLoader(req, "chat.html");
 		return res;
 	});
 
@@ -1364,7 +1364,7 @@ int main(int argc, char ** argv) {
 	
 	CROW_ROUTE(app, "/readme")
 	([&readFile](const crow::request& req) {
-		auto result = readFile("templates/README.md");
+		auto result = readFile("templates/readme.html");
 		std::ostringstream os;
 		os << result;
 

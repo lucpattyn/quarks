@@ -201,7 +201,12 @@ function modalPost(){
   	var name = document.getElementById("namebox").value;
 	var content = document.getElementById("contentbox").value;
   
-  	var userInfo = {};
+  	if(name.length < 1){
+  		alert("Must provide username!!");
+  		return;
+  	}
+	
+	var userInfo = {};
   	userInfo.id = "user_" + name;
   	userInfo.name = name;
   	

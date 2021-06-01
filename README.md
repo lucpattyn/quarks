@@ -654,7 +654,7 @@ Instead of a Quarks server, you can start any server which implements and handle
 http://localhost:18081/putjson and http://localhost:18081/remove api calls
 
 ### WEBSOCKETS
-Websocket support has been added (Not the strongest point of Quarks yet and needs improvement).
+Websocket support has been added (Still not optimized).
 
 #Initiate a socket:
 ```
@@ -662,29 +662,28 @@ var sock = new WebSocket("ws://0.0.0.0:18080/ws?_id=" + userId );
 ```
 *Here userId is the id which would be used to uniquely identify a user, otherwise socket chat fails
 Usually this id would be used by the other party (i.e a messege sender) to send messages to this user
+By default all users have a common room named "default" where they are auto joined
 
 
-#Room join  (must join a room to initiate chat):
+#Room join:
 ```
 sock.onopen = ()=>{
-    console.log('open')
-    var joinData = {"join":"defaultroom"};
-    sock.send(JSON.stringify(joinData));
+	console.log('open');
+	// join room
+	sock.send('{"join":"testroom", "notifyjoin":true, "notifyleave":true}');
 
-    // if needed to broadcast to the room about joining/presence and leave (optional)
-    // add broadcast attribute.
-    // ex. var joinData = {"join":"defaultroom", "broadcast":"online", "notifyOnLeave":"true"};
 }
 
 ```
-#Error Handling
+#Error Handling and closing
 
 ```
 sock.onerror = (e)=>{
-    console.log('error',e)
+	console.log('error',e);
 }
+			
 sock.onclose = ()=>{
-    console.log('close')
+    console.log('close');
 }
 
 ```
@@ -692,28 +691,12 @@ sock.onclose = ()=>{
 #Message Sending:
 
 ```
-$("#send").click(()=>{
-    var msgbody = $("#msg").val();
-
-    var dataToSend = {"payload":
-                        {
-                            "room":"defaultroom",
-                            "to":""+friendId
-                        },
-                      "data":"" + msgBody
-                  };
-
-    sock.send(JSON.stringify(dataToSend));
-    $("#msg").val("");
-
-});
-
-$("#msg").keypress(function(e){
-    if (e.which == 13)
-    {
-        $("#send").click();
-    }
-});
+	var msg = {};
+	msg.room = "testroom";
+	msg.send = usrmsg;
+	
+	var m = JSON.stringify(msg);
+	sock.send(m);
 
 ```
 
@@ -721,20 +704,47 @@ $("#msg").keypress(function(e){
 
 ```
 sock.onmessage = (e)=>{
-    $("#log").val(
-    e.data +"\n" + $("#log").val());
-}
-
+			
+		let msg = JSON.parse(e.data);
+		console.log(msg);
+			
+		var room = "";
+		var from = "";
+		var data = "";
+		
+		if(msg["joined"]){
+			room = msg.joined;
+			from = msg.from
+			data = " I am online!";
+			
+		}else if(msg["left"]){
+			room = msg.left;
+			from = msg.from;
+			data = " I went offline!";
+			
+		}else if(msg["data"]){
+			room = msg.room;
+			from = msg.from;
+			data = msg.data;
+			
+		}else if(msg["userlist"]){
+			room = msg.room;
+			data = msg.userlist;
+			from = "system";
+		}
+		
 ```
 
 #List Users in a Room :
 
 ```
-sock.send(JSON.stringify({"list":""+roomname}));
-sock.onmessage = (e)=>{
-    $("#log").val(
-    "Userlist in room " + roomname + " : " + e.data +"\n" + $("#log").val());
-}
+	var msg = {};
+	msg.list = "testroom";
+	msg.skip = 0;
+	msg.limit = -1;
+	
+	var m = JSON.stringify(msg);
+	sock.send(m); // check the message handling (sock.onmessage) section to see how to receive the list
 
 ```
 
@@ -760,10 +770,20 @@ A browser based editor has been provided to run Quarks queries and visualize and
 (Thanks to https://github.com/json-editor/json-editor).
 To view the editor at work,
 Copy the "templates" folder inside "/examples" in the "build" folder and then hit the following in browser:
-http://0.0.0.0:18080/home
+http://localhost:18080/home
 
 Definitely Quarks has to be running to view the editor
 
+
+### EXAMPLES
+
+A guideline is provided for basic twitter like feed and chatrooms.
+
+Copy the "templates" folder inside "/examples" in the "build" folder and then hit the following in browser:
+http://localhost:18080/feed for feed example
+http://localhost:18080/chat for chat example
+
+Definitely Quarks has to be running to view the examples
 
 ### Quick Start: Dependencies installation for Ubuntu 18.04
 
