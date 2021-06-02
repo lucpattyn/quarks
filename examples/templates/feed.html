@@ -178,6 +178,7 @@ body {
 
 // UI modal stuff
 var modalbox = null 
+var modalCloseControl = null;
 function modalComment(){
   if(!modalbox){		
 		createModal('');
@@ -220,6 +221,12 @@ function modalPost(){
 	
 	isReply = false;
   	currentId = "";	
+  	
+  	if(modalCloseControl){
+  		modalCloseControl.click();
+  		modalCloseControl = null;
+	}
+  	
 }
   
 let createModal = (modalContent) => {  
@@ -257,6 +264,7 @@ let createModal = (modalContent) => {
   
   // Close the modal on button-click
   if(modalClose) {
+  	modalCloseControl = modalClose;
     modalClose.addEventListener('click', function() {
       isReply = false;
       

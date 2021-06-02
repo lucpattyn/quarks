@@ -660,9 +660,9 @@ Websocket support has been added (Still not optimized).
 ```
 var sock = new WebSocket("ws://0.0.0.0:18080/ws?_id=" + userId );
 ```
-*Here userId is the id which would be used to uniquely identify a user, otherwise socket chat fails
-Usually this id would be used by the other party (i.e a messege sender) to send messages to this user
-By default all users have a common room named "default" where they are auto joined
+*Here userId is the id which would be used to uniquely identify a user, otherwise socket chat fails.
+Usually this id would be used by the other party (i.e a messege sender) to send messages to this use.r
+By default all users are auto joined to a room named "default".
 
 
 #Room join:
@@ -694,6 +694,9 @@ sock.onclose = ()=>{
 	var msg = {};
 	msg.room = "testroom";
 	msg.send = usrmsg;
+	
+	// to send to a specific user use the following:
+	//msg.to = "useridxxx"; // specifying room is optional in this case
 	
 	var m = JSON.stringify(msg);
 	sock.send(m);
