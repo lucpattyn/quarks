@@ -1,9 +1,6 @@
-<html>
-<body>
-<!-- #######  YAY, I AM THE SOURCE EDITOR! #########-->
-<h1>quarks</h1>
+<h1>uarks</h1>
 <p>A modern C++ based off-the-shelf server framework for storing, retrieving, processing data with high scalability and plugging in business logics.</p>
-<p>Quarks provides a highly scalable and distributable open source system based on actor model which can be easily deployed in closed networks. The ultimate aim is to come up with open source solutions to well known problems like chatting, image/video processing, transcoding, voice recognition etc. thus reducing dependencies on cloud platforms like AWS and GCP. Standardized chat and feed systems would eliminate the need to make private data available to public social networks, thus provisioning to safeguard user's own valuable data. Adding a new functionality or solution should be as easy as spinning up a new Quarks node and integrate it to the system following a few guidelines.</p>
+<p>Quarks provides a highly scalable and distributable open source system based on actor model which can be easily deployed in closed networks. The ultimate aim is to come up with open source solutions to well known problems like chatting, image/video processing, transcoding, voice recognition etc. thus reducing dependencies on cloud platforms like AWS and GCP. Standardized chat and feed systems would eliminate the need to make private data available to public social networks, thus provisioning to safeguard user's own valuable data. Adding a new functionality <a href="https://cubesolve.com/">or solution</a> should be as easy as spinning up a new Quarks node and integrate it to the system following a few guidelines.</p>
 <p>The core implementation concept, guidance and inspiration behind quarks can be found in this link:&nbsp;<a href="https://dev.to/lucpattyn/quarks-a-new-approach-with-a-new-mindset-to-programming-10lk" rel="nofollow">quarks philosophy</a></p>
 <p>Thanks Arthur de Ara&uacute;jo Farias for providing a good example of using CROW with OpenCV to use as a template. [arthurafarias/microservice-opencv-filter-gausian]</p>
 <p>The current codebase uses a compiled version of RocksDB, Chrome v8 Engine and ZeroMQ. It requires the following packages:</p>
@@ -562,81 +559,93 @@ fbclid=IwAR2ea_PuZ6drbdg4PUuFfhirXdHC4rtlQ3I1KDR9G-PSaIJlFfA0FXNjUw8
 </div>
 <p>Instead of a Quarks server, you can start any server which implements and handles&nbsp;<a href="http://localhost:18081/putjson" rel="nofollow">http://localhost:18081/putjson</a>&nbsp;and&nbsp;<a href="http://localhost:18081/remove" rel="nofollow">http://localhost:18081/remove</a>&nbsp;api calls</p>
 <h3><a id="user-content-websockets" class="anchor" href="https://github.com/lucpattyn/quarks#websockets" aria-hidden="true"></a>WEBSOCKETS</h3>
-<p>Websocket support has been added (Not the strongest point of Quarks yet and needs improvement).</p>
+<p>Websocket support has been added (Still not optimized).</p>
 <p>#Initiate a socket:</p>
 <div class="snippet-clipboard-content position-relative">
 <pre><code>var sock = new WebSocket("ws://0.0.0.0:18080/ws?_id=" + userId );
 </code></pre>
 </div>
-<p>*Here userId is the id which would be used to uniquely identify a user, otherwise socket chat fails Usually this id would be used by the other party (i.e a messege sender) to send messages to this user</p>
-<p>#Room join (must join a room to initiate chat):</p>
+<p>*Here userId is the id which would be used to uniquely identify a user, otherwise socket chat fails. Usually this id would be used by the other party (i.e a messege sender) to send messages to this user. By default, all users are auto joined to a room named "default".</p>
+<p>#Room join:</p>
 <div class="snippet-clipboard-content position-relative">
 <pre><code>sock.onopen = ()=&gt;{
-    console.log('open')
-    var joinData = {"join":"defaultroom"};
-    sock.send(JSON.stringify(joinData));
+	console.log('open');
+	// join room
+	sock.send('{"join":"testroom", "notifyjoin":true, "notifyleave":true}');
 
-    // if needed to broadcast to the room about joining/presence and leave (optional)
-    // add broadcast attribute.
-    // ex. var joinData = {"join":"defaultroom", "broadcast":"online", "notifyOnLeave":"true"};
 }
 
 </code></pre>
 </div>
-<p>#Error Handling</p>
+<p>#Error Handling and closing</p>
 <div class="snippet-clipboard-content position-relative">
 <pre><code>sock.onerror = (e)=&gt;{
-    console.log('error',e)
+	console.log('error',e);
 }
+			
 sock.onclose = ()=&gt;{
-    console.log('close')
+    console.log('close');
 }
 
 </code></pre>
 </div>
 <p>#Message Sending:</p>
 <div class="snippet-clipboard-content position-relative">
-<pre><code>$("#send").click(()=&gt;{
-    var msgbody = $("#msg").val();
-
-    var dataToSend = {"payload":
-                        {
-                            "room":"defaultroom",
-                            "to":""+friendId
-                        },
-                      "data":"" + msgBody
-                  };
-
-    sock.send(JSON.stringify(dataToSend));
-    $("#msg").val("");
-
-});
-
-$("#msg").keypress(function(e){
-    if (e.which == 13)
-    {
-        $("#send").click();
-    }
-});
+<pre><code>	var msg = {};
+	msg.room = "testroom";
+	msg.send = usrmsg;
+	
+	// to send to a specific user use the following:
+	//msg.to = "useridxxx"; // specifying room is optional in this case
+	
+	var m = JSON.stringify(msg);
+	sock.send(m);
 
 </code></pre>
 </div>
 <p>#Message Handling:</p>
 <div class="snippet-clipboard-content position-relative">
 <pre><code>sock.onmessage = (e)=&gt;{
-    $("#log").val(
-    e.data +"\n" + $("#log").val());
-}
-
+			
+		let msg = JSON.parse(e.data);
+		console.log(msg);
+			
+		var room = "";
+		var from = "";
+		var data = "";
+		
+		if(msg["joined"]){
+			room = msg.joined;
+			from = msg.from
+			data = " I am online!";
+			
+		}else if(msg["left"]){
+			room = msg.left;
+			from = msg.from;
+			data = " I went offline!";
+			
+		}else if(msg["data"]){
+			room = msg.room;
+			from = msg.from;
+			data = msg.data;
+			
+		}else if(msg["userlist"]){
+			room = msg.room;
+			data = msg.userlist;
+			from = "system";
+		}
+		
 </code></pre>
 </div>
 <p>#List Users in a Room :</p>
 <div class="snippet-clipboard-content position-relative">
-<pre><code>sock.send(JSON.stringify({"list":""+roomname}));
-sock.onmessage = (e)=&gt;{
-    $("#log").val(
-    "Userlist in room " + roomname + " : " + e.data +"\n" + $("#log").val());
-}
+<pre><code>	var msg = {};
+	msg.list = "testroom";
+	msg.skip = 0;
+	msg.limit = -1;
+	
+	var m = JSON.stringify(msg);
+	sock.send(m); // check the message handling (sock.onmessage) section to see how to receive the list
 
 </code></pre>
 </div>
@@ -646,8 +655,12 @@ sock.onmessage = (e)=&gt;{
 <p>For those interested in testing OpenCV as plugin (uncommenting the relevant codes), you should submit a POST request to&nbsp;<a href="http://localhost:18080/filters/gausian" rel="nofollow">http://localhost:18080/filters/gausian</a>. The body of this request should be your binary PNG image. The response should be a gausian filtered image from the submited image.</p>
 <p>OpenCV however is a plugin (an additional feature) and not the main purpose behind Quarks. Currently it is turned off by using #ifdef _USE_PLUGIN in the codes and if (_USE_PLUGINS) in CMakeLists.txt</p>
 <h3><a id="user-content-editor" class="anchor" href="https://github.com/lucpattyn/quarks#editor" aria-hidden="true"></a>EDITOR</h3>
-<p>A browser based editor has been provided to run Quarks queries and visualize and update data in a JSON Editor (Thanks to&nbsp;<a href="https://github.com/json-editor/json-editor">https://github.com/json-editor/json-editor</a>). To view the editor at work, Copy the "templates" folder inside "/examples" in the "build" folder and then hit the following in browser:&nbsp;<a href="http://0.0.0.0:18080/home" rel="nofollow">http://0.0.0.0:18080/home</a></p>
+<p>A browser based editor has been provided to run Quarks queries and visualize and update data in a JSON Editor (Thanks to&nbsp;<a href="https://github.com/json-editor/json-editor">https://github.com/json-editor/json-editor</a>). To view <a href="https://htmleditor.tools/" target="_blank">the editor at</a> work, Copy the "templates" folder inside "/examples" in the "build" folder and then hit the following in browser:&nbsp;<a href="http://localhost:18080/home" rel="nofollow">http://localhost:18080/home</a></p>
 <p>Definitely Quarks has to be running to view the editor</p>
+<h3><a id="user-content-examples" class="anchor" href="https://github.com/lucpattyn/quarks#examples" aria-hidden="true"></a>EXAMPLES</h3>
+<p>A guideline is provided for basic twitter like feed and chatrooms.</p>
+<p>Copy the "templates" folder inside "/examples" in the "build" folder and then hit the following in browser:&nbsp;<a href="http://localhost:18080/feed" rel="nofollow">http://localhost:18080/feed</a>&nbsp;for feed example&nbsp;<a href="http://localhost:18080/chat" rel="nofollow">http://localhost:18080/chat</a>&nbsp;for <a href="https://geekprank.com/chat-screenshot/">chat example</a></p>
+<p>Definitely Quarks has to be running to view the examples</p>
 <h3><a id="user-content-quick-start-dependencies-installation-for-ubuntu-1804" class="anchor" href="https://github.com/lucpattyn/quarks#quick-start-dependencies-installation-for-ubuntu-1804" aria-hidden="true"></a>Quick Start: Dependencies installation for Ubuntu 18.04</h3>
 <p>environment setup (assuming cmake already installed):</p>
 <p>-$ sudo apt-get update -y</p>
@@ -669,5 +682,3 @@ sock.onmessage = (e)=&gt;{
 <div class="snippet-clipboard-content position-relative">
 <pre><code>docker run -it -v $PWD:/quarks -p 18080:18080 --cap-add sys_ptrace quarks:ubuntu-21.04</code></pre>
 </div>
-</body>
-</html>
