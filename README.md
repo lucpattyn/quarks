@@ -697,6 +697,7 @@ sock.onclose = ()=>{
 	
 	// to send to a specific user use the following:
 	//msg.to = "useridxxx"; // specifying room is optional in this case
+	//msg.key = msg.room + "_" + useridxxx; //specifying a key saves msg.send along with meta data as Value in Quarks against that key
 	
 	var m = JSON.stringify(msg);
 	sock.send(m);
@@ -725,14 +726,14 @@ sock.onmessage = (e)=>{
 			from = msg.from;
 			data = " I went offline!";
 			
-		}else if(msg["data"]){
+		}else if(msg["message"]){
 			room = msg.room;
 			from = msg.from;
-			data = msg.data;
+			data = msg.message;
 			
-		}else if(msg["userlist"]){
+		}else if(msg["replyuserlist"]){
 			room = msg.room;
-			data = msg.userlist;
+			data = msg.replyuserlist;
 			from = "system";
 		}
 		
@@ -742,7 +743,7 @@ sock.onmessage = (e)=>{
 
 ```
 	var msg = {};
-	msg.list = "testroom";
+	msg.userlist = "testroom";
 	msg.skip = 0;
 	msg.limit = -1;
 	

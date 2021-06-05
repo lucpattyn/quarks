@@ -2673,7 +2673,39 @@ void SocketInterceptor::onClose(crow::websocket::connection& conn) {
 
 bool SocketInterceptor::onQueryMessage(crow::websocket::connection& conn,
                                   const crow::json::rvalue& rdata, bool is_binary){
-    return false;                              	
+    try {
+
+		char* _id = (char*)conn.userdata();
+
+		int skip = 0;
+		int limit = -1;
+		
+		if(rdata.has("getkeys")){
+			if(rdata.has("skip")){
+				skip = rdata["skip"].i();
+			}
+			if(rdata.has("limit")){
+				limit = rdata["limit"].i();
+			}
+			
+			std::vector<crow::json::wvalue> out;
+			
+			if(Quarks().getKeys(rdata["getkeys"].s(), out, skip, limit)){
+				crow::json::wvalue wresult;
+				wresult["replygetkeys"] = std::move(out);
+				wresult["skip"] = skip;
+				wresult["limit"] =  limit;
+				conn.send_text(crow::json::dump(wresult));
+			}
+				
+		}
+
+	} catch (const std::runtime_error& error) {
+		CROW_LOG_INFO << "runtime error : invalid data parameters in onquerymessage - " << crow::json::dump(rdata);
+	}
+
+	return true;
+		
 }
 
 bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
@@ -2744,9 +2776,9 @@ bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
 
 			}
 
-		} else if(x.has("list")) {
-			std::string room = std::string(x["list"].s());
-			std::string list ="[";
+		} else if(x.has("userlist")) {
+			std::string room = std::string(x["userlist"].s());
+			std::vector<crow::json::wvalue> list;
 
 			auto items = lookup(_connMap, room + "_" );
 			auto itBegin = items.first;
@@ -2766,23 +2798,22 @@ bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
 			skip--; // for easy comparing inside loop
 			for (auto it=itBegin; it!=itEnd; ++it) {
 				if(i > skip && i != limit){
-					list += it->first + std::string(",");
+					std::string s = it->first;
+					crow::json::wvalue w;
+					w = s;
+					list.push_back(std::move(w));
 				}
 				i++;			
 			}
 			skip++;
-
-			if(list.size() > 0) {
-				list[list.size() - 1] = ']';
-			} else {
-				list = "[]";
-			}
+			
 
 			crow::json::wvalue wlist;
 			wlist["room"] = room;
-			wlist["userlist"] = list;
+			wlist["replyuserlist"] = std::move(list);
 			wlist["skip"] = skip;
 			wlist["limit"] = limit;
+			wlist["timestamp"] = getCurrentTimestamp();
 			
 			conn.send_text(crow::json::dump(wlist));
 
@@ -2794,7 +2825,7 @@ bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
 			
 			crow::json::wvalue wsend;
 			wsend["room"] = room;
-			wsend["data"] = x["send"].s();	
+			wsend["message"] = x["send"];	
 			if(_id != nullptr) {
 				wsend["from"] = _id;
 			}
@@ -2804,6 +2835,7 @@ bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
 			
 			if(x.has("key")){
 				std::string out;
+				CROW_LOG_INFO << "Save Key: " << x["key"].s();
 				bool ret = Quarks().dump(x["key"].s(), send, out);
 				if(!ret){
 					crow::json::wvalue err;
