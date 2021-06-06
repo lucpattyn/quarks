@@ -154,7 +154,7 @@
 	</style>    
         
     </head>
-    <body>
+    <body onload = "connect()">
         <div id="wrapper">
             <div id="menu">
                 <p class="welcome">Welcome, <b><span id="me"></span></b></p>
@@ -175,133 +175,144 @@
             </form>
         </div>
         
-        <script> 
-			// socket stuff			
+        <script>
 			let _id =  Math.round(Math.random()*1000000);
-        	var sock = new WebSocket("ws://localhost:18080/ws?_id="
-                                 + _id);
-
-			
-			sock.onopen = ()=>{
-			    console.log('open');
-			    // join room
-			    sock.send('{"join":"testroom", "notifyjoin":true, "notifyleave":true}');
-			    
-			    sock.send('{"getkeys":"testroom_*"}');
-			    
-			    document.getElementById("me").innerHTML = "user_" + _id;
-			}
-			sock.onerror = (e)=>{
-				console.log('error',e);
-				document.getElementById("me").innerHTML = "error occured.. " + "user_" + _id;
-			}
-			sock.onclose = ()=>{
-			    console.log('close');
-			    document.getElementById("me").innerHTML = "connection closed.. " + "user_" + _id;
-			}
-			sock.onmessage = (e)=>{
-				console.log(e.data);
-				let msg = JSON.parse(e.data);
+	        	 
+        	var sock = null;
+        	function connect(){
+				// socket stuff			
+				sock = new WebSocket("ws://localhost:18080/ws?_id="
+	                                 + _id);
+	
 				
-				var room = "";
-				var from = "";
-				var data = "";
-				
-				var msgLines = [{}];
-				
-				msgLines[0].value = msg;
-				
-				if(msg["joined"]){
-					msgLines[0].value.room = msg.joined;
-					msgLines[0].value.message = " I am online!";
-										
-				}else if(msg["left"]){
-					msgLines[0].value.room = msg.left;
-					msgLines[0].value.message = " I went offline!";
+				sock.onopen = ()=>{
+				    console.log('open');
+				    // join room
+				    sock.send('{"join":"testroom", "notifyjoin":true, "notifyleave":true}');
+				    
+				    sock.send('{"getkeys":"testroom_*", "skip":0, "limit":100}');
+				    
+				    document.getElementById("me").innerHTML = "user_" + _id;
+				}
+				sock.onerror = (e)=>{
+					console.log('error',e);
+					document.getElementById("me").innerHTML = "error occured.. " + "user_" + _id;
+				}
+				sock.onclose = ()=>{
+				    console.log('close');
+				    document.getElementById("me").innerHTML = "connection closed.. " + "user_" + _id;
+				}
+				sock.onmessage = (e)=>{
+					console.log(e.data);
+					let msg = JSON.parse(e.data);
 					
-				}else if(msg["message"]){
-					console.log("message received: " + msg);
+					var room = "";
+					var from = "";
+					var data = "";
 					
-				}else if(msg["replyuserlist"]){
-					msgLines[0].value.from = "system";
-					msgLines[0].value.message = msg.replyuserlist;
+					var msgLines = [{}];
 					
-				}else if(msg["replygetkeys"]){
-					msgLines = msg.replygetkeys;
+					msgLines[0].value = msg;
+					
+					if(msg["joined"]){
+						msgLines[0].value.room = msg.joined;
+						msgLines[0].value.message = " I am online!";
+											
+					}else if(msg["left"]){
+						msgLines[0].value.room = msg.left;
+						msgLines[0].value.message = " I went offline!";
+						
+					}else if(msg["message"]){
+						console.log("message received: " + msg);
+						
+					}else if(msg["replyuserlist"]){
+						msgLines[0].value.from = "system";
+						msgLines[0].value.message = msg.replyuserlist;
+						
+					}else if(msg["replygetkeys"]){
+						msgLines = msg.replygetkeys;
+					}
+					
+					var chatBoxArea = null;
+					
+					for(i = 0; i < msgLines.length; i++){
+						var msgLine = msgLines[i];
+						room = msgLine.value.room;
+						from = msgLine.value.from;
+						data = msgLine.value.message;
+						
+						var d = new Date(parseInt(msgLine.value.timestamp, 0));
+						chatBoxArea = document.getElementById("chatbox");
+					    var node = document.createElement("div");
+					    node.className = "msgln";
+						node.innerHTML = '<span class="chat-time">' + d.toLocaleTimeString() + '</span>' +  
+							'<b class="user-name">user_' + from + ' (' + room + ')</b>' + data + '<br/>';
+						
+						chatBoxArea.appendChild(node); 
+					}
+					
+					var elem = document.getElementById('chatbox');
+  					elem.scrollTop = elem.scrollHeight;
+					
 				}
 				
-				for(i = 0; i < msgLines.length; i++){
-					var msgLine = msgLines[i];
-					room = msgLine.value.room;
-					from = msgLine.value.from;
-					data = msgLine.value.message;
-					
-					var d = new Date(parseInt(msgLine.value.timestamp, 0));
-					let chatBoxArea = document.getElementById("chatbox");
-				    var node = document.createElement("div");
-				    node.className = "msgln";
-					node.innerHTML = '<span class="chat-time">' + d.toLocaleTimeString() + '</span>' +  
-						'<b class="user-name">user_' + from + ' (' + room + ')</b>' + data + '<br/>';
-					
-					chatBoxArea.appendChild(node); 
-				}
 				
-			}
+		}
+		
+		// sending messages and handling UI events
+				
+		let form  = document.getElementById('message');
+	
+		form.addEventListener('submit', (event) => {
+		    // handle the form data
+		    event.preventDefault();
+		    
+		    var usrmsg = document.getElementById("usermsg").value;
+		    var d = new Date();
+		    
+		    let chatBoxArea = document.getElementById("chatbox");
+		    var node = document.createElement("div");
+		    node.className = "msgln";
+			node.innerHTML = '<span class="chat-time">' + d.toLocaleTimeString() + '</span>' +  
+				'<b class="user-name">user_' + _id + ':</b>' + usrmsg + '<br/>';
+				
+			chatBoxArea.appendChild(node);
 			
-			// sending messages
-		
-		    let form  = document.getElementById('message');
-
-			form.addEventListener('submit', (event) => {
-			    // handle the form data
-			    event.preventDefault();
-			    
-			    var usrmsg = document.getElementById("usermsg").value;
-			    var d = new Date();
-			    
-			    let chatBoxArea = document.getElementById("chatbox");
-			    var node = document.createElement("div");
-			    node.className = "msgln";
-				node.innerHTML = '<span class="chat-time">' + d.toLocaleTimeString() + '</span>' +  
-					'<b class="user-name">user_' + _id + ':</b>' + usrmsg + '<br/>';
-					
-				chatBoxArea.appendChild(node);
-				
-				var msg = {};
-				msg.room = "testroom";
-				
-				msg.send = usrmsg;
-				
-				msg.key = msg.room + "_" + _id; //specifying a key saves msg.send along with meta data as Value in Quarks against that key
-				
-				var m = JSON.stringify(msg);
-				console.log(m);
-				sock.send(m);
-				
-				document.getElementById("usermsg").value = "";
-				
-			});
-        
-		
-			function listusers(){
-				
-				var msg = {};
-				msg.userlist = "testroom";
-				msg.skip = 0;
-				msg.limit = -1;
-				
-				var m = JSON.stringify(msg);
-				console.log(m);
-				sock.send(m);
-			}
+			var msg = {};
+			msg.room = "testroom";
 			
-			function disconnect(){
-				sock.close();
-				setTimeout(function(){
-					alert("Disconnecting");
-				}, 100);
-			}	
+			msg.send = usrmsg;
+			
+			msg.key = msg.room + "_" + d.getTime() + "_" + _id; //specifying a key saves msg.send along with meta data as Value in Quarks against that key
+			
+			var m = JSON.stringify(msg);
+			console.log(m);
+			sock.send(m);
+			
+			document.getElementById("usermsg").value = "";
+			
+			var elem = document.getElementById('chatbox');
+  			elem.scrollTop = elem.scrollHeight;
+			
+		});
+    
+	
+		function listusers(){
+			
+			var msg = {};
+			msg.userlist = "testroom";
+			msg.skip = 0;
+			msg.limit = -1;
+			
+			var m = JSON.stringify(msg);
+			console.log(m);
+			sock.send(m);
+		}
 		
+		function disconnect(){
+			sock.close();
+			document.getElementById("exit").innerHTML = "disconnected..";
+		}
 		</script>
         
         
