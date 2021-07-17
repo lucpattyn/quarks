@@ -774,7 +774,7 @@ A browser based editor has been provided to run Quarks queries and visualize and
 (Thanks to https://github.com/json-editor/json-editor).
 To view the editor at work,
 Copy the "templates" folder inside "/examples" in the "build" folder and then hit the following in browser:
-http://localhost:18080/home
+http://localhost:18080/console
 
 Definitely Quarks has to be running to view the editor
 

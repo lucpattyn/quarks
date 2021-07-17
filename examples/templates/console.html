@@ -1,7 +1,90 @@
-<html>
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+    <!-- when using the mode "code", it's important to specify charset utf-8 -->
+    <meta charset="utf-8">
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.1.10/jsoneditor.min.css" rel="stylesheet" type="text/css">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.1.10/jsoneditor.min.js"></script>
+
+</head>
 <body>
+<p>
+	<textarea id="qq" name="qq rows="4" cols="90" placeholder="getkeys?keys=g1* ..."></textarea><br/>
+	Skip: <input type="number" id="skip" value="0" style="width:80px"></input>
+	Limit: <input type="number" id="limit" value="20" style="width:80px"></input>
+	<button onclick="getJSON();">GET</button>
+    	
+</p>
+<div id="jsoneditor" style="width: 640px; height: 480px;"></div>
+<button onclick="postJSON();">UPDATE</button>
+    
+
 <script>
-    window.location.replace("/console");
+    // create the editor
+    var container = document.getElementById("jsoneditor");
+    var editor = new JSONEditor(container);
+    
+	function getJson(q, onResult) { // maybe we will need a queryJson with post later
+		var xhttp = new XMLHttpRequest();
+  		xhttp.onreadystatechange = function() {
+    		if (this.readyState == 4 && this.status == 200) {
+     			onResult(this.responseText);
+    		}
+  		};
+  		xhttp.open("GET", q, true);
+  		xhttp.send();
+	}
+	
+	function postJson(json, onResult){
+		// Creating a XHR object 
+        let xhr = new XMLHttpRequest(); 
+        let url =  "http://"+ window.location.hostname + ":" + window.location.port + "/putjson"; 
+    
+        // open a connection 
+        xhr.open("POST", url, true); 
+
+        // Set the request header i.e. which type of content you are sending 
+        xhr.setRequestHeader("Content-Type", "application/json"); 
+
+        // Create a state change callback 
+        xhr.onreadystatechange = function () { 
+            if (xhr.readyState === 4 && xhr.status === 200) {
+               onResult(this.responseText);
+            } 
+        }; 
+
+        // Converting JSON data to string 
+        var data = JSON.stringify(json); 
+
+        // Sending data with the request 
+        xhr.send(data); 
+	}
+
+    // submit a get query
+    function getJSON () {
+    	var qq = "http://"+ window.location.hostname + ":" + window.location.port +  "/" + document.getElementById("qq").value;
+    	var s = document.getElementById("skip").value;
+    	var l = document.getElementById("limit").value;
+    	
+    	var q = qq + "&skip=" + s + "&limit=" + l;
+    	
+		//alert(q);
+    	getJson(q, function(jsonResult){
+    		editor.set(JSON.parse(jsonResult));
+		});
+        
+    }
+
+    // submit a post request
+    function postJSON() {
+        var json = editor.get();        
+        
+    	postJson(json, function(jsonResult){
+    		editor.set(JSON.parse(jsonResult));
+		});
+        
+    }
 </script>
 </body>
 </html>

@@ -364,14 +364,14 @@ namespace QuarksCloud {
 								zmq::message_t writermessage (e.size());
 								memcpy (writermessage.data (), e.data(), e.size());	
 													
-								std::cout << "Writer producing for next consumer .. ";							
+								std::cout << "Writer producing for next consumer .. " << std::endl;							
 								chainedWriter.send(writermessage);
 							
 							}
 						}
 											
 						if(sinkConnected){
-							std::cout << "Writer disptaching to sink .. ";
+							std::cout << "Writer disptaching to sink .. " << std::endl;;
 								
 							EncodedMsg e(req.data(), req.size());
 							zmq::message_t sinkmessage (e.size());
@@ -383,8 +383,8 @@ namespace QuarksCloud {
 					}
 					
 				}else{
-					sleep(100);
-					std::cout << "Writer waking up after 100ms !! " << std::endl;
+					sleep(10);
+					std::cout << "Writer waking up after 10000ms !! " << std::endl;
 				}
 			
 						

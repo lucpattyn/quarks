@@ -70,7 +70,7 @@ void qcSave(void* data, size_t size){
 	
 	auto x = crow::json::load(jsonData);		
 	if(!x){
-		std::cout << "__Writer received invalid put request!";
+		std::cout << "__Writer received invalid put request!" << std::endl;
 		
 	}else{
 		std::string key = x["key"].s();
@@ -92,7 +92,7 @@ void qcSave(void* data, size_t size){
 			}	
 					
 			if(!status.ok()) {
-				std::cout << "__Writer could not operate on db!";
+				std::cout << "__Writer could not operate on db!" << std::endl;
 				
 			}
 		}
@@ -170,7 +170,7 @@ int wildcmp(const char *wild, const char *str) {
 	return !*wild;
 }
 
-Core::Core() : _portNumber(18080) {
+Core::Core() : _portNumber(18080) , _timeout(0) {
 
 }
 
@@ -204,6 +204,8 @@ void Core::setEnvironment(int argc, char** argv) {
 	bool tcpClientFlag = false;
 	
 	bool loggerFlag = false;
+	
+	bool timeoutFlag = false;
 	
 	_broker = _writer = _reader = false;
 	_tcpServer = _tcpClient = false;
@@ -265,6 +267,9 @@ void Core::setEnvironment(int argc, char** argv) {
 			_hasLogger = true;
 			loggerFlag = false;
 			
+		}else if(timeoutFlag){
+			_timeout = std::stoi(v);
+			timeoutFlag = false;
 		}
 
 		if(!v.compare("-db") || !v.compare("-store")) {
@@ -291,6 +296,8 @@ void Core::setEnvironment(int argc, char** argv) {
 			tcpClientFlag = true;
 		} else if(!v.compare("-log")) {
 			loggerFlag = true;
+		} else if(!v.compare("-timeout")) {
+			timeoutFlag = true;
 		}
 	}
 
@@ -379,6 +386,10 @@ int Core::getPort() {
 	return _portNumber;
 }
 
+int Core::getTimeout(){
+	return _timeout;
+}
+
 bool Core::shouldHookSocket() {
 	return _hooksocket;
 }
@@ -447,7 +458,7 @@ void httpPost(std::string url, std::string key, std::string value){
 	        "Content-Type: application/json"
 	    });
 	    //const http::Response response = request.send("GET");
-	    std::cout << "httpPost: " << std::string(response.body.begin(), response.body.end()) << '\n'; // print the result
+	    std::cout << "httpPost: " << std::string(response.body.begin(), response.body.end()) << std::endl; // print the result
 	}	
 	catch (const std::exception& e)
 	{
@@ -463,7 +474,7 @@ void httpGet(std::string url){
 	
 	    // send a get request
 	    const http::Response response = request.send("GET");
-	    std::cout << "httpGet: " << std::string(response.body.begin(), response.body.end()) << '\n'; // print the result
+	    std::cout << "httpGet: " << std::string(response.body.begin(), response.body.end()) << std::endl; // print the result
 	}
 	catch (const std::exception& e)
 	{
@@ -2675,7 +2686,7 @@ bool SocketInterceptor::onQueryMessage(crow::websocket::connection& conn,
                                   const crow::json::rvalue& rdata, bool is_binary){
     try {
 
-		char* _id = (char*)conn.userdata();
+		//char* _id = (char*)conn.userdata();
 
 		int skip = 0;
 		int limit = -1;
