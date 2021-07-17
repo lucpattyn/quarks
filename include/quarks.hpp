@@ -32,6 +32,8 @@ namespace Quarks {
 
 			int getPort();
 			bool shouldHookSocket();
+			
+			int getTimeout();
 
 			bool insert(bool failIfExists, std::string body, std::string& out);
 			bool post(std::string body, std::string& out);
@@ -163,7 +165,13 @@ namespace Quarks {
 			}
 			const char* getLoggerUrl(){
 				return _loggerUrl.c_str();
-			}			
+			}
+			bool setLogger(const char* loggerUrl){
+				_loggerUrl = loggerUrl;
+				_hasLogger = true;
+				
+				return _hasLogger; // later health check the url and return accurately
+			}
 			
 		private:
 
@@ -172,6 +180,8 @@ namespace Quarks {
 
 			//std::map<std::string, crow::json::rvalue> _Core;
 			int _portNumber;
+			
+			int _timeout;
 
 			bool _hooksocket;
 
@@ -219,6 +229,9 @@ namespace Quarks {
 			void onClose(crow::websocket::connection& conn);
 			bool onMessage(crow::websocket::connection& conn,
 			               const std::string& data, bool is_binary);
+			               
+			bool onQueryMessage(crow::websocket::connection& conn,
+                                  const crow::json::rvalue& rdata, bool is_binary);
 
 
 			Core& Quarks() {

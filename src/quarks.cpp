@@ -70,7 +70,7 @@ void qcSave(void* data, size_t size){
 	
 	auto x = crow::json::load(jsonData);		
 	if(!x){
-		std::cout << "__Writer received invalid put request!";
+		std::cout << "__Writer received invalid put request!" << std::endl;
 		
 	}else{
 		std::string key = x["key"].s();
@@ -92,7 +92,7 @@ void qcSave(void* data, size_t size){
 			}	
 					
 			if(!status.ok()) {
-				std::cout << "__Writer could not operate on db!";
+				std::cout << "__Writer could not operate on db!" << std::endl;
 				
 			}
 		}
@@ -170,7 +170,7 @@ int wildcmp(const char *wild, const char *str) {
 	return !*wild;
 }
 
-Core::Core() : _portNumber(18080) {
+Core::Core() : _portNumber(18080) , _timeout(0) {
 
 }
 
@@ -204,6 +204,8 @@ void Core::setEnvironment(int argc, char** argv) {
 	bool tcpClientFlag = false;
 	
 	bool loggerFlag = false;
+	
+	bool timeoutFlag = false;
 	
 	_broker = _writer = _reader = false;
 	_tcpServer = _tcpClient = false;
@@ -265,6 +267,9 @@ void Core::setEnvironment(int argc, char** argv) {
 			_hasLogger = true;
 			loggerFlag = false;
 			
+		}else if(timeoutFlag){
+			_timeout = std::stoi(v);
+			timeoutFlag = false;
 		}
 
 		if(!v.compare("-db") || !v.compare("-store")) {
@@ -291,6 +296,8 @@ void Core::setEnvironment(int argc, char** argv) {
 			tcpClientFlag = true;
 		} else if(!v.compare("-log")) {
 			loggerFlag = true;
+		} else if(!v.compare("-timeout")) {
+			timeoutFlag = true;
 		}
 	}
 
@@ -379,8 +386,22 @@ int Core::getPort() {
 	return _portNumber;
 }
 
+int Core::getTimeout(){
+	return _timeout;
+}
+
 bool Core::shouldHookSocket() {
 	return _hooksocket;
+}
+
+std::string getCurrentTimestamp(){
+	using namespace std::chrono;
+	milliseconds ms = duration_cast< milliseconds >(
+    	system_clock::now().time_since_epoch()
+	);
+
+	return std::to_string(ms.count());
+
 }
 
 bool getKeyValuePair(std::string key, std::string& value, std::string& out) {
@@ -437,7 +458,7 @@ void httpPost(std::string url, std::string key, std::string value){
 	        "Content-Type: application/json"
 	    });
 	    //const http::Response response = request.send("GET");
-	    std::cout << "httpPost: " << std::string(response.body.begin(), response.body.end()) << '\n'; // print the result
+	    std::cout << "httpPost: " << std::string(response.body.begin(), response.body.end()) << std::endl; // print the result
 	}	
 	catch (const std::exception& e)
 	{
@@ -453,7 +474,7 @@ void httpGet(std::string url){
 	
 	    // send a get request
 	    const http::Response response = request.send("GET");
-	    std::cout << "httpGet: " << std::string(response.body.begin(), response.body.end()) << '\n'; // print the result
+	    std::cout << "httpGet: " << std::string(response.body.begin(), response.body.end()) << std::endl; // print the result
 	}
 	catch (const std::exception& e)
 	{
@@ -1533,7 +1554,6 @@ bool Core::makePair(std::string body, crow::json::wvalue& out) {
 }
 
 
-
 bool Core::getJson(std::string key, crow::json::wvalue& out) {
 
 	bool ret = false;
@@ -2590,7 +2610,7 @@ void SocketInterceptor::broadcast(std::string room, std::string data) {
 }
 
 void SocketInterceptor::broadcast(std::string room, std::string data,
-                                  crow::websocket::connection& conn) {
+                                  crow::websocket::connection& skipconn) {
 
 	auto items = lookup(_connMap, room);
 	auto itBegin = items.first;
@@ -2599,7 +2619,7 @@ void SocketInterceptor::broadcast(std::string room, std::string data,
 	if(_connMap.size() > 0) {
 		for (auto it=itBegin; it!=itEnd; ++it) {
 			auto u = it->second;
-			if(u != &conn) {
+			if(u != &skipconn) {
 				u->send_text(data);
 			}
 		}
@@ -2608,7 +2628,17 @@ void SocketInterceptor::broadcast(std::string room, std::string data,
 
 void SocketInterceptor::onOpen(crow::websocket::connection& conn) {
 	CROW_LOG_INFO << "QuarksSCIR::Open << " << conn.userdata();
+	
+	char* _id = (char*)conn.userdata();
+	if(_id != nullptr) {
+		std::string room = "default";
+		
+		std::string roomKey = room + std::string("_") + _id;
+		_connMap[roomKey] = &conn;	
 
+		CROW_LOG_INFO << "QuarksSCIR::usercreate << " << roomKey;
+	}
+	
 }
 
 void SocketInterceptor::onClose(crow::websocket::connection& conn) {
@@ -2624,13 +2654,19 @@ void SocketInterceptor::onClose(crow::websocket::connection& conn) {
 		auto itEnd = rooms.second;
 
 		if(_notifyAllOnClose) {
-			std::string data = R"({"offline":")";
-			data += leaveId;
-			data += R"("})";
-
+			
 			for (auto it=itBegin; it!=itEnd; ++it) {
 				auto room = it->second;
-				broadcast(room, data);
+				
+				crow::json::wvalue wsend;
+				wsend["left"] = room;
+				if(_id != nullptr) {
+					wsend["from"] = _id;
+				};
+				wsend["timestamp"] = getCurrentTimestamp();
+				std::string send = crow::json::dump(wsend);
+				
+				broadcast(room, send);
 
 				std::string roomKey = room + std::string("_") + _id;
 				_connMap.erase(roomKey);
@@ -2646,6 +2682,43 @@ void SocketInterceptor::onClose(crow::websocket::connection& conn) {
 	}
 }
 
+bool SocketInterceptor::onQueryMessage(crow::websocket::connection& conn,
+                                  const crow::json::rvalue& rdata, bool is_binary){
+    try {
+
+		//char* _id = (char*)conn.userdata();
+
+		int skip = 0;
+		int limit = -1;
+		
+		if(rdata.has("getkeys")){
+			if(rdata.has("skip")){
+				skip = rdata["skip"].i();
+			}
+			if(rdata.has("limit")){
+				limit = rdata["limit"].i();
+			}
+			
+			std::vector<crow::json::wvalue> out;
+			
+			if(Quarks().getKeys(rdata["getkeys"].s(), out, skip, limit)){
+				crow::json::wvalue wresult;
+				wresult["replygetkeys"] = std::move(out);
+				wresult["skip"] = skip;
+				wresult["limit"] =  limit;
+				conn.send_text(crow::json::dump(wresult));
+			}
+				
+		}
+
+	} catch (const std::runtime_error& error) {
+		CROW_LOG_INFO << "runtime error : invalid data parameters in onquerymessage - " << crow::json::dump(rdata);
+	}
+
+	return true;
+		
+}
+
 bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
                                   const std::string& data, bool is_binary) {
 
@@ -2656,7 +2729,7 @@ bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
 	}
 
 	auto x = crow::json::load(data);
-	if (!x) {
+	if (!is_binary && !x) {
 		CROW_LOG_INFO << "invalid message body: " << data;
 		return true;
 
@@ -2672,19 +2745,39 @@ bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
 			if(_id != nullptr) {
 				std::string roomKey = room + std::string("_") + _id;
 
-				if(x.has("broadcast")) {
-					std::string joinData = crow::json::dump(x["broadcast"]);
-					std::string data = R"({"online":")";
-					data += std::string(_id);
-					data += R"(", "data":)";
-					data += joinData;
-					data += R"(})";
+				if(x.has("notifyjoin")){
+					if(x["notifyjoin"].b()){
+						crow::json::wvalue wsend;
+						wsend["joined"] = room;
+						if(_id != nullptr) {
+							wsend["from"] = _id;
+						};
+						if(x.has("data")){
+							wsend["data"] = x["data"];
+						}												
+						wsend["timestamp"] = getCurrentTimestamp();
+							
+						std::string send = crow::json::dump(wsend);
+						// saving conn later, so no need to pass it and perform extra checking
+						
+						if(x.has("key")) {
+							std::string out;
+							
+							if(!Quarks().dump(x["key"].s(), send, out)) {
+								crow::json::wvalue err;
+								err["error"] = out;
+								err["object"] = x;
+								conn.send_text(crow::json::dump(err));
+							}
+							
+						}
+						
+						broadcast(room, send); 
+					}
+				}				
 
-					broadcast(room, data);
-				}
-
-				if(x.has("notifyOnLeave")) {
-					_notifyAllOnClose = x["notifyOnLeave"].b();
+				if(x.has("notifyleave")) {
+					_notifyAllOnClose = x["notifyleave"].b();
 				}
 
 				_connMap[roomKey] = &conn;
@@ -2694,44 +2787,68 @@ bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
 
 			}
 
-		} else if(x.has("list")) {
-			std::string room = std::string(x["list"].s()) + "_";
-			std::string list ="[";
+		} else if(x.has("userlist")) {
+			std::string room = std::string(x["userlist"].s());
+			std::vector<crow::json::wvalue> list;
 
-			auto items = lookup(_connMap, room);
+			auto items = lookup(_connMap, room + "_" );
 			auto itBegin = items.first;
 			auto itEnd = items.second;
 
+			int skip = 0;
+			int limit = -1;
+			
+			if(x.has("skip")){
+				skip = x["skip"].i();
+			}
+			if(x.has("limit")){
+				limit = x["limit"].i();
+			}
+			
+			int i = 0;
+			skip--; // for easy comparing inside loop
 			for (auto it=itBegin; it!=itEnd; ++it) {
-				list += it->first + std::string(",");
+				if(i > skip && i != limit){
+					std::string s = it->first;
+					crow::json::wvalue w;
+					w = s;
+					list.push_back(std::move(w));
+				}
+				i++;			
 			}
+			skip++;
+			
 
-			if(list.size() > 0) {
-				list[list.size() - 1] = ']';
-			} else {
-				list = "[]";
+			crow::json::wvalue wlist;
+			wlist["room"] = room;
+			wlist["replyuserlist"] = std::move(list);
+			wlist["skip"] = skip;
+			wlist["limit"] = limit;
+			wlist["timestamp"] = getCurrentTimestamp();
+			
+			conn.send_text(crow::json::dump(wlist));
+
+		} else if(x.has("send")) {			
+			std::string room = "default"; // check onOpen
+			if(x.has("room")){
+				room = x["room"].s();
+			}		
+			
+			crow::json::wvalue wsend;
+			wsend["room"] = room;
+			wsend["message"] = x["send"];	
+			if(_id != nullptr) {
+				wsend["from"] = _id;
 			}
-
-			conn.send_text(list);
-
-		} else if(x.has("broadcast")) {
-			std::string room = x["room"].s();
-			std::string data = crow::json::dump(x["broadcast"]);
-
-			broadcast(room, data, conn); // broadcast shouldn't send to broadcaster
-
-		} else if(x.has("payload")) {
-			std::string room = x["payload"]["room"].s();
-			std::string to  = "";
-			if(x["payload"].has("to")) {
-				to = x["payload"]["to"].s();
-			}
-
-			if(x.has("key")) {
-
+			wsend["timestamp"] = getCurrentTimestamp();
+			
+			std::string send = crow::json::dump(wsend);
+			
+			if(x.has("key")){
 				std::string out;
-
-				if(!Quarks().putPair(x, out)) {
+				CROW_LOG_INFO << "Save Key: " << x["key"].s();
+				bool ret = Quarks().dump(x["key"].s(), send, out);
+				if(!ret){
 					crow::json::wvalue err;
 					err["error"] = out;
 					err["object"] = x;
@@ -2739,33 +2856,29 @@ bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
 
 					return true;
 				}
+			
 			}
-
-			crow::json::wvalue w = std::move(x);
-
-			if(_id != nullptr) {
-				w["payload"]["from"] = std::string(_id);
-			}
-			std::string data = crow::json::dump(w);
-
-			if(!to.compare("")) {
-				broadcast(room, data, conn);
-			} else if(!to.compare("*")) {
-				broadcast(room, data);
-			} else {
+						
+			if(x.has("to")){				
+				std::string to = x["to"].s();
 				std::string key = room + std::string("_") + to;
 				auto u = _connMap[key];
 				if(u) {
-					if (is_binary)
+					if (is_binary){
 						u->send_binary(data);
-					else
-						u->send_text(data);
-
+					}						
+					else{
+						u->send_text(send);
+					}				
+			 
 				}
-			}
+			}else{
+				broadcast(room, is_binary?data : send, conn); // broadcast shouldn't send to broadcaster
+			}			
 
-		} // has payload
-
+		} else {
+			return onQueryMessage(conn, x, is_binary);
+		}
 
 	} catch (const std::runtime_error& error) {
 		CROW_LOG_INFO << "runtime error : invalid data parameters - " << data;

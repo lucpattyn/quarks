@@ -19,6 +19,7 @@
 
 #include <curl/curl.h>
 
+
 static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp) {
 	((std::string*)userp)->append((char*)contents, size * nmemb);
 	return size * nmemb;
@@ -67,10 +68,13 @@ struct QueryParams {
 
 
 
+// LUC: 20210717 : ugliest of hacks
+int crow::detail::dumb_timer_queue::tick = 5;
+
 int main(int argc, char ** argv) {
 
 	crow::SimpleApp app;
-
+	
 	Quarks::Core::_Instance.setEnvironment(argc, argv);
 
 	/*v8::V8::InitializeICUDefaultLocation(argv[0]);
@@ -79,13 +83,12 @@ int main(int argc, char ** argv) {
 	v8::V8::InitializePlatform(platform.get());
 	v8::V8::Initialize();*/
 
-
 #ifdef _V8_LATEST
 	v8EngineInitializeInMain(argc, argv);
 #endif
 
 	auto route_ping_callback = 
-	[](const crow::request& req) {
+	[](const crow::request& /*req*/) {
 		return "pong";  
 	};
 
@@ -129,7 +132,7 @@ int main(int argc, char ** argv) {
 
 	QSocket qsock(CROW_ROUTE(app, "/ws"), interceptor);
 
-	QSocket qsockFileUploader(CROW_ROUTE(app, "/ws/files/upload"), QSocket::FileInterceptor("upload"));
+	//QSocket qsockFileUploader(CROW_ROUTE(app, "/ws/files/upload"), QSocket::FileInterceptor("upload"));
 	// end websockets
 
 
@@ -411,7 +414,15 @@ int main(int argc, char ** argv) {
 			handle_runtime_error(error, out, jsonResults);
 		}
 
-		return out;
+		std::ostringstream os;
+		os << crow::json::dump(out);
+
+		auto res = crow::response{os.str()};
+	    res.add_header("Access-Control-Allow-Origin", "*");
+	    //res.add_header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
+	    //res.add_header("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+
+		return res;
 
 	};
 
@@ -592,8 +603,18 @@ int main(int argc, char ** argv) {
 
 		std::string out;
 		put(req.body, out);
+		
+		std::ostringstream os;
+		os << out;
 
-		return out;
+		auto res = crow::response{os.str()};
+	    res.add_header("Access-Control-Allow-Origin", "*");
+	    //res.add_header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
+	    //res.add_header("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+
+		return res;
+
+		//return out;
 
 		/*auto x = crow::json::load(req.body);
 		if (!x){
@@ -898,7 +919,7 @@ int main(int argc, char ** argv) {
 	};
 	
 	auto route_core_backup_callback =
-	[atom](const crow::request& req) {
+	[](const crow::request& req) {
 
 		std::string out = R"({"result":false})";
 
@@ -957,6 +978,49 @@ int main(int argc, char ** argv) {
 		}
 
 	};
+	
+	auto route_core_log_callback =
+	[](const crow::request& req) {
+
+		std::string out = R"({"result":false})";
+
+		std::string url = req.body;
+		auto x = req.url_params.get("url");
+		if(x != nullptr) {
+			url = x;
+		}
+				
+		if(Quarks::Core::_Instance.setLogger(url.c_str())){
+			
+			// for now always returns true, later we can health check of the url
+			out = R"({"result":true})";
+		}
+		
+		return out;
+
+	};
+
+	auto route_core_test_callback =
+	[](const crow::request& req) {
+
+		std::string out = R"({"result":false})";
+
+		std::string timeout = "1";
+		auto x = req.url_params.get("timeout");
+		if(x != nullptr) {
+			timeout = x;
+		}
+				
+		int seconds = std::stoi(timeout);
+		
+		sleep(seconds); 
+		std::cout << "waited for " << seconds << " seconds" << std::endl;		
+				
+		out = R"({"result":true})";
+				
+		return out;
+
+	};
 
 	// core ends //
 	//////////////
@@ -1004,7 +1068,7 @@ int main(int argc, char ** argv) {
 	};*/
 
 	auto route_ai_callback =
-	[](const crow::request& req) {
+	[](const crow::request& /*req*/) {
 		
 #ifdef _USE_RAPIDAPI
 
@@ -1146,6 +1210,12 @@ int main(int argc, char ** argv) {
 
 	CROW_ROUTE(app, "/opentcpsocket")
 	.methods("GET"_method, "POST"_method)(route_core_opentcpsocket_callback);
+	
+	CROW_ROUTE(app, "/log")
+	.methods("GET"_method, "POST"_method)(route_core_log_callback);
+	
+	CROW_ROUTE(app, "/test")
+	.methods("GET"_method, "POST"_method)(route_core_test_callback);
 	// 
 	
 	//auto& v = Quarks::Matrix::_Instance; // we will work with the matrix data struct
@@ -1315,9 +1385,15 @@ int main(int argc, char ** argv) {
 	    return page.render(x);
 	});*/
 
-	CROW_ROUTE(app, "/console")
+	/*CROW_ROUTE(app, "/console")
 	([&defaultPageLoader](const crow::request& req) {
 		auto res = defaultPageLoader(req, "console/index.html");
+		return res;
+	});*/
+	
+	CROW_ROUTE(app, "/console")
+	([&defaultPageLoader](const crow::request& req) {
+		auto res = defaultPageLoader(req, "console.html");
 		return res;
 	});
 
@@ -1329,12 +1405,12 @@ int main(int argc, char ** argv) {
 
 	CROW_ROUTE(app, "/chat")
 	([&defaultPageLoader](const crow::request& req) {
-		auto res = defaultPageLoader(req, "ws.html");
+		auto res = defaultPageLoader(req, "chat.html");
 		return res;
 	});
 
 	CROW_ROUTE(app, "/feed")
-	([&readFile](const crow::request& req) {
+	([&readFile](const crow::request& /*req*/) {
 		auto result = readFile("templates/feed.html");
 		std::ostringstream os;
 		os << result;
@@ -1345,8 +1421,8 @@ int main(int argc, char ** argv) {
 	});
 	
 	CROW_ROUTE(app, "/readme")
-	([&readFile](const crow::request& req) {
-		auto result = readFile("templates/README.md");
+	([&readFile](const crow::request& /*req*/) {
+		auto result = readFile("templates/readme.html");
 		std::ostringstream os;
 		os << result;
 
@@ -1422,6 +1498,14 @@ int main(int argc, char ** argv) {
 		startTaskQueueService();	
 	});
 	tq.detach();*/
+	
+	// Timeout setting
+	if(Quarks::Core::_Instance.getTimeout() > 0 ){
+		//app.timeout(Quarks::Core::_Instance.getTimeout());
+		// LUC: 20210717
+		crow::detail::dumb_timer_queue::tick = Quarks::Core::_Instance.getTimeout();
+		std::cout << "Quarks connection timeout set to " << Quarks::Core::_Instance.getTimeout() << " seconds .." << std::endl;
+	}
 	
 	bool runAsServer = Quarks::Core::_Instance.isAServer();
 	

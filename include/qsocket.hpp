@@ -43,6 +43,8 @@ public:
         
         conn->userdata(_id);
         
+        open_handler_(*conn);
+        
         
     }
 #ifdef CROW_ENABLE_SSL

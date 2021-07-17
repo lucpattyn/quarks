@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+ 
+        <title>Hot Chat Application</title>
+        <meta name="description" content="Hot Chat Application" />
+        
+        
+    <style>
+    
+		* {
+	    margin: 0;
+	    padding: 0;
+	  }
+	   
+	  body {
+	    margin: 20px auto;
+	    font-family: "Lato";
+	    font-weight: 300;
+	  }
+	   
+	  form {
+	    padding: 15px 25px;
+	    display: flex;
+	    gap: 10px;
+	    justify-content: center;
+	  }
+	   
+	  form label {
+	    font-size: 1.5rem;
+	    font-weight: bold;
+	  }
+	   
+	  input {
+	    font-family: "Lato";
+	  }
+	   
+	  a {
+	    color: #0000ff;
+	    text-decoration: none;
+	  }
+	   
+	  a:hover {
+	    text-decoration: underline;
+	  }
+	   
+	  #wrapper,
+	  #loginform {
+	    margin: 0 auto;
+	    padding-bottom: 25px;
+	    background: #eee;
+	    width: 600px;
+	    max-width: 100%;
+	    border: 2px solid #212121;
+	    border-radius: 4px;
+	  }
+	   
+	  #loginform {
+	    padding-top: 18px;
+	    text-align: center;
+	  }
+	   
+	  #loginform p {
+	    padding: 15px 25px;
+	    font-size: 1.4rem;
+	    font-weight: bold;
+	  }
+	   
+	  #chatbox {
+	    text-align: left;
+	    margin: 0 auto;
+	    margin-bottom: 25px;
+	    padding: 10px;
+	    background: #fff;
+	    height: 300px;
+	    width: 530px;
+	    border: 1px solid #a7a7a7;
+	    overflow: auto;
+	    border-radius: 4px;
+	    border-bottom: 4px solid #a7a7a7;
+	  }
+	   
+	  #usermsg {
+	    flex: 1;
+	    border-radius: 4px;
+	    border: 1px solid #ff9800;
+	  }
+	   
+	  #name {
+	    border-radius: 4px;
+	    border: 1px solid #ff9800;
+	    padding: 2px 8px;
+	  }
+	   
+	  #submitmsg,
+	  #enter{
+	    background: #ff9800;
+	    border: 2px solid #e65100;
+	    color: white;
+	    padding: 4px 10px;
+	    font-weight: bold;
+	    border-radius: 4px;
+	  }
+	   
+	  .error {
+	    color: #ff0000;
+	  }
+	   
+	  #menu {
+	    padding: 15px 25px;
+	    display: flex;
+	  }
+	   
+	  #menu p.welcome {
+	    flex: 1;
+	  }
+	   
+	  a#exit {
+	    color: white;
+	    background: #c62828;
+	    padding: 4px 8px;
+	    border-radius: 4px;
+	    font-weight: bold;
+	  }
+	   
+	  .msgln {
+	    margin: 0 0 5px 0;
+	  }
+	   
+	  .msgln span.left-info {
+	    color: orangered;
+	  }
+	   
+	  .msgln span.chat-time {
+	    color: #666;
+	    font-size: 60%;
+	    vertical-align: super;
+	  }
+	   
+	  .msgln b.user-name, .msgln b.user-name-left {
+	    font-weight: bold;
+	    background: #546e7a;
+	    color: white;
+	    padding: 2px 4px;
+	    font-size: 90%;
+	    border-radius: 4px;
+	    margin: 0 5px 0 0;
+	  }
+	   
+	  .msgln b.user-name-left {
+	    background: orangered;
+	  }
+	</style>    
+        
+    </head>
+    <body onload = "connect()">
+        <div id="wrapper">
+            <div id="menu">
+                <p class="welcome">Welcome, <b><span id="me"></span></b></p>
+                <p class=""><a id="list" href="#" onclick="listusers()">List Users</a></p>&nbsp;
+                <p class="logout"><a id="exit" href="#" onclick="disconnect()">Disconnect</a></p>
+            </div>
+ 
+            <div id="chatbox">
+				<div class='msgln'><span class='chat-time'></span> 
+					<b class='user-name'>user_system</b> Welcome to the chatroom!<br/>				
+				</div>
+			</div>
+			<div>
+            	</div>
+ 			<form id="message" name="message" action=""> 				
+                <input name="usermsg" type="text" id="usermsg" />
+                <input name="submitmsg" type="submit" id="submitmsg" value="Send" />
+            </form>
+        </div>
+        
+        <script>
+			let _id =  Math.round(Math.random()*1000000);
+	        	 
+        	var sock = null;
+        	function connect(){
+				// socket stuff			
+				sock = new WebSocket("ws://localhost:18080/ws?_id="
+	                                 + _id);
+	
+				
+				sock.onopen = ()=>{
+				    console.log('open');
+				    // join room
+				    sock.send('{"join":"testroom", "notifyjoin":true, "notifyleave":true}');
+				    
+				    sock.send('{"getkeys":"testroom_*", "skip":0, "limit":100}');
+				    
+				    document.getElementById("me").innerHTML = "user_" + _id;
+				}
+				sock.onerror = (e)=>{
+					console.log('error',e);
+					document.getElementById("me").innerHTML = "error occured.. " + "user_" + _id;
+				}
+				sock.onclose = ()=>{
+				    console.log('close');
+				    document.getElementById("me").innerHTML = "connection closed.. " + "user_" + _id;
+				}
+				sock.onmessage = (e)=>{
+					console.log(e.data);
+					let msg = JSON.parse(e.data);
+					
+					var room = "";
+					var from = "";
+					var data = "";
+					
+					var msgLines = [{}];
+					
+					msgLines[0].value = msg;
+					
+					if(msg["joined"]){
+						msgLines[0].value.room = msg.joined;
+						msgLines[0].value.message = " I am online!";
+											
+					}else if(msg["left"]){
+						msgLines[0].value.room = msg.left;
+						msgLines[0].value.message = " I went offline!";
+						
+					}else if(msg["message"]){
+						console.log("message received: " + msg);
+						
+					}else if(msg["replyuserlist"]){
+						msgLines[0].value.from = "system";
+						msgLines[0].value.message = msg.replyuserlist;
+						
+					}else if(msg["replygetkeys"]){
+						msgLines = msg.replygetkeys;
+					}
+					
+					var chatBoxArea = null;
+					
+					for(i = 0; i < msgLines.length; i++){
+						var msgLine = msgLines[i];
+						room = msgLine.value.room;
+						from = msgLine.value.from;
+						data = msgLine.value.message;
+						
+						var d = new Date(parseInt(msgLine.value.timestamp, 0));
+						chatBoxArea = document.getElementById("chatbox");
+					    var node = document.createElement("div");
+					    node.className = "msgln";
+						node.innerHTML = '<span class="chat-time">' + d.toLocaleTimeString() + '</span>' +  
+							'<b class="user-name">user_' + from + ' (' + room + ')</b>' + data + '<br/>';
+						
+						chatBoxArea.appendChild(node); 
+					}
+					
+					var elem = document.getElementById('chatbox');
+  					elem.scrollTop = elem.scrollHeight;
+					
+				}
+				
+				
+		}
+		
+		// sending messages and handling UI events
+				
+		let form  = document.getElementById('message');
+	
+		form.addEventListener('submit', (event) => {
+		    // handle the form data
+		    event.preventDefault();
+		    
+		    var usrmsg = document.getElementById("usermsg").value;
+		    var d = new Date();
+		    
+		    let chatBoxArea = document.getElementById("chatbox");
+		    var node = document.createElement("div");
+		    node.className = "msgln";
+			node.innerHTML = '<span class="chat-time">' + d.toLocaleTimeString() + '</span>' +  
+				'<b class="user-name">user_' + _id + ':</b>' + usrmsg + '<br/>';
+				
+			chatBoxArea.appendChild(node);
+			
+			var msg = {};
+			msg.room = "testroom";
+			
+			msg.send = usrmsg;
+			
+			msg.key = msg.room + "_" + d.getTime() + "_" + _id; //specifying a key saves msg.send along with meta data as Value in Quarks against that key
+			
+			var m = JSON.stringify(msg);
+			console.log(m);
+			sock.send(m);
+			
+			document.getElementById("usermsg").value = "";
+			
+			var elem = document.getElementById('chatbox');
+  			elem.scrollTop = elem.scrollHeight;
+			
+		});
+    
+	
+		function listusers(){
+			
+			var msg = {};
+			msg.userlist = "testroom";
+			msg.skip = 0;
+			msg.limit = -1;
+			
+			var m = JSON.stringify(msg);
+			console.log(m);
+			sock.send(m);
+		}
+		
+		function disconnect(){
+			sock.close();
+			document.getElementById("exit").innerHTML = "disconnected..";
+		}
+		</script>
+        
+        
+    </body>
+</html>

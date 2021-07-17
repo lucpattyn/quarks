@@ -9,10 +9,10 @@
 
 #define _V8_NO_LATEST
 
-#include "v8.h"
+#include <v8.h>
 
 #ifdef _V8_LATEST
-#include "libplatform/libplatform.h"
+#include <libplatform/libplatform.h>
 #endif
 
 
