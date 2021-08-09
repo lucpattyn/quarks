@@ -711,7 +711,8 @@ sock.onclose = ()=>{
 	
 	// to send to a specific user use the following:
 	//msg.to = "useridxxx"; // specifying room is optional in this case
-	//msg.key = msg.room + "_" + useridxxx; //specifying a key saves msg.send along with meta data as Value in Quarks against that key
+	//msg.key = msg.room + "_" + useridxxx; 
+	//specifying a key saves {msg.send, msg.room, timestamp} as Value in Quarks against that key
 	
 	var m = JSON.stringify(msg);
 	sock.send(m);
