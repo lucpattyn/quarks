@@ -1840,6 +1840,8 @@ bool Core::getJoinedMap(crow::json::rvalue& args,
 		crow::json::wvalue k;							
 		crow::json::wvalue w;							
 								
+		std::vector<std::string> sFinalKeys;						
+								
 		for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
 
 			if(wildcmp(wild.c_str(), it->key().ToString().c_str())) {
@@ -1860,17 +1862,19 @@ bool Core::getJoinedMap(crow::json::rvalue& args,
 					std::string finalKey = matchedKey;
 					if(selindex < tokens.size()){
 						finalKey = tokens[selindex];
+						sFinalKeys.push_back(finalKey);
 						//CROW_LOG_INFO << "finalKey : " << finalKey;	
 						crow::json::wvalue f;
-						f = finalKey;							
+						f = finalKey;					
+								
 						finalKeys.push_back(std::move(f));
 					}				
 					
-					std::string prefix = "";
+					/*std::string prefix = "";
 					std::string suffix = "";
-					std::string joinedKey = "";
+					std::string joinedKey = "";*/
 					
-					for(auto& v : join) {					
+					/*for(auto& v : join) {					
 						try {		
 							prefix = v["prefix"].s();
 							suffix = v["suffix"].s();							
@@ -1891,7 +1895,7 @@ bool Core::getJoinedMap(crow::json::rvalue& args,
 	
 							ret = false;
 						}
-					}
+					}*/
 										
 				}
 
@@ -1902,11 +1906,43 @@ bool Core::getJoinedMap(crow::json::rvalue& args,
 			}
 		}
 		
+		std::string prefx = "";
+		std::string suffx = "";
+		std::string joinedKey = "";
+		
+		for(auto& v : join) {					
+			try {		
+				prefx = v["prefix"].s();
+				suffx = v["suffix"].s();							
+				
+				for(auto& finalKey : sFinalKeys){
+				
+					joinedKey = prefx + finalKey + suffx;		
+					
+					crow::json::wvalue out;
+		 			
+		 			if (dbStatus.ok()) {
+						std::string value;
+						rocksdb::Status status = db->Get(rocksdb::ReadOptions(), joinedKey, &value);
+
+						if(status.ok()) {
+							w[joinedKey] =  crow::json::load(value);
+						}
+					}
+		 
+				}
+	
+			} catch (const std::runtime_error& error) {
+				CROW_LOG_INFO << "Runtime Error: " << i << it->value().ToString();
+	
+				ret = false;
+			}
+		}
+		
 		k = std::move(finalKeys);
 		
 		matchedResults.push_back(std::move(k));			
-		matchedResults.push_back(std::move(w));
-					
+		matchedResults.push_back(std::move(w));		
 
 		// do something after loop
 		ret = ret && it->status().ok();

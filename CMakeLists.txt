@@ -86,7 +86,7 @@ else()
 endif()
 
 #mac
-#target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb libv8.dylib libv8_libplatform.dylib)
+#target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb libv8.dylib libv8_libplatform.dylib -lzmq -lboost_system)
 
 #windows powershell
 #target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb -lv8 -lzmq -lboost_system)

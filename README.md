@@ -18,9 +18,9 @@ The current codebase uses a compiled version of RocksDB, Chrome v8 Engine and Ze
 It requires the following packages:
 
 - Crow Library v0.1
-- GCC with support to C++17
+- GCC with support for C++17
 - Cmake 1.13
-- Boost::System
+- Boost::System (1.69)
 - RocksDB
 - v8 Javascript Engine
 - ZeroMQ
@@ -81,11 +81,14 @@ b) Get value against key
  http://0.0.0.0:18080/get?key=g1_u1
 ```
 
-c) List values by wildcard search with keys (you can specifiy skip and limit optionally)
+c) List values by wildcard search with keys You can specifiy skip and limit optionally
 ```
  http://0.0.0.0:18080/getall?keys=g1_u*&skip=5&limit=10
 ```
-d) List sorted values by wildcard search with keys (you can specifiy skip and limit optionally)
+
+d) List sorted values by wildcard search with keys and specifying the sortby attribute of value. 
+   It is preferable to already keep the stored key value pairs sorted by using keys instead of invoking sort api,
+   since stored elements are pre-sorted by keys. You can specifiy skip and limit optionally
 ```
  http://0.0.0.0:18080/getsorted?keys=g1_u*&sortby=msg&skip=5&limit=10
 
@@ -131,8 +134,8 @@ h) remove keys by wildcard search
 ```
 http://0.0.0.0:18080/removeall?keys=g1_u*
 ```
-
 number of keys successfully deleted would be returned
+
 
 i) check if a key already exists
 ```
@@ -145,6 +148,7 @@ http://0.0.0.0:18080/getlist?body=["g1_u1", "g2_u2"]
 ```
 (You can specify skip and limit to this as well but should not need it)
 
+
 k) increment a value saved as integer by a specified amount
 ```
 http://0.0.0.0:18080/incr?body={"key":"somecounter","step":5}
@@ -152,7 +156,7 @@ http://0.0.0.0:18080/incr?body={"key":"somecounter","step":5}
 Note: Value to increment must be saved as integer with a previous call to put -
 http://0.0.0.0:18081/put?body={"key":"somecounter", "value":1}
 ```
-The more advance version is incrval where you can specify the specific attribute (must be integer) to increment
+The more advanced version is incrval where you can specify the specific attribute (must be integer) to increment
 ```
 http://0.0.0.0:18080/incrval?body={"key":"feed_user_johnwick", "value":{"points":3}}
 ```
@@ -164,7 +168,7 @@ l) Execute Atoms: Atoms are set of Put and Remove operations which can be execut
 To run a set of put operations together, run:
 
 ```
-POST: http://0.0.0.0:18080/put/atom?body=
+GET: http://0.0.0.0:18080/put/atom?body=
 [
 {"key":"g1_u2", "value":{"msg":"m1"}},
 {"key":"g2_u2", "value":{"msg":"m2"}},
@@ -175,14 +179,14 @@ POST: http://0.0.0.0:18080/put/atom?body=
 
 To run a set of remove operations together, run:
 ```
-POST: http://0.0.0.0:18080/remove/atom?body=
+GET: http://0.0.0.0:18080/remove/atom?body=
 ["g1_u1","g1_u2", "g3_u3"]
 
 ```
 
 To run a set of remove operations followed by a set of put operations, run:
 ```
-POST: http://0.0.0.0:18080/atom?body=
+GET: http://0.0.0.0:18080/atom?body=
 {
 put:[
 {"key":"g1_u2", "value":{"msg":"m1"}},
@@ -210,7 +214,8 @@ m) autogenerate key with prefix and value provided
 * returns the key value pair as json object; if "key" is specified along with prefix
  then a key is formed with prefix+key and no key generation occurs
 
-n) provide a prefix, key pair for which all keys (along with values) greater than the passed key,
+
+n) provide a prefix, key pair for which all keys (along with values) greater than the passed compare key,
    starting with the prefix are returned
 
 ```
@@ -223,8 +228,8 @@ http://0.0.0.0:18080/getkeysafter?body=["key_pre1", "key1", "key_pre2", "key2", 
 
 ```
 
-o) provide a prefix, key pair for which the highest key (along with values and index) greater than the passed key,
-   starting with the prefix is returned
+o) provide a prefix, key pair for which the highest key (along with values and index) greater than the passed compare key,
+   starting with the prefix is returned (Useful for fetching things like last sent message)
 
 ```
 http://0.0.0.0:18080/getkeyslast?body=["key_prefix", "comparekey"]
@@ -235,6 +240,15 @@ Multiple prefix, key pair can be provided like the following:
 http://0.0.0.0:18080/getkeyslast?body=["key_pre1", "key1", "key_pre2", "key2", ... "key_preN", "keyN"]
 
 ```
+
+p) Testing API that halts the request processing thread for the number of seconds specified in the timeout parameter
+(Useful to check if the requests are actualy rocessed by threads spawned by multiple cpu cores)
+
+```
+ http://localhost:18080/test?timeout=10
+
+```
+
 
 ### POST REQUESTS
 
@@ -812,7 +826,18 @@ Definitely Quarks has to be running to view the examples
 
  Build and Run:
  Check #How to Build section for compilation and binary creation and #Run section for how to run
+ 
+ ## Changes for Ubuntu 20.04
 
+  1. In the CMakeLists.txt replace "node" with "v8" in the section 
+	 target_include_directories(
+         ocv_microservice_crow
+         PRIVATE
+         /usr/include/node
+	 )
+
+  2. Downgrade Boost version to 1.69
+  
  ## Docker setup:
  To build the docker image:
  ```
