@@ -241,8 +241,8 @@ http://0.0.0.0:18080/getkeyslast?body=["key_pre1", "key1", "key_pre2", "key2", .
 
 ```
 
-p) Testing API that halts the request processing thread for the number of seconds specified in the timeout parameter
-(Useful to check if the requests are actualy rocessed by threads spawned by multiple cpu cores)
+p) Testing API that halts the request processing thread for specified number of seconds as mentioned by the timeout parameter
+(Useful to check if the https requests are actualy being processed by threads spawned by multiple cpu cores)
 
 ```
  http://localhost:18080/test?timeout=10
@@ -841,8 +841,9 @@ Definitely Quarks has to be running to view the examples
  ## Docker setup:
  To build the docker image:
  ```
- docker build -t quarks:ubuntu-21.04 .
+ docker build -t quarks:ubuntu-21.04 . 
  ```
+ (Might fail due to _V8_NO_LATEST specified in v8engine.hpp)
 
  To run the docker image:
  ```
