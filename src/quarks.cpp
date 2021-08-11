@@ -12,13 +12,15 @@
 #include <iomanip>
 
 #include <iostream>
-#include <boost/asio.hpp>
 
+#include <boost/asio.hpp>
 #include <boost/uuid/uuid.hpp>            // uuid class
 #include <boost/uuid/uuid_generators.hpp> // generators
 #include <boost/uuid/uuid_io.hpp>         // streaming operators etc.
 
 #include <algorithm>
+
+#include <shared_mutex>
 
 using namespace boost::asio;
 using ip::tcp;
@@ -132,9 +134,13 @@ static QCReader __ReaderNode;
 static std::string producerUrl = "";
 static std::string consumerUrl = "";
 
-std::mutex __put_mtx;
-
 // end Quarks Cloud
+
+// Mutex definition Area
+std::mutex __put_mtx;
+std::shared_mutex __readerwriter_mtx;
+std::mutex __critical_mtx;
+//
 
 int wildcmp(const char *wild, const char *str) {
 	// Written by Jack Handy - <A href="mailto:jakkhandy@hotmail.com">jakkhandy@hotmail.com</A>
@@ -1179,10 +1185,170 @@ bool Core::getKeysReversed(std::string wild,
 	return ret && dbStatus.ok();
 }
 
+bool getCountThreaded(std::string wild,
+                    long& out,
+                    int skip /*= 0*/, int limit /*= -1*/){
+    
+    bool ret = true;
+    if (!dbStatus.ok()){
+		return false;
+	}
+	out = 0;
+	
+	std::size_t found = wild.find("*");
+	if(found != std::string::npos && found == 0) {
+		return false;
+	}
+
+	static std::string lastWild = "";
+	static std::vector<std::string> iterKeys;
+	
+	std::string pre = wild.substr(0, found);
+	std::string preRev = pre;
+	preRev[preRev.size() - 1] = pre[pre.size() - 1] + 1;
+
+	rocksdb::Slice prefix(pre);
+	rocksdb::Slice prefixRev(preRev);
+
+	//rocksdb::Slice prefixPrint = prefix;
+	//CROW_LOG_INFO << "prefix : " << prefixPrint.ToString();
+
+
+	int i  = -1;
+	int count = (limit == -1) ? INT_MAX : limit;
+
+	int lowerbound  = skip - 1;
+	int upperbound = skip + count;
+
+	
+	std::atomic<int> totalCount(0);
+	
+	std::string iterKey1 = "";		
+	std::string iterKey2 = "";
+		
+	int count1 = 0, count2 = 0;
+	
+	if(lastWild.compare(wild)){
+		iterKeys.clear();
+		lastWild = wild;
+	}else{
+		
+		std::vector<std::thread> v(8); 
+  		
+  		int size = iterKeys.size()/8;
+  		std::atomic<int> tc(0);
+		for(auto& t: v){
+			t = std::thread([&]{ 
+					std::lock_guard<std::mutex> lock(__critical_mtx);  	
+					
+					std::cout << "tc: " << tc << " size: " << (tc * size  + size) << " real size: " << size;
+					for(int n = tc * size; n < (tc * size  + size); ++n){						
+						if(wildcmp(wild.c_str(), iterKeys[n].c_str())){
+							totalCount++;
+						}
+					}	
+					
+				tc++;				  
+			});
+	
+		}
+		
+		for(auto& t: v){
+			t.join();
+		}
+		
+		out = totalCount;
+		CROW_LOG_INFO << "returning from cache : " << totalCount;
+		
+		return true;
+	}
+	
+	std::thread iter1([&]{ 	
+		//std::lock_guard<std::shared_mutex> writerLock(__readerwriter_mtx);			
+		
+		// create new iterator
+		rocksdb::ReadOptions ro;
+		rocksdb::Iterator* it = db->NewIterator(ro);
+		
+		const char* wildstr = wild.c_str();
+		CROW_LOG_INFO << "prefix : " << pre;
+		
+		
+		for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
+			iterKey1 = it->key().ToString().c_str();
+			
+			if(wildcmp(wildstr, iterKey1.c_str())){
+				totalCount++;
+				count1++;
+			
+				
+			}	
+			
+			std::lock_guard<std::mutex> lock(__critical_mtx);  	
+			iterKeys.push_back(iterKey1);		
+			
+			if(iterKey1.size() && iterKey2.size() && iterKey1.compare(iterKey2)  > 0){
+				std::cout << "breaking iter 1 .. "  << iterKey1.c_str() << ", " << iterKey2.c_str() << count1 << std::endl;
+				break;
+			}
+		}	
+		
+		ret = ret && it->status().ok();
+		delete it;
+	});	
+	 
+	std::thread iter2([&]{ 	
+		//std::lock_guard<std::shared_mutex> writerLock(__readerwriter_mtx);			
+		
+		// create new iterator
+		rocksdb::ReadOptions ro;
+		rocksdb::Iterator* it = db->NewIterator(ro);
+		
+		const char* wildstr = wild.c_str();
+		CROW_LOG_INFO << "prefixRev : " << preRev;
+		
+		it->Seek(prefixRev);
+		it->Prev();
+		
+		for ( ;it->Valid() && it->key().starts_with(prefix); it->Prev()) {
+			iterKey2 = it->key().ToString().c_str();
+			
+			if(wildcmp(wildstr, iterKey2.c_str())){
+				totalCount++;
+				count2++;
+				
+				
+			}
+		
+			std::lock_guard<std::mutex> lock(__critical_mtx);  
+			iterKeys.push_back(iterKey2);
+				
+			if(iterKey2.compare(iterKey1)  < 0){
+				break;
+			}
+		}	
+		
+		ret = ret && it->status().ok();
+		delete it;
+	});		
+	 
+
+	iter1.join();
+	iter2.join();
+
+	out = totalCount;
+	
+	std::cout << "\ncount1: " << count1 << " count2: "  << count2;
+	
+	return ret;
+}
+
 bool Core::getCount(std::string wild,
                     long& out,
                     int skip /*= 0*/, int limit /*= -1*/) {
 
+	//return getCountThreaded(wild, out, skip, limit);
+	
 	bool ret = true;
 	if (dbStatus.ok()) {
 		out = 0;
@@ -1793,10 +1959,221 @@ bool Core::getList(crow::json::rvalue& args,
 	
 }
 */
+
+bool getJoinedMapThreaded(crow::json::rvalue& args,
+                      std::vector<crow::json::wvalue>& matchedResults,
+                      int skip /*= 0*/, int limit /*= -1*/){
+
+	
+	bool ret = dbStatus.ok(); 
+	if (ret) {
+
+		std::string wild = args["keys"].s();
+		//CROW_LOG_INFO << "keys : " << wild.c_str();
+		
+		std::string splitby = args["splitby"].s();
+		//CROW_LOG_INFO << "splitby : " << splitby;		
+		
+		size_t selindex = (size_t) args["selindex"].i();
+		//CROW_LOG_INFO << "selindex : " << selindex;	
+				
+		const crow::json::rvalue& join = args["join"];
+		
+
+		std::size_t found = wild.find("*");
+		if(found != std::string::npos && found == 0) {
+			return false;
+		}
+
+		// create new iterator
+		//rocksdb::ReadOptions ro;
+		//rocksdb::Iterator* it = db->NewIterator(ro);
+
+		std::string pre = wild.substr(0, found);
+
+		rocksdb::Slice prefix(pre);
+
+		//rocksdb::Slice prefixPrint = prefix;
+		//CROW_LOG_INFO << "prefix : " << prefixPrint.ToString();
+
+
+		int i  = -1;
+		int count = (limit == -1) ? INT_MAX : limit;
+
+		int lowerbound  = skip - 1;
+		int upperbound = skip + count;
+
+		std::vector<crow::json::wvalue> finalKeys;
+		crow::json::wvalue k;							
+		crow::json::wvalue w;							
+								
+		std::vector<std::string> sFinalKeys;
+								
+		std::vector<std::string> iteratorKeys;
+		int nextKey = -1;
+		int currentKey = -1;
+		
+		std::atomic<bool> writerExit(false);
+		std::atomic<bool> readerExit(false);
+		
+		std::thread writer([&]{ 	
+			//std::lock_guard<std::shared_mutex> writerLock(__readerwriter_mtx);			
+			
+			// create new iterator
+			rocksdb::ReadOptions ro;
+			rocksdb::Iterator* it = db->NewIterator(ro);
+						
+			for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
+				std::lock_guard<std::mutex> lock(__critical_mtx);  
+				iteratorKeys.push_back(it->key().ToString().c_str());
+				//CROW_LOG_INFO << "iterating : " << it->key().ToString().c_str();	
+				nextKey++;
+				
+				//sleep_for_ms(1);
+				//std::this_thread::yield();
+				if(writerExit){
+					break;
+				}
+			}	
+			
+			readerExit = true;
+			
+			ret = ret && it->status().ok();
+			delete it;
+		});	
+		 
+		std::thread reader([&]{ 
+			//std::shared_lock<std::shared_mutex> readerLock(__readerwriter_mtx);
+			
+			const char* wildstr = wild.c_str();
+			while(1){
+				//if(wildcmp(wild.c_str(), it->key().ToString().c_str())) {
+				bool compare = false;
+				int next = -1;
+				const char* iterKey = "";			
+				{
+					std::lock_guard<std::mutex> lock(__critical_mtx);  
+					next = nextKey;
+					if(currentKey < next){
+						compare = true;
+						iterKey = iteratorKeys[++currentKey].c_str();
+					}
+				}
+					
+				//CROW_LOG_INFO << "reading : " << iterKey;	
+				if(compare && wildcmp(wildstr, iterKey)) {
+					 
+					i++;
+	
+					if(i > lowerbound && (i < upperbound || limit == -1)) {
+	
+						std::string matchedKey = iterKey;
+						
+						std::vector<std::string> tokens;
+						
+						//CROW_LOG_INFO << "matchedKey : " << matchedKey;
+						tokenize(matchedKey, splitby[0], tokens);
+						
+						//CROW_LOG_INFO << "token size : " << tokens.size();	
+					
+						std::string finalKey = matchedKey;
+						if(selindex < tokens.size()){
+							finalKey = tokens[selindex];
+							sFinalKeys.push_back(finalKey);
+							//CROW_LOG_INFO << "reading finalKey : " << finalKey;	
+							crow::json::wvalue f;
+							f = finalKey;					
+									
+							finalKeys.push_back(std::move(f));
+						}				
+						
+						/*std::string prefix = "";
+						std::string suffix = "";
+						std::string joinedKey = "";*/
+						
+										
+					}
+	
+					if((i == upperbound) && (limit != -1)) {
+						writerExit = true;
+						break;
+					}
+	
+				}
+		
+				if(currentKey == nextKey){
+					if(readerExit)
+						break;
+				
+					std::this_thread::yield();
+					//CROW_LOG_INFO << "reader yielding .. ";	
+					
+				}
+				
+				//sleep_for_ms(1);
+				
+			}
+		
+			//std::cout << "reader exiting.." << std::endl;
+			
+		});	
+		
+		writer.join();
+		reader.join();
+		//writer.join();
+		
+		std::string prefx = "";
+		std::string suffx = "";
+		std::string joinedKey = "";
+		
+		for(auto& v : join) {					
+			try {		
+				prefx = v["prefix"].s();
+				suffx = v["suffix"].s();							
+				
+				for(auto& finalKey : sFinalKeys){
+				
+					joinedKey = prefx + finalKey + suffx;		
+					
+					crow::json::wvalue out;
+		 			
+		 			if (dbStatus.ok()) {
+						std::string value;
+						rocksdb::Status status = db->Get(rocksdb::ReadOptions(), joinedKey, &value);
+
+						if(status.ok()) {
+							w[joinedKey] =  crow::json::load(value);
+						}
+					}
+		 
+				}
+	
+			} catch (const std::runtime_error& error) {
+				CROW_LOG_INFO << "Runtime Error: " << joinedKey;
+	
+				ret = false;
+			}
+		}
+		
+		k = std::move(finalKeys);
+		
+		matchedResults.push_back(std::move(k));			
+		matchedResults.push_back(std::move(w));		
+
+		// do something after loop
+		//ret = ret && it->status().ok();
+		//delete it;
+	}
+
+
+	return ret;					  
+}
+
 bool Core::getJoinedMap(crow::json::rvalue& args,
                       std::vector<crow::json::wvalue>& matchedResults,
                       int skip /*= 0*/, int limit /*= -1*/){
 
+	//return getJoinedMapThreaded(args, matchedResults, skip, limit);
 	
 	bool ret = dbStatus.ok(); 
 	if (ret) {

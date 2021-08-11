@@ -44,6 +44,13 @@ made life way easier
 ./ocv_microservice_crow
 ```
 
+It is possible to specify a server time out value with the timeout parameter:
+```
+./ocv_microservice_crow -timeout 125
+
+```
+
+
 ### Testing
 
 After running the executable, perform get and post requests as follows:
