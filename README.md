@@ -311,8 +311,8 @@ To test these set of APIs,
 You could  post a few values against keys with putjson, for example
 
 ```
-BODY:
 POST: http://0.0.0.0:18080/putjson
+BODY:
 {"key":"g1_u2", "value":{"msg":"m1"}}
 
 POST: http://0.0.0.0:18080/putjson
