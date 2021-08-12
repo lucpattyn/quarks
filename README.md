@@ -287,8 +287,8 @@ Note: In the json body, it is required to have a "key" attribute and a "value" a
 
 If the intention is to insert if and only if the key doesn't exist then use the following api:
 
-POST: http://0.0.0.0:18080/postjson
 ```
+POST: http://0.0.0.0:18080/postjson
 BODY:
 {"key":"g3_u3", "value":{ "msg":"m3"}}
 ```
@@ -296,16 +296,15 @@ If the key already exists then the call fails.
 This is more useful than calling the "exists" api to check if key exists and then call putjson,
 since it's reduces an extra api call
 
-
 ii) Retrieve the json object by key:
-POST: http://0.0.0.0:18080/getjson
 ```
+POST: http://0.0.0.0:18080/getjson
 BODY: {"key":"g3_u3"}
 ```
-iii) List keys vs values by wildcard search with array of key prefixes:
-POST: http://0.0.0.0:18080/getkeysmulti&skip=0&limit=10
 
+iii) List keys vs values by wildcard search with array of key prefixes:
 ```
+POST: http://0.0.0.0:18080/getkeysmulti&skip=0&limit=10
 BODY: ["g3_u*", "*_u3" ]
 ```
 
