@@ -69,12 +69,15 @@ namespace Quarks {
 			                     std::vector<crow::json::wvalue>& matchedResults,
 			                     int skip = 0, int limit = -1);
 
+			bool getKeysMulti(std::string wilds,
+			             std::vector<crow::json::wvalue>& matchedResults,
+			             int skip = 0, int limit = -1);
+			
 			bool getCount(std::string wild,
 			              long& out,
 			              int skip = 0, int limit = -1);
 
-			bool iter(std::string wild,
-			          std::vector<std::string>& matchedResults,
+			bool iter(std::vector<crow::json::wvalue>& matchedResults,
 			          int skip = 0, int limit = -1);
 
 			bool remove(std::string key, std::string& out);
@@ -86,11 +89,6 @@ namespace Quarks {
 			bool makePair(std::string body, crow::json::wvalue& out);
 
 			bool getJson(std::string key, crow::json::wvalue& out);
-
-
-			bool iterJson(std::string wild,
-			            std::vector<crow::json::wvalue>& matchedResults,
-			            int skip = 0, int limit = -1);
 
 			bool getList(crow::json::rvalue& args,
 			            std::vector<crow::json::wvalue>& matchedResults,

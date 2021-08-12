@@ -49,13 +49,13 @@ struct QueryParams {
 
 	static QueryParams Parse(const crow::request& req) {
 		QueryParams q;
-		auto x = req.url_params.get("keys");
-		q.wild = (x == nullptr || !strlen(x) ? "" : x);
+		
+		auto k = req.url_params.get("keys");
+		q.wild = (k == nullptr || !strlen(k) ? "" : k);
 
 		auto s = req.url_params.get("skip");
 		q.skip = (s == nullptr || !strlen(s) ? "0" : s);
 
-		q.limit = "10";
 		auto l = req.url_params.get("limit");
 		q.limit = (l == nullptr || !strlen(l)? "-1" : l);
 
@@ -426,6 +426,60 @@ int main(int argc, char ** argv) {
 
 	};
 
+	auto route_core_getkeysmulti_callback =
+	[](const crow::request& req) {
+		crow::json::wvalue out;
+
+		std::vector<crow::json::wvalue> jsonResults;
+
+		try {
+			std::string body = req.body;
+			auto p = req.url_params.get("body");
+			if(p != nullptr) {
+				body = p;
+			}
+			auto q = QueryParams::Parse(req);
+			
+			if(body.size() > 0) {
+				/*auto rev = req.url_params.get("reverse");
+				std::string reverse = (rev == nullptr || !strlen(rev))  ? "false" : rev;
+
+				if(!reverse.compare("true")) {
+					ret = Quarks::Core::_Instance.getKeysReversed(q.wild, jsonResults,
+					        std::stoi(q.skip), std::stoi(q.limit));
+				} else {
+					ret = Quarks::Core::_Instance.getKeys(q.wild, jsonResults,
+					                                      std::stoi(q.skip), std::stoi(q.limit));
+				}*/
+
+				bool ret = Quarks::Core::_Instance.getKeysMulti(body, jsonResults,
+					                                      std::stoi(q.skip), std::stoi(q.limit));
+				out["result"] = std::move(jsonResults);
+				if(!ret) {
+					out["error"] = R"({"error" : "query returned error"})";
+				}
+
+			} else {
+				out["error"] = R"({"error":"parameter 'keyslist' missing"})";
+
+			}
+
+		} catch (const std::runtime_error& error) {
+			handle_runtime_error(error, out, jsonResults);
+		}
+
+		std::ostringstream os;
+		os << crow::json::dump(out);
+
+		auto res = crow::response{os.str()};
+	    res.add_header("Access-Control-Allow-Origin", "*");
+	    //res.add_header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
+	    //res.add_header("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+
+		return res;
+
+	};
+
 	auto route_core_getcount_callback =
 	[](const crow::request& req) {
 		std::string out;
@@ -460,27 +514,30 @@ int main(int argc, char ** argv) {
 
 	auto route_core_iter_callback =
 	[](const crow::request& req) {
-		std::string out = "[";
+		crow::json::wvalue out;
+		std::vector<crow::json::wvalue> jsonResults;
 		try {
 			auto q = QueryParams::Parse(req);
-
-			//CROW_LOG_INFO << "wild: " << q.wild << ", skip: " << q.skip << ", limit: " << q.limit;
-
-			std::vector<std::string> strResults;
-			Quarks::Core::_Instance.iter(q.wild, strResults, std::stoi(q.skip), std::stoi(q.limit));
-
-			for(auto v : strResults) {
-				out += v;
-				out += ",";
+			bool ret = Quarks::Core::_Instance.iter(jsonResults, std::stoi(q.skip), std::stoi(q.limit));
+			
+			out["result"] = std::move(jsonResults);
+			if(!ret) {
+				out["error"] = R"({"error" : "query returned error"})";
 			}
-
-			out[out.size() -1] = ']'; // replace the last ',' with ']'
-
+			
 		} catch (const std::runtime_error& error) {
-			out = "runtime error during iteration";
+			handle_runtime_error(error, out, jsonResults);
 		}
 
-		return out;
+		std::ostringstream os;
+		os << crow::json::dump(out);
+
+		auto res = crow::response{os.str()};
+	    res.add_header("Access-Control-Allow-Origin", "*");
+	    //res.add_header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
+	    //res.add_header("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+
+		return res;
 
 	};
 
@@ -1128,6 +1185,8 @@ int main(int argc, char ** argv) {
 		return res;
 	};
 
+	// core routing .. 
+	
 	CROW_ROUTE(app, "/put")
 	(route_core_put_callback);
 
@@ -1145,6 +1204,9 @@ int main(int argc, char ** argv) {
 
 	CROW_ROUTE(app, "/getkeys")
 	(route_core_getkeys_callback);
+
+	CROW_ROUTE(app, "/getkeysmulti")
+	(route_core_getkeysmulti_callback);
 
 	CROW_ROUTE(app, "/getcount")
 	(route_core_getcount_callback);

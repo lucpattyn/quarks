@@ -116,7 +116,7 @@ http://0.0.0.0:18080/getsorted?keys=g1_u*&filter={"where":{"messageTo":{"eq_any"
 
 ```
 
-e) List keys vs values by wildcard search with keys (you can specifiy skip and limit optionally)
+e) List keys vs values by wildcard search with key prefixes (you can specifiy skip and limit optionally)
 
 ```
  http://0.0.0.0:18080/getkeys?keys=g1_u*&skip=5&limit=10
@@ -223,7 +223,8 @@ m) autogenerate key with prefix and value provided
 
 
 n) provide a prefix, key pair for which all keys (along with values) greater than the passed compare key,
-   starting with the prefix are returned
+   starting with the prefix are returned. You can specify skip and limit optionally.
+   Notice there is no '*' while specifying the prefix
 
 ```
 http://0.0.0.0:18080/getkeysafter?body=["key_prefix", "comparekey"]
@@ -236,7 +237,8 @@ http://0.0.0.0:18080/getkeysafter?body=["key_pre1", "key1", "key_pre2", "key2", 
 ```
 
 o) provide a prefix, key pair for which the highest key (along with values and index) greater than the passed compare key,
-   starting with the prefix is returned (Useful for fetching things like last sent message)
+   starting with the prefix is returned (Useful for fetching things like last sent message).
+   Notice there is no '*' while specifying the prefix
 
 ```
 http://0.0.0.0:18080/getkeyslast?body=["key_prefix", "comparekey"]
@@ -248,7 +250,20 @@ http://0.0.0.0:18080/getkeyslast?body=["key_pre1", "key1", "key_pre2", "key2", .
 
 ```
 
-p) Testing API that halts the request processing thread for specified number of seconds as mentioned by the timeout parameter
+p) List keys vs values by wildcard search with array of key prefixes. You can specifiy skip and limit optionally.
+   The key prefix format is the same as /getkeys API 
+```
+http://0.0.0.0:18080/getkeysmulti?body=["key1_pre*", "key*_pre2", ... key*_preN"]&skip=0&limit=10
+
+```
+
+q) List keys vs values by iterating entries in the range specified by skip and limit
+```
+http://0.0.0.0:18080/iter?skip=3&limit=5
+
+```
+
+r) Testing API that halts the request processing thread for specified number of seconds as mentioned by the timeout parameter
 (Useful to check if the https requests are actualy being processed by threads spawned by multiple cpu cores)
 
 ```
@@ -270,7 +285,7 @@ BODY:
 ```
 Note: In the json body, it is required to have a "key" attribute and a "value" attribute as a part of the json object.  The json object {"msg":"m3"}  under attribute "value" is saved against the key "g3_u3" in the persistent storage
 
-If the intention is to insert only if the key doesn't exist then use the following api:
+If the intention is to insert if and only if the key doesn't exist then use the following api:
 
 POST: http://0.0.0.0:18080/postjson
 ```
@@ -287,12 +302,12 @@ POST: http://0.0.0.0:18080/getjson
 ```
 BODY: {"key":"g3_u3"}
 ```
-iii) Retrieve an array of json objects by wildcard matching of keys..
-POST: http://0.0.0.0:18080/iterjson
+iii) List keys vs values by wildcard search with array of key prefixes. You can specifiy skip and limit optionally..
+POST: http://0.0.0.0:18080/getkeysmulti&skip=0&limit=10
 ```
-BODY: {"keys":"g3_u*"}
+BODY: ["g3_u*", "*_u3" ]
 ```
-To test this API,
+To test these set of APIs,
 You could  post a few values against keys with putjson, for example
 
 ```
@@ -311,8 +326,9 @@ BODY:
 ```
 and then check the results by
 ```
-POST: http://0.0.0.0:18080/iterjson
-BODY: {"keys":"g3_u*"}
+POST: http://0.0.0.0:18080/getkeysmulti?skip=0&limit=20
+BODY: ["g1_u*", "g2_u*", "g3_u*" ]
+
 ```
 
 iv) Get a list of key value pair given a list of keys
