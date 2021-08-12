@@ -303,11 +303,12 @@ POST: http://0.0.0.0:18080/getjson
 BODY: {"key":"g3_u3"}
 ```
 iii) List keys vs values by wildcard search with array of key prefixes. 
-You can specifiy skip and limit optionally.
+Skip and limit are optional.
 POST: http://0.0.0.0:18080/getkeysmulti&skip=0&limit=10
 ```
 BODY: ["g3_u*", "*_u3" ]
 ```
+
 To test these set of APIs,
 You could  post a few values against keys with putjson, for example
 
@@ -328,7 +329,7 @@ BODY:
 and then check the results by
 ```
 POST: http://0.0.0.0:18080/getkeysmulti?skip=0&limit=20
-BODY: ["g1_u*", "g2_u*", "g3_u*" ]
+BODY: ["g*_u1", "g2_u*", "g*" ]
 
 ```
 
