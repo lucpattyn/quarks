@@ -302,9 +302,9 @@ POST: http://0.0.0.0:18080/getjson
 ```
 BODY: {"key":"g3_u3"}
 ```
-iii) List keys vs values by wildcard search with array of key prefixes. 
-Skip and limit are optional.
+iii) List keys vs values by wildcard search with array of key prefixes:
 POST: http://0.0.0.0:18080/getkeysmulti&skip=0&limit=10
+Skip and limit are optional.
 ```
 BODY: ["g3_u*", "*_u3" ]
 ```
