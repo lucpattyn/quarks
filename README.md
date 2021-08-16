@@ -465,10 +465,32 @@ http://localhost:18080/getjoinedmap?body=
 
 ```
 
+You can also provide your own keylist, if you don't want a wildcard search or want both.
+If you provide both, keylist keys are processed after the wildcard search keys.
+Skip and Limit are only applicable for wildcard search of keys
+
+```
+GET:
+http://localhost:18080/getjoinedmap?body=
+{ 	"keys":"roomkeys_*",
+	keylist":["roomkeys_roomid1", "roomkeys_roomid2"],
+	"splitby":"_","selindex":1,
+	"join":[{"prefix":"usercount_","suffix":""},
+		    {"prefix":"messagecount_","suffix":""},
+		    {"prefix":"notificationcount_","suffix":"user"}
+		   ]
+}&skip=2&limit=3
+
+```
+
+POST version:
+
 ```
 POST: http://localhost:18080/getjoinedmap&skip=2&limit=3
 BODY:
-{ 	"keys":"roomkeys_*","splitby":"_","selindex":5,
+{ 	"keys":"roomkeys_*",
+	"keylist":["roomkeys_roomid1", "roomkeys_roomid2"],
+	"splitby":"_","selindex":1,
 	"join":[{"prefix":"usercount_","suffix":""},
 		    {"prefix":"messagecount_","suffix":""},
 		    {"prefix":"notificationcount_","suffix":"user"}

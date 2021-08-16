@@ -460,7 +460,7 @@ int main(int argc, char ** argv) {
 				}
 
 			} else {
-				out["error"] = R"({"error":"parameter 'keyslist' missing"})";
+				out["error"] = R"({"error":"parameter 'body' missing or has no content"})";
 
 			}
 

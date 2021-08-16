@@ -2269,168 +2269,8 @@ bool getJoinedMapThreaded(crow::json::rvalue& args,
 	return ret;					  
 }
 
-bool getJoinedMapOld(crow::json::rvalue& args,
-                      std::vector<crow::json::wvalue>& matchedResults,
-                      int skip /*= 0*/, int limit /*= -1*/){
 
-	//return getJoinedMapThreaded(args, matchedResults, skip, limit);
-	
-	bool ret = dbStatus.ok(); 
-	if (ret) {
-
-		std::string wild = args["keys"].s();
-		//CROW_LOG_INFO << "keys : " << wild.c_str();
-		
-		std::string splitby = args["splitby"].s();
-		//CROW_LOG_INFO << "splitby : " << splitby;		
-		
-		size_t selindex = (size_t) args["selindex"].i();
-		//CROW_LOG_INFO << "selindex : " << selindex;	
-				
-		const crow::json::rvalue& join = args["join"];
-		
-
-		std::size_t found = wild.find("*");
-		if(found != std::string::npos && found == 0) {
-			return false;
-		}
-
-		// create new iterator
-		rocksdb::ReadOptions ro;
-		rocksdb::Iterator* it = db->NewIterator(ro);
-
-		std::string pre = wild.substr(0, found);
-
-		rocksdb::Slice prefix(pre);
-
-		//rocksdb::Slice prefixPrint = prefix;
-		//CROW_LOG_INFO << "prefix : " << prefixPrint.ToString();
-
-
-		int i  = -1;
-		int count = (limit == -1) ? INT_MAX : limit;
-
-		int lowerbound  = skip - 1;
-		int upperbound = skip + count;
-
-		std::vector<crow::json::wvalue> finalKeys;
-		crow::json::wvalue k;							
-		crow::json::wvalue w;							
-								
-		std::vector<std::string> sFinalKeys;						
-								
-		for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
-
-			if(wildcmp(wild.c_str(), it->key().ToString().c_str())) {
-
-				i++;
-
-				if(i > lowerbound && (i < upperbound || limit == -1)) {
-
-					std::string matchedKey = it->key().ToString();
-					
-					std::vector<std::string> tokens;
-					
-					//CROW_LOG_INFO << "matchedKey : " << matchedKey;
-					tokenize(matchedKey, splitby[0], tokens);
-					
-					//CROW_LOG_INFO << "token size : " << tokens.size();	
-				
-					std::string finalKey = matchedKey;
-					if(selindex < tokens.size()){
-						finalKey = tokens[selindex];
-						sFinalKeys.push_back(finalKey);
-						//CROW_LOG_INFO << "finalKey : " << finalKey;	
-						crow::json::wvalue f;
-						f = finalKey;					
-								
-						finalKeys.push_back(std::move(f));
-					}				
-					
-					/*std::string prefix = "";
-					std::string suffix = "";
-					std::string joinedKey = "";*/
-					
-					/*for(auto& v : join) {					
-						try {		
-							prefix = v["prefix"].s();
-							suffix = v["suffix"].s();							
-							joinedKey = prefix + finalKey + suffix;		
-							
-							crow::json::wvalue out;
-	
-							if(getJson(joinedKey, out)) {
-								//w["value"] = std::move(out);
-								//w["key"] = joinedKey;
-								w[joinedKey] = std::move(out);
-						
-								//matchedResults.push_back(std::move(w));
-							}						
-	
-						} catch (const std::runtime_error& error) {
-							CROW_LOG_INFO << "Runtime Error: " << i << it->value().ToString();
-	
-							ret = false;
-						}
-					}*/
-										
-				}
-
-				if((i == upperbound) && (limit != -1)) {
-					break;
-				}
-
-			}
-		}
-		
-		std::string prefx = "";
-		std::string suffx = "";
-		std::string joinedKey = "";
-		
-		for(auto& v : join) {					
-			try {		
-				prefx = v["prefix"].s();
-				suffx = v["suffix"].s();							
-				
-				for(auto& finalKey : sFinalKeys){
-				
-					joinedKey = prefx + finalKey + suffx;		
-					
-					crow::json::wvalue out;
-		 			
-		 			if (dbStatus.ok()) {
-						std::string value;
-						rocksdb::Status status = db->Get(rocksdb::ReadOptions(), joinedKey, &value);
-
-						if(status.ok()) {
-							w[joinedKey] =  crow::json::load(value);
-						}
-					}
-		 
-				}
-	
-			} catch (const std::runtime_error& error) {
-				CROW_LOG_INFO << "Runtime Error: " << i << it->value().ToString();
-	
-				ret = false;
-			}
-		}
-		
-		k = std::move(finalKeys);
-		
-		matchedResults.push_back(std::move(k));			
-		matchedResults.push_back(std::move(w));		
-
-		// do something after loop
-		ret = ret && it->status().ok();
-		delete it;
-	}
-
-
-	return ret;					  
-}
-
-bool Core::getJoinedMap(crow::json::rvalue& args,
+bool getJoinedMapWildcardOnly(crow::json::rvalue& args,
                       std::vector<crow::json::wvalue>& matchedResults,
                       int skip /*= 0*/, int limit /*= -1*/){
 
@@ -2561,6 +2401,190 @@ bool Core::getJoinedMap(crow::json::rvalue& args,
 	return ret;					  
 }
 
+bool Core::getJoinedMap(crow::json::rvalue& args,
+                      std::vector<crow::json::wvalue>& matchedResults,
+                      int skip /*= 0*/, int limit /*= -1*/){
+
+	//return getJoinedMapThreaded(args, matchedResults, skip, limit);
+	
+	bool ret = dbStatus.ok(); 
+	if (ret) {
+
+		std::string wild = "";
+		if(args.has("keys")){
+			wild = args["keys"].s(); 
+		}
+		
+		bool hasKeyList = args.has("keylist");
+		//CROW_LOG_INFO << "keys : " << wild.c_str();
+		bool hasSplitBy = args.has("splitby");
+		std::string splitby = "";
+		if(hasSplitBy){
+			splitby = args["splitby"].s();
+		}
+		//CROW_LOG_INFO << "splitby : " << splitby;		
+		bool hasSelIndex = args.has("selindex");
+		int selindex =  hasSelIndex ? (size_t) args["selindex"].i() : -1;
+		//CROW_LOG_INFO << "selindex : " << selindex;	
+				
+		const crow::json::rvalue& join = args["join"];
+		
+		bool hasKeys = true;
+		std::size_t found = wild.find("*");
+		if(found != std::string::npos && found == 0) {
+			hasKeys = false;
+			if(!hasKeyList){
+				return false;
+			}
+			
+		}
+	
+
+		std::vector<crow::json::wvalue> finalKeys;
+		crow::json::wvalue k;							
+		crow::json::wvalue w;							
+									
+		std::vector<std::string> sFinalKeys;						
+			
+		if(hasKeys){
+			// create new iterator
+			rocksdb::ReadOptions ro;
+			rocksdb::Iterator* it = db->NewIterator(ro);
+	
+			std::string pre = wild.substr(0, found);
+	
+			rocksdb::Slice prefix(pre);
+	
+			//rocksdb::Slice prefixPrint = prefix;
+			//CROW_LOG_INFO << "prefix : " << prefixPrint.ToString();
+	
+	
+			int i  = -1;
+			int count = (limit == -1) ? INT_MAX : limit;
+	
+			int lowerbound  = skip - 1;
+			int upperbound = skip + count;
+	
+									
+			for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
+	
+				if(wildcmp(wild.c_str(), it->key().ToString().c_str())) {
+	
+					i++;
+	
+					if(i > lowerbound && (i < upperbound || limit == -1)) {
+	
+						std::string matchedKey = it->key().ToString();
+						
+						std::vector<std::string> tokens;
+						//CROW_LOG_INFO << "matchedKey : " << matchedKey;
+						if(hasSplitBy){
+							tokenize(matchedKey, splitby[0], tokens);
+						}
+						
+						//CROW_LOG_INFO << "token size : " << tokens.size();	
+					
+						std::string finalKey = matchedKey;
+						if(selindex > -1 && (size_t)selindex < tokens.size()){
+							finalKey = tokens[selindex];
+						}
+						sFinalKeys.push_back(finalKey);
+						//CROW_LOG_INFO << "finalKey : " << finalKey;	
+						crow::json::wvalue f;
+						f = finalKey;					
+								
+						finalKeys.push_back(std::move(f));
+					}
+	
+					if((i == upperbound) && (limit != -1)) {
+						break;
+					}
+	
+				}
+			}
+			
+			// do something after loop
+			ret = ret && it->status().ok();
+			delete it;	
+		}
+		
+		// add from keylists if provided
+		if(hasKeyList){
+			try{
+					
+				auto klist = args["keylist"];
+				
+				for(auto kl : klist){
+					std::string matchedKey = kl.s();
+					std::vector<std::string> tokens;
+					if(hasSplitBy){
+						tokenize(matchedKey, splitby[0], tokens);
+					}
+					std::string finalKey = matchedKey;
+					if(selindex > -1 && (size_t)selindex < tokens.size()){
+						finalKey = tokens[selindex];
+					}
+					
+					sFinalKeys.push_back(finalKey);
+						//CROW_LOG_INFO << "finalKey : " << finalKey;	
+					crow::json::wvalue f;
+					f = finalKey;					
+								
+					finalKeys.push_back(std::move(f));
+				}
+				
+			} catch (const std::runtime_error& error) {
+				CROW_LOG_INFO << "Runtime Error: keylist iterate .. ";
+	
+				ret = false;
+			}
+				
+		}
+		
+		std::string prefx = "";
+		std::string suffx = "";
+		std::string joinedKey = "";
+		
+		for(auto& v : join) {					
+			try {		
+				prefx = v["prefix"].s();
+				suffx = v["suffix"].s();							
+				
+				for(auto& finalKey : sFinalKeys){
+				
+					joinedKey = prefx + finalKey + suffx;		
+					
+					crow::json::wvalue out;
+		 			
+		 			if (dbStatus.ok()) {
+						std::string value;
+						rocksdb::Status status = db->Get(rocksdb::ReadOptions(), joinedKey, &value);
+
+						if(status.ok()) {
+							w[joinedKey] =  crow::json::load(value);
+						}
+					}
+		 
+				}
+	
+			} catch (const std::runtime_error& error) {
+				CROW_LOG_INFO << "Runtime Error: prefix/suffix join, last joined key: " << joinedKey;
+	
+				ret = false;
+			}
+		}
+		
+		k = std::move(finalKeys);
+		
+		matchedResults.push_back(std::move(k));			
+		matchedResults.push_back(std::move(w));		
+
+		
+	}
+
+
+	return ret;					  
+}
 
 bool Core::getAfter(std::string key, std::string prefix, std::vector<crow::json::wvalue>& matchedResults,
 						int skip /*= 0*/, int limit /*= -1*/) {
