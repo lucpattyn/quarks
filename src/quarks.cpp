@@ -1627,7 +1627,7 @@ bool Core::iter(std::vector<crow::json::wvalue>& matchedResults,
 }
 
 
-bool Core::remove(std::string key, std::string& out) {
+bool removeIterating(std::string key, std::string& out) {
 	bool ret = false;
 
 	// Delete value
@@ -1668,6 +1668,49 @@ bool Core::remove(std::string key, std::string& out) {
 		}
 
 		delete it;
+
+	} else {
+		out = R"({"result":-1})";
+	}
+
+	return ret;
+
+}
+
+bool Core::remove(std::string key, std::string& out) {
+	bool ret = false;
+
+	// Delete value
+	if (dbStatus.ok()) {
+
+		try {
+			std::string value;
+			
+			rocksdb::Status status = db->Get(rocksdb::ReadOptions(), key, &value);
+			if(status.ok()){
+				rocksdb::Status delstatus = db->Delete(rocksdb::WriteOptions(), key);				
+				if(delstatus.ok()) {
+					ret = true;
+					removeRequest(key);
+					
+					out = R"({"result":1})";
+	
+				} else {
+					out = R"({"result":0})";
+				}
+				
+			}else {
+					out = R"({"result":0})";
+			}			
+				
+
+		} catch (const std::runtime_error& error) {
+			CROW_LOG_INFO << "Runtime Error: Remove " <<  key << " ..";
+
+			out = R"({"result":-1})";
+
+		}
+
 
 	} else {
 		out = R"({"result":-1})";
@@ -1736,11 +1779,11 @@ int Core::removeAll(std::string wild,  int skip /*= 0*/, int limit /*= -1*/) {
 			rocksdb::Status s = db->Write(rocksdb::WriteOptions(), &batch);
 			
 			if(!s.ok()){
-				CROW_LOG_INFO << "Batch Delete Error: ";
+				CROW_LOG_INFO << "Batch Delete Error.. ";
 			}
 
 		} catch (const std::runtime_error& error) {
-			CROW_LOG_INFO << "Runtime Error: " << out << it->value().ToString();
+			CROW_LOG_INFO << "Runtime Error: " << out << " " << it->value().ToString();
 
 			delete it;
 
@@ -2035,6 +2078,57 @@ bool Core::getList(crow::json::rvalue& args,
 					if(valid){
 						matchedResults.push_back(std::move(w));
 					}					
+				}
+
+			}
+
+		} catch (const std::runtime_error& error) {
+			ret = false;
+
+		}
+
+	}
+
+	return ret;
+
+}
+
+bool Core::getItems(crow::json::rvalue& args,
+                   crow::json::wvalue& jsonResult,
+                   int skip /*= 0*/, int limit /*= -1*/) {
+
+
+	bool ret = true;
+
+	if (dbStatus.ok()) {
+
+		try {
+			int i  = -1;
+			int count = (limit == -1) ? INT_MAX : limit;
+
+			int lowerbound  = skip - 1;
+			int upperbound = skip + count;
+
+			crow::json::wvalue w;
+			// iterate all entries
+			for (auto key : args) {
+				bool valid = false;
+		
+				std::string s = key.s();
+				i++;
+				if(i > lowerbound && (i < upperbound || limit == -1)) {
+					if (dbStatus.ok()) {
+						std::string value;
+						rocksdb::Status status = db->Get(rocksdb::ReadOptions(), s, &value);
+						if(status.ok()) {
+							jsonResult[s] =  std::move(crow::json::load(value));
+							ret = ret && true;
+							
+						}else{
+							//jsonResult[s] = "not found";
+							ret = false;
+						}
+					}
 				}
 
 			}

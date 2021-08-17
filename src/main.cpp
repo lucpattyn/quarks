@@ -270,7 +270,7 @@ int main(int argc, char ** argv) {
 
 	};
 
-	auto route_core_getkey_callback =
+	auto route_core_get_callback =
 	[](const crow::request& req) {
 		std::string out = "";
 		//CROW_LOG_INFO <<"get_key:";
@@ -783,6 +783,38 @@ int main(int argc, char ** argv) {
 
 	};
 	
+	auto route_core_getitems_callback =
+	[](const crow::request& req) {
+		crow::json::wvalue w;
+		
+		std::string body = req.body;
+		auto p = req.url_params.get("body");
+		if(p != nullptr) {
+			body = p;
+		}
+
+		auto x = crow::json::load(body);
+		if (!x) {
+			w["error"] = "invalid parameters";
+			return w;
+		}
+
+		auto q = QueryParams::Parse(req);
+
+		bool ret = Quarks::Core::_Instance.getItems(x, w, std::stoi(q.skip), std::stoi(q.limit));
+
+		//if(jsonResults.size()) {
+			//w["result"] = jsonResults[0].s();
+			//CROW_LOG_INFO << "jsonResults[0] : "
+			//   <<  crow::json::dump(jsonResults[0])
+		if(!ret) {
+			w["error"] = "One or more keys did not retrieve the corresponding item";
+		}
+
+		return w;
+
+	};
+	
 	auto route_core_getjoinedmap_callback =
 	[](const crow::request& req) {
 		crow::json::wvalue w;
@@ -1194,7 +1226,7 @@ int main(int argc, char ** argv) {
 	(route_core_existkey_callback);
 
 	CROW_ROUTE(app, "/get")
-	(route_core_getkey_callback);
+	(route_core_get_callback);
 
 	CROW_ROUTE(app, "/getall")
 	(route_core_getall_callback);
@@ -1243,6 +1275,9 @@ int main(int argc, char ** argv) {
 
 	CROW_ROUTE(app, "/getlist")
 	.methods("GET"_method, "POST"_method)(route_core_getlist_callback);
+	
+	CROW_ROUTE(app, "/getitems")
+	.methods("GET"_method, "POST"_method)(route_core_getitems_callback);
 	
 	CROW_ROUTE(app, "/getjoinedmap")
 	.methods("GET"_method, "POST"_method)(route_core_getjoinedmap_callback);

@@ -60,7 +60,7 @@ After running the executable, perform get and post requests as follows:
 
 ### Description
 
-a)  Put key vs value
+1)  Put key vs value
 
 ```
  http://0.0.0.0:18080/put?body={"key":"g1_u1","value":{"msg":"m1"}}
@@ -82,18 +82,18 @@ a)  Put key vs value
  In those cases you have to use the methods in POST section (putjson, postjson etc.)
 
 
-b) Get value against key
+2) Get value against key
 
 ```
  http://0.0.0.0:18080/get?key=g1_u1
 ```
 
-c) List values by wildcard search with keys You can specifiy skip and limit optionally
+3) List values by wildcard search with keys You can specifiy skip and limit optionally
 ```
  http://0.0.0.0:18080/getall?keys=g1_u*&skip=5&limit=10
 ```
 
-d) List sorted values by wildcard search with keys and specifying the sortby attribute of value. 
+4) List sorted values by wildcard search with keys and specifying the sortby attribute of value. 
    It is preferable to already keep the stored key value pairs sorted by using keys instead of invoking sort api,
    since stored elements are pre-sorted by keys. You can specifiy skip and limit optionally
 ```
@@ -116,7 +116,7 @@ http://0.0.0.0:18080/getsorted?keys=g1_u*&filter={"where":{"messageTo":{"eq_any"
 
 ```
 
-e) List keys vs values by wildcard search with key prefixes (you can specifiy skip and limit optionally)
+5) List keys vs values by wildcard search with key prefixes (you can specifiy skip and limit optionally)
 
 ```
  http://0.0.0.0:18080/getkeys?keys=g1_u*&skip=5&limit=10
@@ -126,37 +126,42 @@ To get the keys in reverse order run
 http://0.0.0.0:18080/getkeys?keys=g1_u*&skip=5&limit=10&reverse=true
 ```
 
-f) Get count of keys matched by wildcard search
+6) Get count of keys matched by wildcard search
 ```
 http://0.0.0.0:18080/getcount?keys=g1*
 ```
 
-g)  remove a key
+7)  remove a key
 ```
 http://0.0.0.0:18080/remove?key=g1_u1
 ```
 number of keys successfully deleted would be returned
 
-h) remove keys by wildcard search
+8) remove keys by wildcard search
 ```
 http://0.0.0.0:18080/removeall?keys=g1_u*
 ```
 number of keys successfully deleted would be returned
 
 
-i) check if a key already exists
+9) check if a key already exists
 ```
 http://0.0.0.0:18080/exists?key=g1_u1
 ```
 
-j) get a list of key value pair given a list of keys
+10) get a list of key value pair given a list of keys
 ```
 http://0.0.0.0:18080/getlist?body=["g1_u1", "g2_u2"]
 ```
 (You can specify skip and limit to this as well but should not need it)
 
+11) get a json object containing values against a given a list of keys
+```
+http://0.0.0.0:18080/getitems?body=["g1_u1", "g2_u2"]
+```
+(You can specify skip and limit to this as well but should not need it)
 
-k) increment a value saved as integer by a specified amount
+12) increment a value saved as integer by a specified amount
 ```
 http://0.0.0.0:18080/incr?body={"key":"somecounter","step":5}
 
@@ -170,7 +175,7 @@ http://0.0.0.0:18080/incrval?body={"key":"feed_user_johnwick", "value":{"points"
 In the above example if points were previously set as 7, after the API call it becomes 10.
 Both incr and incrval works with POST methods as well
 
-l) Execute Atoms: Atoms are set of Put and Remove operations which can be executed in a single API call
+l3) Execute Atoms: Atoms are set of Put and Remove operations which can be executed in a single API call
 
 To run a set of put operations together, run:
 
@@ -212,7 +217,7 @@ remove:["g1_u1","g1_u2", "g3_u3"]
    3) If you have a number of put operations and no removes then use  ../put/atom (and not  ../atom)
    4) If you have a number of remove operations and no puts then use  ../remove/atom (and not ../atom)
 
-m) autogenerate key with prefix and value provided
+14) autogenerate key with prefix and value provided
 
 ```
  http://0.0.0.0:18080/make?body={"prefix":"dev_","value":"101"}
@@ -222,7 +227,7 @@ m) autogenerate key with prefix and value provided
  then a key is formed with prefix+key and no key generation occurs
 
 
-n) provide a prefix, key pair for which all keys (along with values) greater than the passed compare key,
+15) provide a prefix, key pair for which all keys (along with values) greater than the passed compare key,
    starting with the prefix are returned. You can specify skip and limit optionally.
    Notice there is no '*' while specifying the prefix
 
@@ -236,7 +241,7 @@ http://0.0.0.0:18080/getkeysafter?body=["key_pre1", "key1", "key_pre2", "key2", 
 
 ```
 
-o) provide a prefix, key pair for which the highest key (along with values and index) greater than the passed compare key,
+16) provide a prefix, key pair for which the highest key (along with values and index) greater than the passed compare key,
    starting with the prefix is returned (Useful for fetching things like last sent message).
    Notice there is no '*' while specifying the prefix
 
@@ -250,20 +255,20 @@ http://0.0.0.0:18080/getkeyslast?body=["key_pre1", "key1", "key_pre2", "key2", .
 
 ```
 
-p) List keys vs values by wildcard search with array of key prefixes. You can specifiy skip and limit optionally.
+17) List keys vs values by wildcard search with array of key prefixes. You can specifiy skip and limit optionally.
    The key prefix format is the same as /getkeys API 
 ```
 http://0.0.0.0:18080/getkeysmulti?body=["key1_pre*", "key*_pre2", ... key*_preN"]&skip=0&limit=10
 
 ```
 
-q) List keys vs values by iterating entries in the range specified by skip and limit
+18) List keys vs values by iterating entries in the range specified by skip and limit
 ```
 http://0.0.0.0:18080/iter?skip=3&limit=5
 
 ```
 
-r) Testing API that halts the request processing thread for specified number of seconds as mentioned by the timeout parameter
+19) Testing API that halts the request processing thread for specified number of seconds as mentioned by the timeout parameter
 (Useful to check if the https requests are actualy being processed by threads spawned by multiple cpu cores)
 
 ```
@@ -277,7 +282,7 @@ r) Testing API that halts the request processing thread for specified number of 
 
 ### Description
 
-i) Put a json object against a key:
+1) Put a json object against a key:
  POST: http://0.0.0.0:18080/putjson
 ```
 BODY:
@@ -296,13 +301,13 @@ If the key already exists then the call fails.
 This is more useful than calling the "exists" api to check if key exists and then call putjson,
 since it's reduces an extra api call
 
-ii) Retrieve the json object by key:
+2) Retrieve the json object by key:
 ```
 POST: http://0.0.0.0:18080/getjson
 BODY: {"key":"g3_u3"}
 ```
 
-iii) List keys vs values by wildcard search with array of key prefixes:
+3) List keys vs values by wildcard search with array of key prefixes:
 ```
 POST: http://0.0.0.0:18080/getkeysmulti&skip=0&limit=10
 BODY: ["g3_u*", "*_u3" ]
@@ -332,7 +337,7 @@ BODY: ["g*_u1", "g2_u*", "g*" ]
 
 ```
 
-iv) Get a list of key value pair given a list of keys
+4) Get a list of key value pair given a list of keys
 ```
 POST: http://0.0.0.0:18080/getlist
 BODY: ["g1_u1", "g2_u2"]
@@ -340,8 +345,16 @@ BODY: ["g1_u1", "g2_u2"]
 ```
 (You can specify skip and limit as query parameters but should not need it)
 
+5) Get a json object containing values against a list of keys
+```
+POST: http://0.0.0.0:18080/getitems
+BODY: ["g1_u1", "g2_u2"]
 
-v) Execute Atoms: Atoms are set of Put and Remove operations which can be executed in a single API call
+```
+(You can specify skip and limit as query parameters but should not need it)
+
+
+6) Execute Atoms: Atoms are set of Put and Remove operations which can be executed in a single API call
 
 To run a set of put operations together, run:
 
@@ -390,7 +403,7 @@ remove:["g1_u1","g1_u2", "g3_u3"]
  4) If you have a number of remove operations and no puts then use  ../remove/atom (and not ../atom)
 
 
-vi) Autogenerate key and make a key value pair given a key-prefix and value
+7) Autogenerate key and make a key value pair given a key-prefix and value
 ```
 POST: http://0.0.0.0:18080/make
 BODY:
@@ -400,7 +413,7 @@ BODY:
 * returns the key value pair as json object; if "key" is specified along with prefix
 then a key is formed with prefix+key and no key generation occurs
 
-vii) provide a prefix, key pair for which all keys (along with values) greater than the passed key,
+8) provide a prefix, key pair for which all keys (along with values) greater than the passed key,
    starting with the prefix are returned
 
 ```
@@ -417,7 +430,7 @@ BODY:
 
 ```
 
-viii) provide a prefix, key pair for which the highest key (along with value and index) greater than the passed key,
+9) provide a prefix, key pair for which the highest key (along with value and index) greater than the passed key,
    starting with the prefix is returned
 
 ```

@@ -86,14 +86,16 @@ namespace Quarks {
 			bool removeAtom(std::string body, std::string& out);
 
 			//bool putJson(std::string key, crow::json::rvalue& x, crow::json::wvalue& out);
-			bool makePair(std::string body, crow::json::wvalue& out);
 
 			bool getJson(std::string key, crow::json::wvalue& out);
 
 			bool getList(crow::json::rvalue& args,
 			            std::vector<crow::json::wvalue>& matchedResults,
 			            int skip = 0, int limit = -1);
-			
+			bool getItems(crow::json::rvalue& args,
+                   crow::json::wvalue& jsonResult,
+                   int skip = 0, int limit = -1);
+
 			bool getJoinedMap(crow::json::rvalue& args,
 			            std::vector<crow::json::wvalue>& matchedResults,
 			            int skip = 0, int limit = -1);
@@ -114,7 +116,8 @@ namespace Quarks {
 			
 			bool atom(std::string body, std::string& out);
 
-
+			bool makePair(std::string body, crow::json::wvalue& out);
+			
 			/// counting stuff
 			std::mutex mtx;
 			bool increment(std::string key, int stepBy, std::string& out);
