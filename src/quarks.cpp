@@ -22,6 +22,7 @@
 
 #include <shared_mutex>
 
+
 using namespace boost::asio;
 using ip::tcp;
 //using std::string;
@@ -30,9 +31,172 @@ using ip::tcp;
 
 using namespace Quarks;
 
+// Mutex definition Area
+std::mutex __put_mtx;
+std::shared_mutex __readerwriter_mtx;
+
+std::mutex __wildextract_mtx;
+std::mutex __getkeysmulti_mtx;
+
+std::mutex __critical_mtx;
+
+std::mutex __cache_mtx;
+//
+
 
 Core Core::_Instance;
 Matrix Matrix::_Instance;
+
+int wildcmp(const char *wild, const char *str) {
+	// Written by Jack Handy - <A href="mailto:jakkhandy@hotmail.com">jakkhandy@hotmail.com</A>
+	const char *cp = NULL, *mp = NULL;
+
+	while ((*str) && (*wild != '*')) {
+		if ((*wild != *str) && (*wild != '?')) {
+			return 0;
+		}
+		wild++;
+		str++;
+	}
+
+	while (*str) {
+		if (*wild == '*') {
+			if (!*++wild) {
+				return 1;
+			}
+			mp = wild;
+			cp = str+1;
+		} else if ((*wild == *str) || (*wild == '?')) {
+			wild++;
+			str++;
+		} else {
+			wild = mp;
+			str = cp++;
+		}
+	}
+
+	while (*wild == '*') {
+		wild++;
+	}
+	return !*wild;
+}
+
+/// Caching section ///
+
+const bool _CACHE_COUNTONLY = true;
+const bool _CACHE_REVERSED  = true;
+
+bool _CacheEnabled = false;
+std::map<std::string, std::string> _CacheMap;
+
+bool _GetCached(std::string key, std::string& value){
+	std::lock_guard<std::mutex> lock(__cache_mtx);
+	value = _CacheMap[key];
+	
+	return true;
+}
+
+bool _PutCached(std::string key, std::string value){
+	std::lock_guard<std::mutex> lock(__cache_mtx);
+	_CacheMap[key] = value;
+	
+	return true;
+}
+
+int _GetCachedKeys(bool countOnly, bool reversed, std::string wild,
+                   std::vector<crow::json::wvalue>& matchedResults,
+                   int skip = 0, int limit = -1) {
+
+	int ret = 0;
+	
+	std::size_t found = wild.find("*");
+	if(found != std::string::npos && found == 0) {
+		return 0;
+	}
+	std::string prefix = wild.substr(0, found);
+	
+	std::string firstAfterPrefix = prefix;
+	++firstAfterPrefix[firstAfterPrefix.length() - 1];
+
+	std::lock_guard<std::mutex> lock(__cache_mtx);
+		
+	auto prefixedBeginIt = _CacheMap.lower_bound(prefix);
+	auto prefixedEndIt = _CacheMap.lower_bound(firstAfterPrefix);
+
+	auto itBegin = reversed?prefixedEndIt : prefixedBeginIt;
+	auto itEnd = reversed?prefixedBeginIt : prefixedEndIt; 
+	
+	int i  = -1;
+	int count = (limit == -1) ? INT_MAX : limit;
+
+	int lowerbound  = skip - 1;
+	int upperbound = skip + count;
+	
+	if(reversed){
+		itBegin--;
+	}else{
+		itEnd--;
+	}
+	
+	for (   ; itBegin != _CacheMap.end(); reversed?--itBegin : ++itBegin) {
+
+		if(wildcmp(wild.c_str(), itBegin->first.c_str())) {
+
+			i++;
+
+			if(i > lowerbound && (i < upperbound || limit == -1)) {
+				ret++;
+				
+				if(!countOnly){
+					crow::json::wvalue w;
+
+					try {
+						auto x = crow::json::load(itBegin->second);
+	
+						if(!x) {
+							w["value"] =  crow::json::load(std::string("[\"") +
+							                               itBegin->second + std::string("\"]"));
+	
+						} else {
+							w["value"] = x;
+						}
+	
+					} catch (const std::runtime_error& error) {
+						CROW_LOG_INFO << "Runtime Error: " << i << prefixedBeginIt->second;
+	
+						w["error"] =  itBegin->second;
+	
+						matchedResults.push_back(std::move(w));
+	
+					}
+	
+					w["key"] = itBegin->first;
+	
+					//CROW_LOG_INFO << "w key fwd: " << crow::json::dump(w) << " skip: "
+					//<< skip << ", limit: " << limit;
+	
+					matchedResults.push_back(std::move(w));	
+	
+				}
+				
+			}
+
+			if((i == upperbound) && (limit != -1)) {
+				break;
+			}
+			
+			if(itBegin == itEnd){
+				break;
+			}
+
+		}
+	}
+
+
+	return ret;
+}
+
+/// end of Caching section ///
 
 rocksdb::DB* db = nullptr;
 rocksdb::Status dbStatus;
@@ -44,6 +208,20 @@ void openDB(std::string schemaname) {
 
 	CROW_LOG_INFO << "opening db: " << schemaname;
 
+	if(_CacheEnabled){
+		rocksdb::ReadOptions ro;
+		rocksdb::Iterator* it = db->NewIterator(ro);
+		
+		int cacheCount = 0;
+		for (it->SeekToFirst(); it->Valid(); it->Next()) {
+			_PutCached(it->key().ToString(), it->value().ToString());
+			cacheCount++;
+		}
+		
+		CROW_LOG_INFO << "Cache enabled! Total entries cached: " << cacheCount;
+		
+		delete it;
+	}
 }
 
 void closeDB(std::string schemaname) {
@@ -136,49 +314,6 @@ static std::string consumerUrl = "";
 
 // end Quarks Cloud
 
-// Mutex definition Area
-std::mutex __put_mtx;
-std::shared_mutex __readerwriter_mtx;
-
-std::mutex __wildextract_mtx;
-std::mutex __getkeysmulti_mtx;
-
-std::mutex __critical_mtx;
-//
-
-int wildcmp(const char *wild, const char *str) {
-	// Written by Jack Handy - <A href="mailto:jakkhandy@hotmail.com">jakkhandy@hotmail.com</A>
-	const char *cp = NULL, *mp = NULL;
-
-	while ((*str) && (*wild != '*')) {
-		if ((*wild != *str) && (*wild != '?')) {
-			return 0;
-		}
-		wild++;
-		str++;
-	}
-
-	while (*str) {
-		if (*wild == '*') {
-			if (!*++wild) {
-				return 1;
-			}
-			mp = wild;
-			cp = str+1;
-		} else if ((*wild == *str) || (*wild == '?')) {
-			wild++;
-			str++;
-		} else {
-			wild = mp;
-			str = cp++;
-		}
-	}
-
-	while (*wild == '*') {
-		wild++;
-	}
-	return !*wild;
-}
 
 Core::Core() : _portNumber(18080) , _timeout(0) {
 
@@ -308,6 +443,8 @@ void Core::setEnvironment(int argc, char** argv) {
 			loggerFlag = true;
 		} else if(!v.compare("-timeout")) {
 			timeoutFlag = true;
+		} else if(!v.compare("-cached")){
+			_CacheEnabled = true;
 		}
 	}
 
@@ -418,32 +555,22 @@ bool getKeyValuePair(std::string key, std::string& value, std::string& out) {
 	bool ret = false;
 
 	if (dbStatus.ok()) {
-		rocksdb::ReadOptions ro;
-		rocksdb::Iterator* it = db->NewIterator(ro);
-
 		try {
-			rocksdb::Slice prefix(key);
-			//rocksdb::Slice prefixPrint = prefix;
-			//CROW_LOG_INFO << "prefix : " << prefixPrint.ToString();
-
-			it->Seek(prefix);
-			if(it->Valid() && !key.compare(it->key().ToString())) {
+			rocksdb::Status status = db->Get(rocksdb::ReadOptions(), key, &value);
+			if(status.ok()){
 				ret = true;
-				value = it->value().ToString();
 				out = R"({"result":true})";
-
+				
 			} else {
 				out = R"({"result":false})";
 			}
 
 		} catch (const std::runtime_error& error) {
-			CROW_LOG_INFO << "Runtime Error: " <<  it->value().ToString();
-
+			CROW_LOG_INFO << "Runtime Error: " <<  key;
 			out = R"({"error":"runtime error"})";
 
 		}
 
-		delete it;
 
 	} else {
 		out = R"({"error":"db status error"})";
@@ -492,6 +619,35 @@ void httpGet(std::string url){
 	}
 }
 
+void putRequest(std::string key, std::string value){
+
+	if(_CacheEnabled){
+		//_CachedMap[key] = value;
+		_PutCached(key, value);
+	}
+			
+	if(Core::_Instance.isWriterNode()){
+		//CROW_LOG_INFO << "publishing put ..";
+
+		std::lock_guard<std::mutex> _(__put_mtx);
+	
+		crow::json::wvalue w;
+		w["value"] = value;
+		w["key"] = key;
+		w["action"] = "put";
+		
+		std::string data = crow::json::dump(w);
+		
+		__WriterNode.write(data.c_str(), data.size()+1); // 1 added for a trailing zero
+	}
+	
+	if(Core::_Instance.hasLogger()){
+		std::string putUrl = std::string(Core::_Instance.getLoggerUrl()) + "/putjson";
+		httpPost(putUrl, key, value);
+	}
+	
+}
+
 void removeRequest(std::string key){
 	
 	if(Core::_Instance.isWriterNode()){
@@ -516,33 +672,6 @@ void removeRequest(std::string key){
 
 
 }
-
-
-
-void putRequest(std::string key, std::string value){
-
-	if(Core::_Instance.isWriterNode()){
-		//CROW_LOG_INFO << "publishing put ..";
-
-		std::lock_guard<std::mutex> _(__put_mtx);
-	
-		crow::json::wvalue w;
-		w["value"] = value;
-		w["key"] = key;
-		w["action"] = "put";
-		
-		std::string data = crow::json::dump(w);
-		
-		__WriterNode.write(data.c_str(), data.size()+1); // 1 added for a trailing zero
-	}
-	
-	if(Core::_Instance.hasLogger()){
-		std::string putUrl = std::string(Core::_Instance.getLoggerUrl()) + "/putjson";
-		httpPost(putUrl, key, value);
-	}
-	
-}
-
 
 bool insertKeyValuePair(bool failIfExists, crow::json::rvalue& x, std::string& out) {
 
@@ -615,6 +744,7 @@ bool insertKeyValuePair(bool failIfExists, crow::json::rvalue& x, std::string& o
 			
 		}else{
 			putRequest(key, writeValue);
+			
 		}
 
 	} else {
@@ -732,6 +862,10 @@ bool Core::exists(std::string key, std::string& out) {
 }
 
 bool Core::get(std::string key, std::string& value) {
+	
+	if(_CacheEnabled){
+		return _GetCached(key, value);
+	}
 
 	bool ret = false;
 
@@ -829,6 +963,7 @@ bool Core::getAll(std::string wild,
 	return ret && dbStatus.ok();
 }
 
+// Needs serious review
 bool Core::getSorted(std::string wild, std::string sortby, bool ascending,
                      std::vector<crow::json::wvalue>& matchedResults,
                      int skip /*= 0*/, int limit /*= -1*/, std::string filter /*= ""*/) {
@@ -1009,6 +1144,12 @@ bool Core::getKeys(std::string wild,
                    std::vector<crow::json::wvalue>& matchedResults,
                    int skip /*= 0*/, int limit /*= -1*/) {
 
+	if(_CacheEnabled){
+		_GetCachedKeys(!_CACHE_COUNTONLY, !_CACHE_REVERSED, wild, matchedResults, skip, limit);
+		
+		return true;
+	}
+	
 	bool ret = true;
 	if (dbStatus.ok()) {
 
@@ -1092,10 +1233,17 @@ bool Core::getKeys(std::string wild,
 	return ret && dbStatus.ok();
 }
 
+// Needs review and improvement
 bool Core::getKeysReversed(std::string wild,
                            std::vector<crow::json::wvalue>& matchedResults,
                            int skip /*= 0*/, int limit /*= -1*/) {
 
+	if(_CacheEnabled){
+		_GetCachedKeys(!_CACHE_COUNTONLY, _CACHE_REVERSED, wild, matchedResults, skip, limit);
+		
+		return true;
+	}
+	
 	bool ret = true;
 	if (dbStatus.ok()) {
 
@@ -1189,6 +1337,7 @@ bool Core::getKeysReversed(std::string wild,
 	return ret && dbStatus.ok();
 }
 
+// experimental thread codes /////////
 bool getKeysInThread(std::string wild,
 					std::vector<crow::json::wvalue>& matchedResults,
 		            int skip, int limit, std::atomic<int>& atomic_index, std::atomic<bool>& exit){
@@ -1336,169 +1485,176 @@ bool Core::getKeysMulti(std::string wilds,
 	return ret;
 }
 
-bool getCountThreaded(std::string wild,
-                    long& out,
-                    int skip /*= 0*/, int limit /*= -1*/){
-    
-    bool ret = true;
-    if (!dbStatus.ok()){
-		return false;
-	}
-	out = 0;
-	
-	std::size_t found = wild.find("*");
-	if(found != std::string::npos && found == 0) {
-		return false;
-	}
+//bool getCountThreaded(std::string wild,
+//                    long& out,
+//                    int skip /*= 0*/, int limit /*= -1*/){
+//    
+//    bool ret = true;
+//    if (!dbStatus.ok()){
+//		return false;
+//	}
+//	out = 0;
+//	
+//	std::size_t found = wild.find("*");
+//	if(found != std::string::npos && found == 0) {
+//		return false;
+//	}
+//
+//	static std::string lastWild = "";
+//	static std::vector<std::string> iterKeys;
+//	
+//	std::string pre = wild.substr(0, found);
+//	std::string preRev = pre;
+//	preRev[preRev.size() - 1] = pre[pre.size() - 1] + 1;
+//
+//	rocksdb::Slice prefix(pre);
+//	rocksdb::Slice prefixRev(preRev);
+//
+//	//rocksdb::Slice prefixPrint = prefix;
+//	//CROW_LOG_INFO << "prefix : " << prefixPrint.ToString();
+//
+//
+//	int i  = -1;
+//	int count = (limit == -1) ? INT_MAX : limit;
+//
+//	int lowerbound  = skip - 1;
+//	int upperbound = skip + count;
+//
+//	
+//	std::atomic<int> totalCount(0);
+//	
+//	std::string iterKey1 = "";		
+//	std::string iterKey2 = "";
+//		
+//	int count1 = 0, count2 = 0;
+//	
+//	if(lastWild.compare(wild)){
+//		iterKeys.clear();
+//		lastWild = wild;
+//	}else{
+//		
+//		std::vector<std::thread> v(8); 
+//  		
+//  		int size = iterKeys.size()/8;
+//  		std::atomic<int> tc(0);
+//		for(auto& t: v){
+//			t = std::thread([&]{ 
+//					std::lock_guard<std::mutex> lock(__critical_mtx);  	
+//					
+//					std::cout << "tc: " << tc << " size: " << (tc * size  + size) << " real size: " << size;
+//					for(int n = tc * size; n < (tc * size  + size); ++n){						
+//						if(wildcmp(wild.c_str(), iterKeys[n].c_str())){
+//							totalCount++;
+//						}
+//					}	
+//					
+//				tc++;				  
+//			});
+//	
+//		}
+//		
+//		for(auto& t: v){
+//			t.join();
+//		}
+//		
+//		out = totalCount;
+//		CROW_LOG_INFO << "returning from cache : " << totalCount;
+//		
+//		return true;
+//	}
+//	
+//	std::thread iter1([&]{ 	
+//		//std::lock_guard<std::shared_mutex> writerLock(__readerwriter_mtx);			
+//		
+//		// create new iterator
+//		rocksdb::ReadOptions ro;
+//		rocksdb::Iterator* it = db->NewIterator(ro);
+//		
+//		const char* wildstr = wild.c_str();
+//		CROW_LOG_INFO << "prefix : " << pre;
+//		
+//		
+//		for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
+//			iterKey1 = it->key().ToString().c_str();
+//			
+//			if(wildcmp(wildstr, iterKey1.c_str())){
+//				totalCount++;
+//				count1++;
+//			
+//				
+//			}	
+//			
+//			std::lock_guard<std::mutex> lock(__critical_mtx);  	
+//			iterKeys.push_back(iterKey1);		
+//			
+//			if(iterKey1.size() && iterKey2.size() && iterKey1.compare(iterKey2)  > 0){
+//				std::cout << "breaking iter 1 .. "  << iterKey1.c_str() << ", " << iterKey2.c_str() << count1 << std::endl;
+//				break;
+//			}
+//		}	
+//		
+//		ret = ret && it->status().ok();
+//		delete it;
+//	});	
+//	 
+//	std::thread iter2([&]{ 	
+//		//std::lock_guard<std::shared_mutex> writerLock(__readerwriter_mtx);			
+//		
+//		// create new iterator
+//		rocksdb::ReadOptions ro;
+//		rocksdb::Iterator* it = db->NewIterator(ro);
+//		
+//		const char* wildstr = wild.c_str();
+//		CROW_LOG_INFO << "prefixRev : " << preRev;
+//		
+//		it->Seek(prefixRev);
+//		it->Prev();
+//		
+//		for ( ;it->Valid() && it->key().starts_with(prefix); it->Prev()) {
+//			iterKey2 = it->key().ToString().c_str();
+//			
+//			if(wildcmp(wildstr, iterKey2.c_str())){
+//				totalCount++;
+//				count2++;
+//				
+//				
+//			}
+//		
+//			std::lock_guard<std::mutex> lock(__critical_mtx);  
+//			iterKeys.push_back(iterKey2);
+//				
+//			if(iterKey2.compare(iterKey1)  < 0){
+//				break;
+//			}
+//		}	
+//		
+//		ret = ret && it->status().ok();
+//		delete it;
+//	});		
+//	 
+//
+//	iter1.join();
+//	iter2.join();
+//
+//	out = totalCount;
+//	
+//	std::cout << "\ncount1: " << count1 << " count2: "  << count2;
+//	
+//	return ret;
+//}
 
-	static std::string lastWild = "";
-	static std::vector<std::string> iterKeys;
-	
-	std::string pre = wild.substr(0, found);
-	std::string preRev = pre;
-	preRev[preRev.size() - 1] = pre[pre.size() - 1] + 1;
-
-	rocksdb::Slice prefix(pre);
-	rocksdb::Slice prefixRev(preRev);
-
-	//rocksdb::Slice prefixPrint = prefix;
-	//CROW_LOG_INFO << "prefix : " << prefixPrint.ToString();
-
-
-	int i  = -1;
-	int count = (limit == -1) ? INT_MAX : limit;
-
-	int lowerbound  = skip - 1;
-	int upperbound = skip + count;
-
-	
-	std::atomic<int> totalCount(0);
-	
-	std::string iterKey1 = "";		
-	std::string iterKey2 = "";
-		
-	int count1 = 0, count2 = 0;
-	
-	if(lastWild.compare(wild)){
-		iterKeys.clear();
-		lastWild = wild;
-	}else{
-		
-		std::vector<std::thread> v(8); 
-  		
-  		int size = iterKeys.size()/8;
-  		std::atomic<int> tc(0);
-		for(auto& t: v){
-			t = std::thread([&]{ 
-					std::lock_guard<std::mutex> lock(__critical_mtx);  	
-					
-					std::cout << "tc: " << tc << " size: " << (tc * size  + size) << " real size: " << size;
-					for(int n = tc * size; n < (tc * size  + size); ++n){						
-						if(wildcmp(wild.c_str(), iterKeys[n].c_str())){
-							totalCount++;
-						}
-					}	
-					
-				tc++;				  
-			});
-	
-		}
-		
-		for(auto& t: v){
-			t.join();
-		}
-		
-		out = totalCount;
-		CROW_LOG_INFO << "returning from cache : " << totalCount;
-		
-		return true;
-	}
-	
-	std::thread iter1([&]{ 	
-		//std::lock_guard<std::shared_mutex> writerLock(__readerwriter_mtx);			
-		
-		// create new iterator
-		rocksdb::ReadOptions ro;
-		rocksdb::Iterator* it = db->NewIterator(ro);
-		
-		const char* wildstr = wild.c_str();
-		CROW_LOG_INFO << "prefix : " << pre;
-		
-		
-		for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
-			iterKey1 = it->key().ToString().c_str();
-			
-			if(wildcmp(wildstr, iterKey1.c_str())){
-				totalCount++;
-				count1++;
-			
-				
-			}	
-			
-			std::lock_guard<std::mutex> lock(__critical_mtx);  	
-			iterKeys.push_back(iterKey1);		
-			
-			if(iterKey1.size() && iterKey2.size() && iterKey1.compare(iterKey2)  > 0){
-				std::cout << "breaking iter 1 .. "  << iterKey1.c_str() << ", " << iterKey2.c_str() << count1 << std::endl;
-				break;
-			}
-		}	
-		
-		ret = ret && it->status().ok();
-		delete it;
-	});	
-	 
-	std::thread iter2([&]{ 	
-		//std::lock_guard<std::shared_mutex> writerLock(__readerwriter_mtx);			
-		
-		// create new iterator
-		rocksdb::ReadOptions ro;
-		rocksdb::Iterator* it = db->NewIterator(ro);
-		
-		const char* wildstr = wild.c_str();
-		CROW_LOG_INFO << "prefixRev : " << preRev;
-		
-		it->Seek(prefixRev);
-		it->Prev();
-		
-		for ( ;it->Valid() && it->key().starts_with(prefix); it->Prev()) {
-			iterKey2 = it->key().ToString().c_str();
-			
-			if(wildcmp(wildstr, iterKey2.c_str())){
-				totalCount++;
-				count2++;
-				
-				
-			}
-		
-			std::lock_guard<std::mutex> lock(__critical_mtx);  
-			iterKeys.push_back(iterKey2);
-				
-			if(iterKey2.compare(iterKey1)  < 0){
-				break;
-			}
-		}	
-		
-		ret = ret && it->status().ok();
-		delete it;
-	});		
-	 
-
-	iter1.join();
-	iter2.join();
-
-	out = totalCount;
-	
-	std::cout << "\ncount1: " << count1 << " count2: "  << count2;
-	
-	return ret;
-}
+/// end of experimental thread codes 
 
 bool Core::getCount(std::string wild,
                     long& out,
                     int skip /*= 0*/, int limit /*= -1*/) {
 
 	//return getCountThreaded(wild, out, skip, limit);
+	if(_CacheEnabled){
+		std::vector<crow::json::wvalue> matchedResults;
+		out = _GetCachedKeys(_CACHE_COUNTONLY, !_CACHE_REVERSED, wild, matchedResults, skip, limit);
+		return true;
+	}
 	
 	bool ret = true;
 	if (dbStatus.ok()) {
@@ -2111,9 +2267,7 @@ bool Core::getItems(crow::json::rvalue& args,
 
 			crow::json::wvalue w;
 			// iterate all entries
-			for (auto key : args) {
-				bool valid = false;
-		
+			for (auto key : args) {		
 				std::string s = key.s();
 				i++;
 				if(i > lowerbound && (i < upperbound || limit == -1)) {
@@ -3115,6 +3269,7 @@ bool Core::increment(std::string key, int stepBy, std::string& out) {
 
 			std::string writeValue = std::to_string(value);
 
+			// same as dump 
 			put(key, writeValue, out);
 
 		} catch (const std::invalid_argument& ia) {

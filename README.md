@@ -726,6 +726,16 @@ If you start another quarks server in the 18081 port specifying a new database, 
 Instead of a Quarks server, you can start any server which implements and handles
 http://localhost:18081/putjson and http://localhost:18081/remove api calls
 
+
+### CACHING
+To enable caching for fast lookup and iteration (specially for getkeys and getcount),
+specify the cached parameter at start up :
+```
+./ocv_microservice_crow -port 18080 -cached 
+
+```
+
+
 ### WEBSOCKETS
 Websocket support has been added (Still not optimized).
 
