@@ -25,7 +25,31 @@
 using namespace boost::asio;  
 using ip::tcp;  
 
-  
+static int tcp_port = 18071;
+static TCPServer* tcp_server = nullptr;
+
+static int tcp_s_interrupted = 0;
+void tcp_s_signal_handler (int /*signal_value*/) {
+	tcp_s_interrupted = 1;
+	
+	std::cerr << "Interrupt received while running TCP Server .." << std::endl;
+	
+	if(tcp_server){
+		tcp_server->stop();
+	}
+	
+}
+
+void tcp_s_catch_signals (void) {
+	struct sigaction action;
+	action.sa_handler = tcp_s_signal_handler;
+	action.sa_flags = 0;
+	sigemptyset (&action.sa_mask);
+	sigaction (SIGINT, &action, NULL);
+	sigaction (SIGTERM, &action, NULL);
+	
+}
+ 
 //------------------------------------------------------------------------------
 
 std::string make_string(boost::asio::streambuf& streambuf)
@@ -43,64 +67,8 @@ void tokenize_string(const char* input, char delim, std::vector<std::string>& to
 	}
 
 }
-// Echoes back all received WebSocket messages
-void do_session(tcp::socket& client_socket)
-{
-    try
-    {
-    	boost::system::error_code error;
-    	
-    	boost::asio::streambuf read_buffer;
-	  		
-    	bool quit = false;    	
-    	while(!quit){
-    		
-			// Read from client.
-	  		/*std::size_t bytes_transferred = 4;
-			bytes_transferred = boost::asio::read(client_socket, read_buffer,
-	      		boost::asio::transfer_exactly(bytes_transferred));
-	  			  		 
-	  		std::string data = make_string(read_buffer);
-	  		std::cout << "Read: " <<  data << std::endl;
-	  		read_buffer.consume(bytes_transferred); // Remove data that was read.*/
-	  		
-	  		char recv_str[1024] = {};
-	  		/*for(int i=0; i<1024; i++){
-	  			recv_str[i] = 0;	
-			}*/
-            client_socket.receive(boost::asio::buffer(recv_str));
-            
-            std::string data = recv_str;
-	  		std::cout << "Read: " <<  data << std::endl;
-	  		
-	  		std::string message = std::string("ack") + data[data.size() - 1];
-	  		client_socket.send(boost::asio::buffer(message));
-	  	 	//boost::asio::write( client_socket, boost::asio::buffer(message), error);
-	  	 	//std::cout << "Write: " <<  message << std::endl;
-	  	 	
-	  	 	//sleep(10);
-	  	 	if(!data.compare("quit")){
-	  	 		quit = true;
-			}
-	  
-		}
-		
-		std::cout << "disconnecting from socket .." << std::endl;
-        		
-    }
-    catch(boost::system::system_error const& se)
-    {
-        // This indicates that the session was closed
-        std::cerr << "Error: " << se.code().message() << std::endl;
-    }
-    catch(std::exception const& e)
-    {
-        std::cerr << "Error: " << e.what() << std::endl;
-    }
-}
 
 //------------------------------------------------------------------------------
-
 
 int tcpServerStart(const char* tcpUrl)
 {
@@ -109,37 +77,30 @@ int tcpServerStart(const char* tcpUrl)
 		std::vector<std::string> tokens;
 		tokenize_string(tcpUrl, ':', tokens);
 		
-		int port = 18070;
+		int port = tcp_port;
 		if(tokens.size() > 1){
 			port = std::stoi(tokens[1]);
+			tcp_port = port;
 		}
-	
-        boost::asio::io_service io_service;  
-  
-		//listen for new connection  
-      	tcp::acceptor acceptor(io_service, tcp::endpoint(tcp::v4(), port ));  
-      	std::cout << "TCP server started at port: " << port <<  std::endl;
-  
+		
+		tcp_s_catch_signals();
+		
+    	boost::asio::io_service io_service;  
+    	TCPServer server(io_service, port);
+    	tcp_server = &server;
+    	
+    	io_service.run();
       	
-		for(;;)
-        {
-            // This will receive the new connection
-            tcp::socket socket(io_service);
-
-            // Block until we get a connection
-            acceptor.accept(socket);
-
-            // Launch the session, transferring ownership of the socket
-            std::thread{std::bind(
-                &do_session,
-                std::move(socket))}.detach();
-        }
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Error: " << e.what() << std::endl;
+        std::cerr << "TCP Server Exception. Error: " << e.what() << std::endl;
         return EXIT_FAILURE;
     }
+    
+    std::cout << ".......TCP: TCP SERVER EXITING FOR REAL ......." << std::endl;
+    
+    return 0;
 }
 
 
@@ -149,7 +110,7 @@ int tcpClientStart(const char* tcpUrl) {
 	tokenize_string(tcpUrl, ':', tokens);
 	
 	std::string address = "127.0.0.1";
-	int port = 18070;
+	int port = tcp_port;
 	if(tokens.size() > 1){
 		address = tokens[0];
 		port = std::stoi(tokens[1]);
@@ -166,71 +127,53 @@ int tcpClientStart(const char* tcpUrl) {
     
     std::cout << "TCP client started at address: " << address  <<" port: " << port <<  std::endl;
 
-	int n = 0;
-	while(true){
-		n++;
-		
-		const std::string msg = std::string("msg") + std::to_string(n);
-		boost::system::error_code error;
+	boost::system::error_code error;
 	
-		//boost::asio::write( socket, boost::asio::buffer(msg), error );
-		socket.send(boost::asio::buffer(msg));
-		
-		if( !error ) {
-		   //std::cout << "Client sent " << msg << std::endl;
-		}
-		else {
-		   //std::cout << "send failed: " << error.message() << std::endl;
-		}
-		// getting response from server
-		//boost::asio::streambuf receive_buffer;
-		///boost::asio::read(socket, receive_buffer, boost::asio::transfer_all(), error);
-		char recv_str[1024] = {};
-  		/*for(int i=0; i<1024; i++){
-  			recv_str[i] = 0;	
-		}*/
-        socket.receive(boost::asio::buffer(recv_str));
-            
+	boost::asio::streambuf receive_buffer;
+	
+	char buf[1024];
+
+	//boost::asio::read(socket, receive_buffer, boost::asio::transfer_all(), error);	
+	for(int i = 0; i < 2; i++){
+		const std::string msg = "Hello " + std::to_string(i) + " from Client!\n";
+		boost::asio::write( socket, boost::asio::buffer(msg), error );
+	
+		size_t len = socket.read_some(boost::asio::buffer(buf), error);
 		if( error && error != boost::asio::error::eof ) {
-		    //std::cout << "receive failed: " << error.message() << std::endl;
+			std::cout << "client failed to receive: " << error.message() << std::endl;
 		}
 		else {
-		    //const char* data = boost::asio::buffer_cast<const char*>(receive_buffer.data());
-		   const char* data = recv_str;
-		   std::cout << "client received: " << data << std::endl;
+			const char* data = boost::asio::buffer_cast<const char*>(receive_buffer.data());
+			std::cout << "client received: " << buf << std::endl;
 		}
-		
 	}
-	    
-    //std::string quitMsg = "quit";
-    //boost::asio::write(socket, boost::asio::buffer(quitMsg));
+	
+    std::string quitMsg = "quit";
+    boost::asio::write( socket, boost::asio::buffer(quitMsg), error );
+	
+    std::cout << "TCP Client Exiting" << std::endl;
+    //boost::asio::read(socket, receive_buffer, boost::asio::transfer_all(), error);
     
     return 0;
 }
 
 
-// unused
-int tcpServerStartAsync(const char* tcpUrl){
-	try
-    {
-    	std::vector<std::string> tokens;
-    	tokenize_string(tcpUrl, ':', tokens);
-		
-		int port = 18070;
-		if(tokens.size() > 1){
-			port = std::stoi(tokens[1]);
-		}
-		
-    	boost::asio::io_service io_service;  
-    	TCPServer server(io_service, port);
-    	io_service.run();
-    	
-    }
-  	catch(std::exception& e)
-    {
-    	std::cerr << e.what() << std::endl;
-    }
+int tcpServerQuit() {
+	std::string address = "127.0.0.1";
+	int port = tcp_port;
+	
+    boost::asio::io_service io_service;
+	//socket creation
+    tcp::socket socket(io_service);
+	//connection
+    socket.connect( tcp::endpoint( boost::asio::ip::address::from_string(address), port ));
+    
+    std::cout << "TCP client started to instigate quit at : " << address  <<" port: " << port <<  std::endl;
+	
+    std::string quitMsg = "quit";
+    boost::asio::write(socket, boost::asio::buffer(quitMsg));
     
     return 0;
 }
+
 

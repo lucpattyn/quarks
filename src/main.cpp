@@ -49,23 +49,25 @@ int main(int argc, char ** argv) {
 	// end websockets
 
 
-	std::cout << "running main .." << std::endl;
+	std::cout << "Quarks launching .." << std::endl;
+
+	std::vector<std::thread> services;
+	
+	//if(Quarks::Core::_Instance.isTcpClient()){
+		//services.push_back(std::thread ([]() {
+		//	sleep(1);
+		//	tcpClientStart(Quarks::Core::_Instance.getTcpUrl());		
+		//}));		
+	//}
 	
 	if(Quarks::Core::_Instance.isTcpServer()){	
-		std::thread ts([]() {
+		services.push_back(std::thread([]() {
 			tcpServerStart(Quarks::Core::_Instance.getTcpUrl());				
-		});
-		
-		ts.detach();
+		}));
 	}
 	
-	if(Quarks::Core::_Instance.isTcpClient()){
-		std::thread tc([]() {
-			tcpClientStart(Quarks::Core::_Instance.getTcpUrl());		
-		});
-		
-		tc.detach();
-	}
+	
+	
 	
 	/*std::thread tq([](){
 		startTaskQueueService();	
@@ -98,6 +100,11 @@ int main(int argc, char ** argv) {
 		app.port(Quarks::Core::_Instance.getPort()).multithreaded().run();
 	}
 	
+	for (std::thread &t: services) {
+  		if (t.joinable()) {
+    		t.join();
+  		}		
+	}
 
 #ifdef _V8_LATEST
 	v8EngineShutdownInMain();
@@ -105,6 +112,7 @@ int main(int argc, char ** argv) {
 
 	Quarks::Core::_Instance.shutDown();
 
+	std::cout << "Quarks Exiting!!" << std::endl;
 	exit(-1);
 
 	return 0;
