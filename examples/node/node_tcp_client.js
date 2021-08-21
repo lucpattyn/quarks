@@ -44,7 +44,7 @@ const client = net.connect({port: 18071}, () => {//use same port of server
 }); 
  
 client.on('data', (data) => {  
-  console.log(data.toString());  
+  //console.log(data.toString());  
   wqReader.push(data.toString());
   if(data.toString() == "quit"){
   	quit = true;
@@ -56,17 +56,17 @@ client.on('end', () => {
 });  
 
  
-setTimeout(runReader = function() {
+setTimeout(runReader = async function() {
   write("hello");
-  var result1 = read();
+  var result1 = await read();
   console.log(result1);
   
   write("world");
-  var result2 = read();
+  var result2 = await read();
   console.log(result2);
   
   write("quit");
-  var resultQuit = read();
+  var resultQuit = await read();
   console.log(resultQuit);
   if(!quit){
   	//runReader();
