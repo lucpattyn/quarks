@@ -26,17 +26,13 @@ using namespace boost::asio;
 using ip::tcp;  
 
 static int tcp_port = 18071;
-static TCPServer* tcp_server = nullptr;
 
 static int tcp_s_interrupted = 0;
 void tcp_s_signal_handler (int /*signal_value*/) {
-	tcp_s_interrupted = 1;
-	
+	tcp_s_interrupted = 1;	
 	std::cerr << "Interrupt received while running TCP Server .." << std::endl;
 	
-	if(tcp_server){
-		tcp_server->stop();
-	}
+	tcpServerQuit();
 	
 }
 
@@ -83,13 +79,22 @@ int tcpServerStart(const char* tcpUrl)
 			tcp_port = port;
 		}
 		
-		tcp_s_catch_signals();
+		//tcp_s_catch_signals();
 		
     	boost::asio::io_service io_service;  
     	TCPServer server(io_service, port);
-    	tcp_server = &server;
     	
-    	io_service.run();
+    	try{
+    		io_service.run();
+    		
+		}catch (const std::exception& e){
+			//io_service.stop();
+			
+			boost::optional<boost::asio::io_service::work> work{io_service};
+			io_service.post([&]() {
+            	work.reset(); // let io_service run out of work
+        	});
+		} 
       	
     }
     catch (const std::exception& e)
@@ -98,7 +103,7 @@ int tcpServerStart(const char* tcpUrl)
         return EXIT_FAILURE;
     }
     
-    std::cout << ".......TCP: TCP SERVER EXITING FOR REAL ......." << std::endl;
+    std::cout << ".......TCP: SERVER EXITING FOR REAL ......." << std::endl;
     
     return 0;
 }

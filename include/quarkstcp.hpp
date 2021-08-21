@@ -116,9 +116,9 @@ public:
 		}
 		
 		if(notifyStop){
-			stop_assoc_io_service();
-			//throw std::exception();
-			 throw std::runtime_error("TCP: Server forced to quit!!");
+			//stop_assoc_io_service();
+			throw std::exception();
+			 //throw std::runtime_error("TCP: Server forced to quit!!");
 		}
 	}
 	
@@ -127,8 +127,10 @@ public:
 		boost::optional<boost::asio::io_service::work> work{io_service};
 		io_service.post([&]() {
             work.reset(); // let io_service run out of work
+            
         });
 		//io_service.stop();
+		//throw std::runtime_error("TCP: Server forced to quit!!");
 	}
 };
 
@@ -170,10 +172,7 @@ public:
   	
   	void stop(){
   		boost::asio::io_service& io_service = io_service_;
-		boost::optional<boost::asio::io_service::work> work{io_service};
-		io_service.post([&]() {
-            work.reset(); // let io_service run out of work
-        });	
+		io_service.stop();	
 	}
 };
 
