@@ -70,36 +70,28 @@ public:
          	if(!strcmp(data, "quit")){
          		std::cout << "Quit received ... " << std::endl;
          		message = "quit";
-         		notifyStop = true;
-         		
-         		sock.async_write_some(
-	        			boost::asio::buffer(message, max_length),
-	       				boost::bind(&tcp_con_handler::handle_write,
-	                  		shared_from_this(),
-	                  		boost::asio::placeholders::error,
-	                  		boost::asio::placeholders::bytes_transferred));
-         		
-		 	}else{
+         		notifyStop = true;	
+		 	}
 		 		
-		 			sock.async_write_some(
-	        			boost::asio::buffer(message, max_length),
-	       				boost::bind(&tcp_con_handler::handle_write,
-	                  		shared_from_this(),
-	                  		boost::asio::placeholders::error,
-	                  		boost::asio::placeholders::bytes_transferred));
-		 		
-		 			reset_data();
-					sock.async_read_some(
-	        			boost::asio::buffer(data, max_length),
-	        			boost::bind(&tcp_con_handler::handle_read,
-	                    	shared_from_this(),
-	                    	boost::asio::placeholders::error,
-	                    	boost::asio::placeholders::bytes_transferred));
-	                
-	                    	
-	            	std::cout << "async_read_some inside handle_read" << std::endl;
-	            
-			 }
+ 			sock.async_write_some(
+    			boost::asio::buffer(message, max_length),
+   				boost::bind(&tcp_con_handler::handle_write,
+              		shared_from_this(),
+              		boost::asio::placeholders::error,
+              		boost::asio::placeholders::bytes_transferred));
+ 		
+ 			if(!notifyStop){
+				reset_data();
+				sock.async_read_some(
+    				boost::asio::buffer(data, max_length),
+    				boost::bind(&tcp_con_handler::handle_read,
+                	shared_from_this(),
+                	boost::asio::placeholders::error,
+                	boost::asio::placeholders::bytes_transferred));
+            
+                	
+        		std::cout << "async_read_some inside handle_read" << std::endl;
+			}
 		       
     	} else {
          	std::cerr << "TCP: handle_read error: " << err.message() << " (possible connection close)" << std::endl;
@@ -117,8 +109,8 @@ public:
 		
 		if(notifyStop){
 			//stop_assoc_io_service();
-			throw std::exception();
-			 //throw std::runtime_error("TCP: Server forced to quit!!");
+			//throw std::exception();
+			throw std::runtime_error("TCP: Server forced to quit!!");
 		}
 	}
 	

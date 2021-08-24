@@ -87,9 +87,9 @@ int tcpServerStart(const char* tcpUrl)
     	try{
     		io_service.run();
     		
-		}catch (const std::exception& e){
+		}catch (const std::runtime_error& e){
 			//io_service.stop();
-			
+			std::cerr << "TCP Server runtime error: " << e.what() << std::endl;
 			boost::optional<boost::asio::io_service::work> work{io_service};
 			io_service.post([&]() {
             	work.reset(); // let io_service run out of work
