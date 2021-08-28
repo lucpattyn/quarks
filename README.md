@@ -211,11 +211,11 @@ remove:["g1_u1","g1_u2", "g3_u3"]
 
 ```
 * Notes about Atoms,
-   a) "Remove" operations will always be executed before "Put" in ../atom call
-   b) Atoms should be used sparingly - if you have only a single put/remove operation then,
+   i) "Remove" operations will always be executed before "Put" in ../atom call
+   ii) Atoms should be used sparingly - if you have only a single put/remove operation then,
       use the put/remove apis provided for the specific purpose, not atomic ones
-   c) If you have a number of put operations and no removes then use  ../put/atom (and not  ../atom)
-   d) If you have a number of remove operations and no puts then use  ../remove/atom (and not ../atom)
+   iii) If you have a number of put operations and no removes then use  ../put/atom (and not  ../atom)
+   iv) If you have a number of remove operations and no puts then use  ../remove/atom (and not ../atom)
 
 14) autogenerate key with prefix and value provided
 
@@ -267,6 +267,7 @@ http://0.0.0.0:18080/getkeysmulti?body=["key1_pre*", "key*_pre2", ... key*_preN"
 http://0.0.0.0:18080/iter?skip=3&limit=5
 
 ```
+(You can use reverse=true to iterate in reverse order)
 
 19) Testing API that halts the request processing thread for specified number of seconds as mentioned by the timeout parameter
 (Useful to check if the https requests are actualy being processed by threads spawned by multiple cpu cores)
@@ -396,11 +397,11 @@ remove:["g1_u1","g1_u2", "g3_u3"]
 
 ```
 * Notes about Atoms,
- a) "Remove" operations will always be executed before "Put" in ../atom call
- b) Atoms should be used sparingly - if you have only a single put/remove operation then,
+ i) "Remove" operations will always be executed before "Put" in ../atom call
+ ii) Atoms should be used sparingly - if you have only a single put/remove operation then,
      use the put/remove apis provided for the specific purpose, not atomic ones
- c) If you have a number of put operations and no removes then use  ../put/atom (and not  ../atom)
- d) If you have a number of remove operations and no puts then use  ../remove/atom (and not ../atom)
+ iii) If you have a number of put operations and no removes then use  ../put/atom (and not  ../atom)
+ iv) If you have a number of remove operations and no puts then use  ../remove/atom (and not ../atom)
 
 
 7) Autogenerate key and make a key value pair given a key-prefix and value
