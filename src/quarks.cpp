@@ -136,7 +136,7 @@ int _GetCachedKeys(bool countOnly, bool reversed, std::string wild,
 	}
 	
 	// if first entry doesn't match return
-	if(!wildcmp(wild.c_str(), itBegin->first.c_str())){
+	if((itBegin != _CacheMap.end()) && !wildcmp(wild.c_str(), itBegin->first.c_str())){
 		return 0;
 	}
 	
@@ -202,7 +202,7 @@ int _GetCachedKeys(bool countOnly, bool reversed, std::string wild,
                    std::string& out,
                    int skip = 0, int limit = -1) {
 
-	int ret = 0;
+	int matched = 0;
 	
 	std::size_t found = wild.find("*");
 	if(found != std::string::npos && found == 0) {
@@ -213,7 +213,7 @@ int _GetCachedKeys(bool countOnly, bool reversed, std::string wild,
 	std::string firstAfterPrefix = prefix;
 	++firstAfterPrefix[firstAfterPrefix.length() - 1];
 
-	//std::lock_guard<std::mutex> lock(__cache_mtx);
+	std::lock_guard<std::mutex> lock(__cache_mtx);
 		
 	auto prefixedBeginIt = _CacheMap.lower_bound(prefix);
 	auto prefixedEndIt = _CacheMap.lower_bound(firstAfterPrefix);
@@ -230,22 +230,23 @@ int _GetCachedKeys(bool countOnly, bool reversed, std::string wild,
 	if(reversed){
 		itBegin--;
 	}else{
-		itEnd--;
+		itEnd--; // because itEnd pointed to element greater than the prefix
 	}
 	
 	// if first entry doesn't match return
-	if(!wildcmp(wild.c_str(), itBegin->first.c_str())){
+	if((itBegin != _CacheMap.end()) && !wildcmp(wild.c_str(), itBegin->first.c_str())){
 		out = R"({"result":[]})";
 		return 0;
 	}
 	
+
 	out = R"({"result":[)";
 	for (   ; itBegin != _CacheMap.end(); reversed?--itBegin : ++itBegin) {
 		
 		if(wildcmp(wild.c_str(), itBegin->first.c_str())) {
 			i++;
 			if(i > lowerbound && (i < upperbound || limit == -1)) {
-				ret++;
+				matched++;
 				if(!countOnly){
 					out += std::string(R"({"key":")") +  itBegin->first + std::string(R"(","value":)");
 					out += itBegin->second + R"(},)";
@@ -262,10 +263,15 @@ int _GetCachedKeys(bool countOnly, bool reversed, std::string wild,
 		}	
 		
 	}
-	out[out.size()-1] = ']';
-	out = out + '}';
-
-	return ret;
+	
+	if(matched > 0){
+		out[out.size()-1] = ']';
+		out = out + '}';	
+	} else{
+		out = R"({"result":[]})";
+	}
+	
+	return matched;
 }
 
 /// end of Caching section ///
@@ -1339,6 +1345,7 @@ bool Core::getKeys(std::string wild,
 		int lowerbound  = skip - 1;
 		int upperbound = skip + count;
 
+		int matched = 0;
 		out = R"({"result":[)";
 		for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
 
@@ -1347,6 +1354,7 @@ bool Core::getKeys(std::string wild,
 				i++;
 
 				if(i > lowerbound && (i < upperbound || limit == -1)) {
+					matched++;
 					out += std::string(R"({"key":")") +  it->key().ToString() + std::string(R"(","value":)");
 					out += it->value().ToString() + R"(},)";
 				}
@@ -1358,7 +1366,7 @@ bool Core::getKeys(std::string wild,
 			}
 		}
 		
-		if(i > -1){
+		if(matched > 0){
 			out[out.size()-1] = ']';
 			out = out + '}';
 			
@@ -1616,6 +1624,7 @@ bool Core::getKeysReversed(std::string wild,
 		it->Seek(prefixRev);
 		it->Prev();
 		
+		int matched = 0;
 		out = R"({"result":[)";
 		for ( ;it->Valid() && it->key().starts_with(prefix); it->Prev()) {
 
@@ -1624,6 +1633,7 @@ bool Core::getKeysReversed(std::string wild,
 				i++;
 
 				if(i > lowerbound && (i < upperbound || limit == -1)) {
+					matched++;
 					out += std::string(R"({"key":")") +  it->key().ToString() + std::string(R"(","value":)");
 					out += it->value().ToString() + R"(},)";
 				}
@@ -1635,7 +1645,7 @@ bool Core::getKeysReversed(std::string wild,
 		}
 
 		// do something after loop
-		if(i > -1){
+		if(matched > 0){
 			out[out.size()-1] = ']';
 			out = out + '}';
 			
