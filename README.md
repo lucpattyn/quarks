@@ -641,29 +641,6 @@ In our example, we named the function - "jsFilter" in main.js.
 Quarks will allow minimum usage of scripting to ensure the server side codes remain super optimized.
 
 
-
-## Backup and Restore
-```
-For backing up the database try:
-http://0.0.0.0:18080/backup?body={"path":"quarks_backup_1"}
-
-To restore simply run quarks next time using the "store" commandline parameter
- ./ocv_microservice_crow -store quarks_backup_1
- 
- -store followed by the path denotes the rocksdb directory path to use when starting quarks
-
-```
-
-
-### BENCHMARKING
-```
-https://github.com/kaisarh/quarks/tree/dev/benchmark/results?
-fbclid=IwAR2ea_PuZ6drbdg4PUuFfhirXdHC4rtlQ3I1KDR9G-PSaIJlFfA0FXNjUw8
-
-```
-Thanks Kaisar Haq (https://github.com/kaisarh) :)
-
-
 After v8 engine integration and scripting support,
 the next target was to allow listener support through zero mq to communicate with other processes and services
 and creating the Quarks Cloud which is partially done.
@@ -748,6 +725,18 @@ To enable caching for fast lookup and iteration (specially for getkeys and getco
 specify the cached parameter at start up :
 ```
 ./ocv_microservice_crow -port 18080 -cached 
+
+```
+
+## Backup and Restore
+```
+For backing up the database try:
+http://0.0.0.0:18080/backup?body={"path":"quarks_backup_1"}
+
+To restore simply run quarks next time using the "store" commandline parameter
+ ./ocv_microservice_crow -store quarks_backup_1
+ 
+ -store followed by the path denotes the rocksdb directory path to use when starting quarks
 
 ```
 
@@ -968,4 +957,21 @@ Definitely Quarks has to be running to view the examples
  ```
  docker run -it -v $PWD:/quarks -p 18080:18080 --cap-add sys_ptrace quarks:ubuntu-21.04
  ```
+
+
+### BENCHMARKING
+
+The repo for benchmarking quarks is available on : 
+https://github.com/kaisarh/quarks/tree/dev/benchmark
+
+The results are stored here:
+
+```
+https://github.com/kaisarh/quarks/tree/dev/benchmark/results?
+fbclid=IwAR2ea_PuZ6drbdg4PUuFfhirXdHC4rtlQ3I1KDR9G-PSaIJlFfA0FXNjUw8
+
+```
+Thanks Kaisar Haq (https://github.com/kaisarh) :)
+
+
 
