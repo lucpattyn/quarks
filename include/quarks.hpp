@@ -64,9 +64,15 @@ namespace Quarks {
 			bool getKeys(std::string wild,
 			             std::vector<crow::json::wvalue>& matchedResults,
 			             int skip = 0, int limit = -1);
+			bool getKeys(std::string wild,
+			             std::string& out,
+			             int skip = 0, int limit = -1);
 
 			bool getKeysReversed(std::string wild,
 			                     std::vector<crow::json::wvalue>& matchedResults,
+			                     int skip = 0, int limit = -1);
+			bool getKeysReversed(std::string wild,
+			                     std::string& out,
 			                     int skip = 0, int limit = -1);
 
 			bool getKeysMulti(std::string wilds,
@@ -78,6 +84,8 @@ namespace Quarks {
 			              int skip = 0, int limit = -1);
 
 			bool iter(std::vector<crow::json::wvalue>& matchedResults,
+			          int skip = 0, int limit = -1);
+			bool iterReversed(std::vector<crow::json::wvalue>& matchedResults,
 			          int skip = 0, int limit = -1);
 
 			bool remove(std::string key, std::string& out);
@@ -257,7 +265,5 @@ namespace Quarks {
 	};
 
 }
-
-#include <matrix.hpp>
 
 #endif

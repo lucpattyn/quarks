@@ -1,5 +1,5 @@
-#ifndef _WSSSERVER_H_
-#define _WSSSERVER_H_
+#ifndef _QUARKSTCP_H_
+#define _QUARKSTCP_H_
 
 // src: https://www.codeproject.com/Articles/1264257/Socket-Programming-in-Cplusplus-using-boost-asio-T
 
@@ -11,6 +11,7 @@
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/optional.hpp>
 
+#include <tcprouting.hpp>
 
 using namespace boost::asio;
 using ip::tcp;
@@ -23,7 +24,7 @@ class tcp_con_handler : public boost::enable_shared_from_this<tcp_con_handler>
 private:
 	tcp::socket sock;
 	std::string message="";
-	enum { max_length = 1024 };
+	enum { max_length = 1024*1024 };
 	char data[max_length];
 	void reset_data(){
 		data[0] = 0;
@@ -63,15 +64,18 @@ public:
 		
   	void handle_read(const boost::system::error_code& err, size_t bytes_transferred){
     	if (!err) {
-    		std::cout << "Server received: " << data << std::endl;
+    		//std::cout << "Server received: " << data << std::endl;
     		data[bytes_transferred] = 0;
-    		message = std::string("Acknowledging ") + data;
+    		//message = std::string("Acknowledging ") + data;
     		
          	if(!strcmp(data, "quit")){
          		std::cout << "Quit received ... " << std::endl;
          		message = "quit";
-         		notifyStop = true;	
-		 	}
+         		notifyStop = true;
+				 	
+		 	} else {
+		 		message = TCP::DispatchRequest(data);
+			}
 		 		
  			sock.async_write_some(
     			boost::asio::buffer(message, max_length),
@@ -101,7 +105,7 @@ public:
   
 	void handle_write(const boost::system::error_code& err, size_t bytes_transferred){
 	    if (!err) {
-	       	std::cout << "Server sent "<< message <<  std::endl;
+	       	//std::cout << "Server sent "<< message <<  std::endl;
 	    } else {
 	       	std::cerr << "TCP: handle_write error: " << err.message() << " (possible connection close)" << std::endl;
 	       	sock.close();
@@ -177,6 +181,7 @@ struct TCPCommand{
 int tcpServerStart(const char* tcpUrl);
 int tcpClientStart(const char* tcpUrl);
 int tcpServerQuit();
+
 	
 
 #endif

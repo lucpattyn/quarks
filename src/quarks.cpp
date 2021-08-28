@@ -25,9 +25,6 @@
 
 using namespace boost::asio;
 using ip::tcp;
-//using std::string;
-//using std::cout;
-//using std::endl;
 
 using namespace Quarks;
 
@@ -45,7 +42,7 @@ std::mutex __cache_mtx;
 
 
 Core Core::_Instance;
-Matrix Matrix::_Instance;
+//Matrix Matrix::_Instance;
 
 int wildcmp(const char *wild, const char *str) {
 	// Written by Jack Handy - <A href="mailto:jakkhandy@hotmail.com">jakkhandy@hotmail.com</A>
@@ -138,6 +135,11 @@ int _GetCachedKeys(bool countOnly, bool reversed, std::string wild,
 		itEnd--;
 	}
 	
+	// if first entry doesn't match return
+	if(!wildcmp(wild.c_str(), itBegin->first.c_str())){
+		return 0;
+	}
+	
 	for (   ; itBegin != _CacheMap.end(); reversed?--itBegin : ++itBegin) {
 
 		if(wildcmp(wild.c_str(), itBegin->first.c_str())) {
@@ -192,6 +194,76 @@ int _GetCachedKeys(bool countOnly, bool reversed, std::string wild,
 		}
 	}
 
+
+	return ret;
+}
+
+int _GetCachedKeys(bool countOnly, bool reversed, std::string wild,
+                   std::string& out,
+                   int skip = 0, int limit = -1) {
+
+	int ret = 0;
+	
+	std::size_t found = wild.find("*");
+	if(found != std::string::npos && found == 0) {
+		return 0;
+	}
+	std::string prefix = wild.substr(0, found);
+	
+	std::string firstAfterPrefix = prefix;
+	++firstAfterPrefix[firstAfterPrefix.length() - 1];
+
+	//std::lock_guard<std::mutex> lock(__cache_mtx);
+		
+	auto prefixedBeginIt = _CacheMap.lower_bound(prefix);
+	auto prefixedEndIt = _CacheMap.lower_bound(firstAfterPrefix);
+
+	auto itBegin = reversed?prefixedEndIt : prefixedBeginIt;
+	auto itEnd = reversed?prefixedBeginIt : prefixedEndIt; 
+	
+	int i  = -1;
+	int count = (limit == -1) ? INT_MAX : limit;
+
+	int lowerbound  = skip - 1;
+	int upperbound = skip + count;
+	
+	if(reversed){
+		itBegin--;
+	}else{
+		itEnd--;
+	}
+	
+	// if first entry doesn't match return
+	if(!wildcmp(wild.c_str(), itBegin->first.c_str())){
+		out = R"({"result":[]})";
+		return 0;
+	}
+	
+	out = R"({"result":[)";
+	for (   ; itBegin != _CacheMap.end(); reversed?--itBegin : ++itBegin) {
+		
+		if(wildcmp(wild.c_str(), itBegin->first.c_str())) {
+			i++;
+			if(i > lowerbound && (i < upperbound || limit == -1)) {
+				ret++;
+				if(!countOnly){
+					out += std::string(R"({"key":")") +  itBegin->first + std::string(R"(","value":)");
+					out += itBegin->second + R"(},)";
+				}		
+			}
+
+			if((i == upperbound) && (limit != -1)) {
+				break;
+			}
+			
+			if(itBegin == itEnd){
+				break;
+			}
+		}	
+		
+	}
+	out[out.size()-1] = ']';
+	out = out + '}';
 
 	return ret;
 }
@@ -1231,12 +1303,85 @@ bool Core::getKeys(std::string wild,
 	return ret && dbStatus.ok();
 }
 
-// Needs review and improvement
-bool legacyGetKeysReversed(std::string wild,
-                           std::vector<crow::json::wvalue>& matchedResults,
-                           int skip /*= 0*/, int limit /*= -1*/) {
+bool Core::getKeys(std::string wild,
+                   std::string& out,
+                   int skip /*= 0*/, int limit /*= -1*/) {
 
 	if(_CacheEnabled){
+		_GetCachedKeys(!_CACHE_COUNTONLY, !_CACHE_REVERSED, wild, out, skip, limit);
+		
+		return true;
+	}
+	
+	bool ret = true;
+	if (dbStatus.ok()) {
+
+		std::size_t found = wild.find("*");
+		if(found != std::string::npos && found == 0) {
+			return false;
+		}
+
+		// create new iterator
+		rocksdb::ReadOptions ro;
+		rocksdb::Iterator* it = db->NewIterator(ro);
+
+		std::string pre = wild.substr(0, found);
+
+		rocksdb::Slice prefix(pre);
+
+		//rocksdb::Slice prefixPrint = prefix;
+		//CROW_LOG_INFO << "prefix : " << prefixPrint.ToString();
+
+
+		int i  = -1;
+		int count = (limit == -1) ? INT_MAX : limit;
+
+		int lowerbound  = skip - 1;
+		int upperbound = skip + count;
+
+		out = R"({"result":[)";
+		for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
+
+			if(wildcmp(wild.c_str(), it->key().ToString().c_str())) {
+
+				i++;
+
+				if(i > lowerbound && (i < upperbound || limit == -1)) {
+					out += std::string(R"({"key":")") +  it->key().ToString() + std::string(R"(","value":)");
+					out += it->value().ToString() + R"(},)";
+				}
+
+				if((i == upperbound) && (limit != -1)) {
+					break;
+				}
+
+			}
+		}
+		
+		if(i > -1){
+			out[out.size()-1] = ']';
+			out = out + '}';
+			
+		} else{
+			out = R"({"result":[]})";
+		}
+		
+
+		// do something after loop
+
+		delete it;
+
+	}
+
+	return ret && dbStatus.ok();
+}
+
+// Needs review and improvement - now kept for example of sorting
+//bool legacyGetKeysReversed(std::string wild,
+//                           std::vector<crow::json::wvalue>& matchedResults,
+//                           int skip /*= 0*/, int limit /*= -1*/) {
+
+/*	if(_CacheEnabled){
 		_GetCachedKeys(!_CACHE_COUNTONLY, _CACHE_REVERSED, wild, matchedResults, skip, limit);
 		
 		return true;
@@ -1332,8 +1477,8 @@ bool legacyGetKeysReversed(std::string wild,
 
 	}
 
-	return ret && dbStatus.ok();
-}
+	return ret && dbStatus.ok();*/
+//}
 
 bool Core::getKeysReversed(std::string wild,
                            std::vector<crow::json::wvalue>& matchedResults,
@@ -1424,6 +1569,80 @@ bool Core::getKeysReversed(std::string wild,
 
 		// do something after loop
 
+		delete it;
+
+	}
+
+	return ret && dbStatus.ok();
+}
+
+bool Core::getKeysReversed(std::string wild,
+                           std::string& out,
+                           int skip /*= 0*/, int limit /*= -1*/){
+	if(_CacheEnabled){
+		_GetCachedKeys(!_CACHE_COUNTONLY, _CACHE_REVERSED, wild, out, skip, limit);		
+		return true;
+	}
+	
+	bool ret = true;
+	if (dbStatus.ok()) {
+
+		std::size_t found = wild.find("*");
+		if(found != std::string::npos && found == 0) {
+			return false;
+		}
+
+		// create new iterator
+		rocksdb::ReadOptions ro;
+		rocksdb::Iterator* it = db->NewIterator(ro);
+
+		std::string pre = wild.substr(0, found);
+	
+		std::string firstAfterPrefix = pre;
+		++firstAfterPrefix[firstAfterPrefix.length() - 1];
+	
+		rocksdb::Slice prefix(pre);
+		rocksdb::Slice prefixRev(firstAfterPrefix);
+
+		//rocksdb::Slice prefixPrint = prefixRev;
+		//CROW_LOG_INFO << "prefix : " << prefixPrint.ToString();
+
+		int i  = -1;
+		int count = (limit == -1) ? INT_MAX : limit;
+
+		int lowerbound  = skip - 1;
+		int upperbound = skip + count;
+
+		it->Seek(prefixRev);
+		it->Prev();
+		
+		out = R"({"result":[)";
+		for ( ;it->Valid() && it->key().starts_with(prefix); it->Prev()) {
+
+			if(wildcmp(wild.c_str(), it->key().ToString().c_str())) {
+
+				i++;
+
+				if(i > lowerbound && (i < upperbound || limit == -1)) {
+					out += std::string(R"({"key":")") +  it->key().ToString() + std::string(R"(","value":)");
+					out += it->value().ToString() + R"(},)";
+				}
+
+				if((i == upperbound) && (limit != -1)) {
+					break;
+				}
+			}
+		}
+
+		// do something after loop
+		if(i > -1){
+			out[out.size()-1] = ']';
+			out = out + '}';
+			
+		} else{
+			out = R"({"result":[]})";
+		}
+		
 		delete it;
 
 	}
@@ -1876,6 +2095,75 @@ bool Core::iter(std::vector<crow::json::wvalue>& matchedResults,
 
 }
 
+bool Core::iterReversed(std::vector<crow::json::wvalue>& matchedResults,
+                	int skip /*= 0*/, int limit /*= -1*/) {
+
+	bool ret = true;
+	if (dbStatus.ok()) {
+
+		//CROW_LOG_INFO << "iter1 starting .. " ;
+		
+		// create new iterator
+		rocksdb::ReadOptions ro;
+		rocksdb::Iterator* it = db->NewIterator(ro);
+
+		int i  = -1;
+		int count = (limit == -1) ? INT_MAX : limit;
+
+		int lowerbound  = skip - 1;
+		int upperbound = skip + count;
+
+		for (it->SeekToLast(); it->Valid(); it->Prev()) {
+			i++;
+			//CROW_LOG_INFO << "iter " << i ;
+		
+			if(i > lowerbound && (i < upperbound || limit == -1)) {
+				crow::json::wvalue w;
+
+				try {
+					auto x = crow::json::load(it->value().ToString());
+
+					if(!x) {
+						w["value"] =  crow::json::load(std::string("[\"") +
+						                               it->value().ToString() + std::string("\"]"));
+
+					} else {
+						w["value"] = x;
+					}
+
+				} catch (const std::runtime_error& error) {
+					CROW_LOG_INFO << "Runtime Error: " << i << it->value().ToString();
+
+					w["error"] =  it->value().ToString();
+
+					matchedResults.push_back(std::move(w));
+
+					ret = false;
+				}
+
+				w["key"] = it->key().ToString();
+
+				//CROW_LOG_INFO << "w key fwd: " << crow::json::dump(w) << " skip: "
+				//<< skip << ", limit: " << limit;
+
+				matchedResults.push_back(std::move(w));
+
+			}
+
+			if((i == upperbound) && (limit != -1)) {
+				break;
+			}
+
+		}
+		// do something after loop
+
+		delete it;
+
+	}
+
+	return ret && dbStatus.ok();
+
+}
 
 bool removeIterating(std::string key, std::string& out) {
 	bool ret = false;

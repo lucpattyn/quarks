@@ -211,11 +211,11 @@ remove:["g1_u1","g1_u2", "g3_u3"]
 
 ```
 * Notes about Atoms,
-   1) "Remove" operations will always be executed before "Put" in ../atom call
-   2) Atoms should be used sparingly - if you have only a single put/remove operation then,
+   a) "Remove" operations will always be executed before "Put" in ../atom call
+   b) Atoms should be used sparingly - if you have only a single put/remove operation then,
       use the put/remove apis provided for the specific purpose, not atomic ones
-   3) If you have a number of put operations and no removes then use  ../put/atom (and not  ../atom)
-   4) If you have a number of remove operations and no puts then use  ../remove/atom (and not ../atom)
+   c) If you have a number of put operations and no removes then use  ../put/atom (and not  ../atom)
+   d) If you have a number of remove operations and no puts then use  ../remove/atom (and not ../atom)
 
 14) autogenerate key with prefix and value provided
 
@@ -396,11 +396,11 @@ remove:["g1_u1","g1_u2", "g3_u3"]
 
 ```
 * Notes about Atoms,
- 1) "Remove" operations will always be executed before "Put" in ../atom call
- 2) Atoms should be used sparingly - if you have only a single put/remove operation then,
+ a) "Remove" operations will always be executed before "Put" in ../atom call
+ b) Atoms should be used sparingly - if you have only a single put/remove operation then,
      use the put/remove apis provided for the specific purpose, not atomic ones
- 3) If you have a number of put operations and no removes then use  ../put/atom (and not  ../atom)
- 4) If you have a number of remove operations and no puts then use  ../remove/atom (and not ../atom)
+ c) If you have a number of put operations and no removes then use  ../put/atom (and not  ../atom)
+ d) If you have a number of remove operations and no puts then use  ../remove/atom (and not ../atom)
 
 
 7) Autogenerate key and make a key value pair given a key-prefix and value
@@ -521,7 +521,8 @@ There is also provision to run ORM style queries with searchjson and applying fi
 POST: http://0.0.0.0:18080/searchjson
 
 Sample Query Format for
-"querying items which are up for sale with key like item* (i.e item1, item2 etc.) , then find the sellers of such items (items has a seller_id field that contains the user_id of the seller) "
+"querying items which are up for sale with key like item* (i.e item1, item2 etc.) , 
+then find the sellers of such items (items has a seller_id field that contains the user_id of the seller) "
 
 ```
 {
@@ -574,7 +575,8 @@ BODY:
 Finally, check the results by
 POST: http://0.0.0.0:18080/searchjson
 
-So we are able to iterate items (by "keys":"item*") and then run a join operation with the filter attribute ("filter":...) through the keyword map ({"map": {"field":"seller_id", "as":"seller"}})
+So we are able to iterate items (by "keys":"item*") and then run a join operation with the filter attribute ("filter":...) 
+through the keyword map ({"map": {"field":"seller_id", "as":"seller"}})
 
 v8 engine has been integrated to support scripting in server side to further filter/sort queried results.
 
@@ -613,7 +615,8 @@ function jsFilter() {
 Here module main is the main.js file residing in the server in the same path as the executable.
 function is the name of the JS Function which we will use to further filter the data.
 
-The idea is the mentioned script main.js will have a filter function with a predefined form filter(elem, params), or a sort function with predefined form sort(elem1, elem2, params) to further fitler/sort the data.
+The idea is the mentioned script main.js will have a filter function with a predefined form filter(elem, params), 
+or a sort function with predefined form sort(elem1, elem2, params) to further fitler/sort the data.
 
 'elem' is an individual item (one of many) found by the Quarks lookup through "keys":"item*" .
 We are invoking the JS module and the function while finding and iterating the matching items in C++.
@@ -836,12 +839,45 @@ sock.onmessage = (e)=>{
 
 ```
 
+### TCP SOCKETS
 
-Quarks has plans for plugins integration.
+Inorder for faster communicaton, Quarks provides pure tcp socket communication.
+You need to run Quarks TCP Service with the following:
+```
+    ./ocv_microservice_crow -tcpserver 127.0.0.1:18070
+
+```
+Then use any TCP Client to query Quarks to avail the same features as GET request section.
+NodeJS TCP Client example can be found in "examples/node" folder
+
+The body of the request should be of this form:
+```
+    var req = {};
+    req.query = "/getkeys";
+    req.keys = "g1_u*";
+    req.skip = 0;
+    req.limit = 10;
+
+```
+Another example: 
+```
+    var req = {};
+    req.query = "/getlist";
+    req.body=["g1_u1", "g2_u2"]
+    req.skip = 0;
+    req.limit = 10;
+
+```
+(Skip, limits are as usual optional.)
+Basically, all the GET Requests can be formed as a query for TCP Communication. 
+You only need to specify the url in query parameter as shown above, 
+and the other GET arguments as properties of JSON Body,
+
 
 ### PLUGINS
 
-Currently, only OpenCV is provided as a plugin (codes commented).
+Quarks has plans for dynamic plugins integration to extend its features .
+Currently, only OpenCV is provided as a readily available plugin (codes commented).
 
 For those interested in testing OpenCV as plugin (uncommenting the relevant codes),
 you should submit a POST request to http://localhost:18080/filters/gausian.

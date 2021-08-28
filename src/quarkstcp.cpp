@@ -21,11 +21,11 @@
 #include <string>
 #include <thread>
 
-
 using namespace boost::asio;  
 using ip::tcp;  
 
 static int tcp_port = 18071;
+static bool tcp_server_running = true;
 
 static int tcp_s_interrupted = 0;
 void tcp_s_signal_handler (int /*signal_value*/) {
@@ -85,9 +85,13 @@ int tcpServerStart(const char* tcpUrl)
     	TCPServer server(io_service, port);
     	
     	try{
+    		tcp_server_running = true;
     		io_service.run();
     		
 		}catch (const std::runtime_error& e){
+			
+			tcp_server_running = false;
+			
 			//io_service.stop();
 			std::cerr << "TCP Server runtime error: " << e.what() << std::endl;
 			boost::optional<boost::asio::io_service::work> work{io_service};
@@ -99,6 +103,8 @@ int tcpServerStart(const char* tcpUrl)
     }
     catch (const std::exception& e)
     {
+    	tcp_server_running = false;
+    	
         std::cerr << "TCP Server Exception. Error: " << e.what() << std::endl;
         return EXIT_FAILURE;
     }
@@ -164,6 +170,10 @@ int tcpClientStart(const char* tcpUrl) {
 
 
 int tcpServerQuit() {
+	if(!tcp_server_running){
+		return 0;
+	}
+	
 	std::string address = "127.0.0.1";
 	int port = tcp_port;
 	

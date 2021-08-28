@@ -12,10 +12,12 @@
 
 #include <qsocket.hpp>
 
-#include <quarkstcp.hpp>
-#include <quarkstaskqueue.hpp>
+#include <httprouting.hpp>
+#include <tcprouting.hpp>
 
-#include <routes.hpp>
+#include <quarkstcp.hpp>
+
+#include <quarkstaskqueue.hpp>
 
 // LUC: 20210717 : ugliest of hacks
 int crow::detail::dumb_timer_queue::tick = 5;
@@ -36,7 +38,7 @@ int main(int argc, char ** argv) {
 	v8EngineInitializeInMain(argc, argv);
 #endif
 	  
-	routeHttpRequests(app);
+	BuildHttpRoutes(app);
 	              
 	// websockets
 	QSocket::Interceptor& interceptor = Quarks::Core::_Instance.shouldHookSocket()
@@ -53,21 +55,19 @@ int main(int argc, char ** argv) {
 
 	std::vector<std::thread> services;
 	
-	//if(Quarks::Core::_Instance.isTcpClient()){
-		//services.push_back(std::thread ([]() {
-		//	sleep(1);
-		//	tcpClientStart(Quarks::Core::_Instance.getTcpUrl());		
-		//}));		
-	//}
-	
-	if(Quarks::Core::_Instance.isTcpServer()){	
+	if(Quarks::Core::_Instance.isTcpServer()){
+		
+		TCP::BuildRoutes(TCP::DefaultRouter());
+				
 		services.push_back(std::thread([]() {
 			tcpServerStart(Quarks::Core::_Instance.getTcpUrl());				
 		}));
 	}
-	
-	
-	
+	if(Quarks::Core::_Instance.isTcpClient()){
+		services.push_back(std::thread ([]() {
+			tcpClientStart(Quarks::Core::_Instance.getTcpUrl());		
+		}));		
+	}
 	
 	/*std::thread tq([](){
 		startTaskQueueService();	
@@ -99,6 +99,10 @@ int main(int argc, char ** argv) {
 	if(!runAsServer){
 		app.port(Quarks::Core::_Instance.getPort()).multithreaded().run();
 	}
+	
+	std::cerr << "Http Server Exiting .. !";
+	
+	tcpServerQuit();
 	
 	for (std::thread &t: services) {
   		if (t.joinable()) {

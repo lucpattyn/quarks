@@ -19,15 +19,27 @@ static void handle_runtime_error(const std::runtime_error& error, crow::json::wv
                                  std::vector<crow::json::wvalue>& jsonResults) {
 	std::string errs = R"([{"error" : "runtime parsing error"},)";
 
-	errs += "[";
-	errs += error.what();
-	errs += "],";
-	for(size_t i = 0; i < jsonResults.size(); i++) {
-		errs += crow::json::dump(jsonResults[i]);
-	}
+	crow::json::wvalue err;
+	err["reason"] = error.what();
+	out["error"] = std::move(err);
+		
+	out["result"] = std::move(jsonResults);
+	
+}
 
-	errs += "]";
-	out["error"] = errs;
+static void handle_runtime_error(const std::runtime_error& error, std::string& out,
+                                 std::string& results) {
+	std::string errs = R"([{"error" : "runtime parsing error"},)";
+
+	crow::json::wvalue w;
+
+	crow::json::wvalue err;
+	err["reason"] = error.what();
+	w["error"] = std::move(err);
+		
+	w["result"] = results;
+	
+	out = crow::json::dump(w);
 }
 
 struct QueryParams {
@@ -55,7 +67,7 @@ struct QueryParams {
 };
 
 
-void routeHttpRequests(crow::SimpleApp& app){
+void BuildHttpRoutes(crow::SimpleApp& app){
 
 	auto route_ping_callback = 
 	[](const crow::request& /*req*/) {
@@ -335,7 +347,7 @@ void routeHttpRequests(crow::SimpleApp& app){
 
 	};
 
-	auto route_core_getkeys_callback =
+	/*auto route_core_getkeys_callback =
 	[](const crow::request& req) {
 		crow::json::wvalue out;
 
@@ -383,8 +395,52 @@ void routeHttpRequests(crow::SimpleApp& app){
 
 		return res;
 
-	};
+	};*/
 
+	auto route_core_getkeys_callback =
+	[](const crow::request& req) {
+		std::string out;
+		
+		try {
+			auto q = QueryParams::Parse(req);
+
+			//CROW_LOG_INFO << "wild: " << q.wild << " (size: " << q.wild.size() << "), skip: " << q.skip << ", /limit: " << q.limit;
+			//CROW_LOG_INFO << "wild: " << q.wild << " (size: " << q.wild.size() << "), q.skip: " << q.skip << ", /limit: " << q.limit;
+
+			bool ret = false;
+			if(q.wild.size() > 0) {
+				auto rev = req.url_params.get("reverse");
+				std::string reverse = (rev == nullptr || !strlen(rev))  ? "false" : rev;				
+				if(!reverse.compare("true")) {
+					ret = Quarks::Core::_Instance.getKeysReversed(q.wild, out,
+					        									std::stoi(q.skip), std::stoi(q.limit));
+				} else {
+					ret = Quarks::Core::_Instance.getKeys(q.wild, out, std::stoi(q.skip), std::stoi(q.limit));
+				}
+
+				if(!ret){
+					out[out.size() - 1] = ',';
+					out += std::string(R"("error" : "wildcard or db error"})");
+				}
+			} 
+
+		} catch (const std::runtime_error& error) {
+			handle_runtime_error(error, out, out);
+		}
+
+		std::ostringstream os;
+		os << out;
+		
+		auto res = crow::response{os.str()};
+	    res.add_header("Access-Control-Allow-Origin", "*");
+	    //res.add_header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
+	    //res.add_header("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+
+		return res;
+
+	};
+	
+	
 	auto route_core_getkeysmulti_callback =
 	[](const crow::request& req) {
 		crow::json::wvalue out;
@@ -400,17 +456,7 @@ void routeHttpRequests(crow::SimpleApp& app){
 			auto q = QueryParams::Parse(req);
 			
 			if(body.size() > 0) {
-				/*auto rev = req.url_params.get("reverse");
-				std::string reverse = (rev == nullptr || !strlen(rev))  ? "false" : rev;
-
-				if(!reverse.compare("true")) {
-					ret = Quarks::Core::_Instance.getKeysReversed(q.wild, jsonResults,
-					        std::stoi(q.skip), std::stoi(q.limit));
-				} else {
-					ret = Quarks::Core::_Instance.getKeys(q.wild, jsonResults,
-					                                      std::stoi(q.skip), std::stoi(q.limit));
-				}*/
-
+				
 				bool ret = Quarks::Core::_Instance.getKeysMulti(body, jsonResults,
 					                                      std::stoi(q.skip), std::stoi(q.limit));
 				out["result"] = std::move(jsonResults);
@@ -477,7 +523,18 @@ void routeHttpRequests(crow::SimpleApp& app){
 		std::vector<crow::json::wvalue> jsonResults;
 		try {
 			auto q = QueryParams::Parse(req);
-			bool ret = Quarks::Core::_Instance.iter(jsonResults, std::stoi(q.skip), std::stoi(q.limit));
+			
+			auto rev = req.url_params.get("reverse");
+				std::string reverse = (rev == nullptr || !strlen(rev))  ? "false" : rev;
+
+			bool ret = true;
+			if(!reverse.compare("true")) {
+				ret = Quarks::Core::_Instance.iterReversed(jsonResults, std::stoi(q.skip), std::stoi(q.limit));
+			
+			} else{
+				ret = Quarks::Core::_Instance.iter(jsonResults, std::stoi(q.skip), std::stoi(q.limit));
+			
+			}
 			
 			out["result"] = std::move(jsonResults);
 			if(!ret) {
@@ -1009,9 +1066,9 @@ void routeHttpRequests(crow::SimpleApp& app){
 
 		if(ret) {
 			return R"({"result":"transferred"})";
-		} else {
-			return R"({"error":"not transferred"})";
-		}
+		} 
+			
+		return R"({"error":"not transferred"})";
 
 	};
 
@@ -1021,10 +1078,9 @@ void routeHttpRequests(crow::SimpleApp& app){
 
 		if(ret) {
 			return R"({"result":"opened socket"})";
-		} else {
-			return R"({"error":"socket closed"})";
-		}
+		} 
 
+		return R"({"error":"socket closed"})";
 	};
 	
 	auto route_core_log_callback =

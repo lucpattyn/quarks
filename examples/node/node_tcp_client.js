@@ -21,7 +21,7 @@ async function read(){
 var quit = false;
   	
 const net = require('net');  
-const client = net.connect({port: 18071}, () => {//use same port of server  
+const client = net.connect({port: 18070}, () => {//use same port of server  
 
 	console.log('connected to server!');  
   	
@@ -56,19 +56,19 @@ client.on('end', () => {
 });  
 
  
-setTimeout(runReader = async function() {
-  write("hello");
-  var result1 = await read();
-  console.log(result1);
+setTimeout(runMain = async function() {
   
-  write("world");
-  var result2 = await read();
-  console.log(result2);
+  var req = {};
+  req.query = "/getkeys";
+  req.keys = "COM*";
+  req.limit = 10;
+   
+  write(JSON.stringify(req));
+  var response = await read();
+  console.log(response);
   
-  write("quit");
-  var resultQuit = await read();
-  console.log(resultQuit);
-  if(!quit){
-  	//runReader();
-  }
+  //write("quit");
+  //var resultQuit = await read();
+  //console.log(resultQuit);
+   
 }, 1000);
