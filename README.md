@@ -210,12 +210,18 @@ remove:["g1_u1","g1_u2", "g3_u3"]
 }
 
 ```
-* Notes about Atoms,
-   i) "Remove" operations will always be executed before "Put" in ../atom call
-   ii) Atoms should be used sparingly - if you have only a single put/remove operation then,
-      use the put/remove apis provided for the specific purpose, not atomic ones
+
+Notes about Atoms:
+```
+   i)   "Remove" operations will always be executed before "Put" in ../atom call
+   
+   ii)  Atoms should be used sparingly - if you have only a single put/remove operation then,
+        use the put/remove apis provided for the specific purpose, not atomic ones
+      
    iii) If you have a number of put operations and no removes then use  ../put/atom (and not  ../atom)
-   iv) If you have a number of remove operations and no puts then use  ../remove/atom (and not ../atom)
+   
+   iv)  If you have a number of remove operations and no puts then use  ../remove/atom (and not ../atom)
+```
 
 14) autogenerate key with prefix and value provided
 
@@ -396,12 +402,18 @@ remove:["g1_u1","g1_u2", "g3_u3"]
 }
 
 ```
-* Notes about Atoms,
- i) "Remove" operations will always be executed before "Put" in ../atom call
- ii) Atoms should be used sparingly - if you have only a single put/remove operation then,
-     use the put/remove apis provided for the specific purpose, not atomic ones
- iii) If you have a number of put operations and no removes then use  ../put/atom (and not  ../atom)
- iv) If you have a number of remove operations and no puts then use  ../remove/atom (and not ../atom)
+
+Notes about Atoms:
+```
+   i)   "Remove" operations will always be executed before "Put" in ../atom call
+   
+   ii)  Atoms should be used sparingly - if you have only a single put/remove operation then,
+        use the put/remove apis provided for the specific purpose, not atomic ones
+      
+   iii) If you have a number of put operations and no removes then use  ../put/atom (and not  ../atom)
+   
+   iv)  If you have a number of remove operations and no puts then use  ../remove/atom (and not ../atom)
+```
 
 
 7) Autogenerate key and make a key value pair given a key-prefix and value
