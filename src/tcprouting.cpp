@@ -257,8 +257,8 @@ void TCP::BuildRoutes(TCP::Router& router){
 
 			bool ret = false;
 			if(q.wild().size() > 0) {
-				auto reverse = req.get("reverse");				
-				if(!reverse.compare("true")) {
+				auto reverse = req.reverse;
+				if(reverse){
 					ret = Quarks::Core::_Instance.getKeysReversed(q.wild(), out,
 					        									q.skip, q.limit);
 				} else {
@@ -481,25 +481,18 @@ void TCP::BuildRoutes(TCP::Router& router){
 	auto route_core_getlist_callback =
 	[](const TCP::Request& req) {
 		
-		crow::json::wvalue w;
-		w["result"] = "";
-
+		std::string out;
 		auto x = req.bodyJson();
 		if (!x) {
-			w["error"] = "invalid parameters";
-			return w;
+			out = R"({"result":[],"error":"invalid json body"})";
+			return out;
 		}
 
 		auto& q = req;
 
-		std::vector<crow::json::wvalue> jsonResults;
-		bool ret = Quarks::Core::_Instance.getList(x, jsonResults, q.skip, q.limit);
+		Quarks::Core::_Instance.getList(x, out, q.skip, q.limit);
 
-		if(!ret) {
-			w["error"] = "runtime error";
-		}
-
-		return w;
+		return out;
 
 	};
 	

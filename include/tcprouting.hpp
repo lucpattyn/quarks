@@ -12,6 +12,7 @@ namespace TCP{
 		std::string body = "";
 		int skip = 0;
 		int limit = -1;
+		bool reverse = false;
 		crow::json::rvalue req;
 		
 		Request(const std::string request) {
@@ -21,13 +22,18 @@ namespace TCP{
 					query = req["query"].s();
 				}				
 				if(req.has("body")){
-					body = req["body"].s();
+					if(! (req["body"].size())) {
+						body = req["body"].s();
+					}
 				}				
 				if(req.has("skip")){
 					skip = req["skip"].i();
 				}
 				if(req.has("limit")){
 					limit = req["limit"].i();
+				}
+				if(req.has("reverse")){
+					reverse = req["reverse"].b();
 				}
 			}
 		}
@@ -100,11 +106,15 @@ namespace TCP{
 				auto dispatcherString = routingTableString[req.query];
 				if(dispatcherString){
 					result = dispatcherString(req);
-				}				
-				auto dispatcherJson = routingTableJson[req.query];
-				if(dispatcherJson){
-					result = crow::json::dump(dispatcherJson(req));
-				}				
+				}		
+				
+				if(!result.size()){
+					auto dispatcherJson = routingTableJson[req.query];
+					if(dispatcherJson){
+						result = crow::json::dump(dispatcherJson(req));
+					}
+				}		
+								
 				// Record end time
 				auto finish = std::chrono::high_resolution_clock::now();
 				

@@ -906,17 +906,26 @@ bool Core::putAtom(crow::json::rvalue& x, std::string& out) {
 	bool ret = true;
 
 	int i = 0;
-	for(auto& v : x) {
-		//CROW_LOG_INFO << ".. put: " << crow::json::dump(v);
-		ret = insertKeyValuePair(false, v, out);
-		//if(ret) {
-		//	break;
-		//}
-		if(ret){
-			i++;
+	
+	try{
+		for(auto& v : x) {
+			//CROW_LOG_INFO << ".. put: " << crow::json::dump(v);
+			ret = insertKeyValuePair(false, v, out);
+			//if(ret) {
+			//	break;
+			//}
+			if(ret){
+				i++;
+			}
 		}
+		
+	} catch (const std::runtime_error& error){
+		CROW_LOG_INFO << "Runtime Error: putAtom has invalid body";
+		out = std::string("{") + R"("result":false, "error":"invalid putatom body")" + std::string("}");
+		
+		return false;
 	}
-
+	
 	out = std::string("{") + R"("put":)" + std::to_string((int) i) + std::string(",")
 			+ R"("result":true})";
 	
@@ -928,10 +937,9 @@ bool Core::putAtom(std::string body, std::string& out) {
 	auto x = crow::json::load(body);
 	//CROW_LOG_INFO << "put body" << body;
 	if (!x) {
-		CROW_LOG_INFO << "invalid put body" << body;
+		CROW_LOG_INFO << "putAtom: invalid put body" << body;
 		//out = "invalid put body";
-
-		out = "{\"error\": \"Invalid put body\"}";
+		out = R"({"result":false, "error": "invalid put body"})";
 
 		return false;
 
@@ -1633,6 +1641,7 @@ bool Core::getKeysReversed(std::string wild,
 		it->Prev();
 		
 		int matched = 0;
+		std::string val = "";
 		out = R"({"result":[)";
 		for ( ;it->Valid() && it->key().starts_with(prefix); it->Prev()) {
 
@@ -1643,7 +1652,13 @@ bool Core::getKeysReversed(std::string wild,
 				if(i > lowerbound && (i < upperbound || limit == -1)) {
 					matched++;
 					out += std::string(R"({"key":")") +  it->key().ToString() + std::string(R"(","value":)");
-					out += it->value().ToString() + R"(},)";
+					val = it->value().ToString();
+					/*if(val.size() > 0 && (val[0] != '{' || val[0] != '[')){
+						std::cerr << "no json in value: " << val;
+						val = std::string(R"([")")  + val + std::string(R"("])");
+						
+					}*/
+					out += val + R"(},)";
 				}
 
 				if((i == upperbound) && (limit != -1)) {
@@ -2357,17 +2372,27 @@ bool Core::removeAtom(crow::json::rvalue& x, std::string& out) {
 	bool ret = true;
 
 	int i = 0;
-	for(auto& v : x) {
-		ret = remove(v.s(), out);
-		//if(!ret) {
-		//	break;
-		//}
-
-		//i++;
-		if(ret){
-			i++;
+	
+	try{
+		for(auto& v : x) {
+			ret = remove(v.s(), out);
+			//if(!ret) {
+			//	break;
+			//}
+	
+			//i++;
+			if(ret){
+				i++;
+			}
 		}
+
+	} catch(const std::runtime_error& error){
+		CROW_LOG_INFO << "Runtime Error: removeAtom has invalid body";
+		out = std::string("{") + R"("result":false, "error":"invalid removeatom body")" + std::string("}");
+		
+		return false;
 	}
+	
 	//if(ret) {
 	//if(i > 0){
 		out = std::string("{") + R"("removed":)" + std::to_string((int) i) + std::string(",")
@@ -2385,10 +2410,10 @@ bool Core::removeAtom(std::string body, std::string& out) {
 	auto x = crow::json::load(body);
 
 	if (!x) {
-		CROW_LOG_INFO << "invalid put body" << body;
+		CROW_LOG_INFO << "removeAtom: invalid remove body" << body;
 		//out = "invalid put body";
 
-		out = "{\"error\": \"Invalid put body\"}";
+		out = R"({"result":false, "error": "invalid remove body"})";
 
 		return false;
 
@@ -2489,6 +2514,14 @@ bool Core::makePair(std::string body, crow::json::wvalue& out) {
 bool Core::getJson(std::string key, crow::json::wvalue& out) {
 
 	bool ret = false;
+
+	if(_CacheEnabled){
+		std::string value;
+		ret = _GetCached(key, value);
+		
+		out =  crow::json::load(value);
+		return ret;
+	}
 
 	/*std::map<std::string, crow::json::rvalue>::iterator it = _Core.find(key);
 	 if (it != _Core.end()){
@@ -2645,6 +2678,65 @@ bool Core::getList(crow::json::rvalue& args,
 		} catch (const std::runtime_error& error) {
 			ret = false;
 
+		}
+
+	}
+
+	return ret;
+
+}
+
+bool Core::getList(crow::json::rvalue& args,
+                   std::string& out,
+                   int skip /*= 0*/, int limit /*= -1*/) {
+
+
+	bool ret = true;
+
+	if (dbStatus.ok()) {
+
+		int matched = 0;
+			
+		try {
+			int i  = -1;
+			int count = (limit == -1) ? INT_MAX : limit;
+
+			int lowerbound  = skip - 1;
+			int upperbound = skip + count;
+
+			out = R"({"result":[)";
+			// iterate all entries
+			for (auto key : args) {
+				
+				std::string s = key.s();
+				std::string value;
+				bool valid = get(s, value);
+				i++;
+				if(i > lowerbound && (i < upperbound || limit == -1)) {
+					if(valid){
+						matched++;
+						out += std::string(R"({"key":")") +  s + std::string(R"(","value":)");
+						out += value + R"(},)";
+					}					
+				}
+
+			}
+
+		} catch (const std::runtime_error& error) {
+			ret = false;
+		}
+		
+		if(matched > 0){
+			out[out.size()-1] = ']';
+			out = out + '}';
+			
+		} else{
+			out = R"({"result":[]})";
+		}
+		
+		if(!ret){
+			out[out.size() - 1] = ',';
+			out += R"("error":"runtime error"})";
 		}
 
 	}
@@ -3626,18 +3718,19 @@ bool Core::atom(std::string body, std::string& out) {
 	auto x = crow::json::load(body);
 
 	if (!x) {
-		CROW_LOG_INFO << "invalid put body" << body;
+		CROW_LOG_INFO << "atom: invalid atom body" << body;
 		//out = "invalid put body";
-
-		out = "{\"error\": \"Invalid put body\"}";
+		out = R"({"result":false, "error": "invalid atom body"})";
 
 		return false;
 
 	}
 
 	out = std::string("{") + R"("result":false)" + std::string("}");
-	std::string removedResult;
-	std::string putResult;
+	std::string removedResult = std::string("{") + R"("removed":)" + std::string("0")+ std::string(",")
+								+ R"("result":true})";
+	std::string putResult = std::string("{") + R"("put":)" + std::string("0") + std::string(",")
+			+ R"("result":true})";
 	
 	bool ret = true;
 
@@ -3655,7 +3748,7 @@ bool Core::atom(std::string body, std::string& out) {
 	}
 
 	if(ret){
-		out = std::string("{") + R"("result":true)" + std::string(R"(,"count":[)") 
+		out = std::string("{") + R"("result":true)" + std::string(R"(,"affected":[)") 
 				+ removedResult + std::string(",") + putResult + std::string("]}");	
 	}
 	

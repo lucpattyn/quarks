@@ -763,9 +763,11 @@ void BuildHttpRoutes(crow::SimpleApp& app){
 
 	auto route_core_getlist_callback =
 	[](const crow::request& req) {
-		crow::json::wvalue w;
-		w["result"] = "";
+		//crow::json::wvalue w;
+		//w["result"] = "";
 
+		std::string out;
+		
 		std::string body = req.body;
 		auto p = req.url_params.get("body");
 		if(p != nullptr) {
@@ -774,28 +776,26 @@ void BuildHttpRoutes(crow::SimpleApp& app){
 
 		auto x = crow::json::load(body);
 		if (!x) {
-			w["error"] = "invalid parameters";
-			return w;
+			//w["error"] = "invalid parameters";
+			//return w;
+			out = R"({"result":[],"error":"invalid json body"})";
+			return out;
 		}
 
 		auto q = QueryParams::Parse(req);
 
-		std::vector<crow::json::wvalue> jsonResults;
-		bool ret = Quarks::Core::_Instance.getList(x, jsonResults, std::stoi(q.skip), std::stoi(q.limit));
-
-		//if(jsonResults.size()) {
-			//w["result"] = jsonResults[0].s();
-			//CROW_LOG_INFO << "jsonResults[0] : "
-			//   <<  crow::json::dump(jsonResults[0])
-
-			w["result"] = std::move(jsonResults);
+		//std::vector<crow::json::wvalue> jsonResults;
+		//bool ret = Quarks::Core::_Instance.getList(x, jsonResults, std::stoi(q.skip), std::stoi(q.limit));
+		Quarks::Core::_Instance.getList(x, out, std::stoi(q.skip), std::stoi(q.limit));
+		
+			//w["result"] = std::move(jsonResults);
+		
+		//if(!ret) {
+			//w["error"] = "runtime error";
 		//}
 
-		if(!ret) {
-			w["error"] = "runtime error";
-		}
-
-		return w;
+		//return w;
+		return out;
 
 	};
 	
