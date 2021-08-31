@@ -25,7 +25,7 @@ using namespace boost::asio;
 using ip::tcp;  
 
 static int tcp_port = 18071;
-static bool tcp_server_running = true;
+static bool tcp_server_running = false;
 
 static int tcp_s_interrupted = 0;
 void tcp_s_signal_handler (int /*signal_value*/) {

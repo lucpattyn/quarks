@@ -905,15 +905,23 @@ bool Core::putAtom(crow::json::rvalue& x, std::string& out) {
 
 	bool ret = true;
 
+	int i = 0;
 	for(auto& v : x) {
 		//CROW_LOG_INFO << ".. put: " << crow::json::dump(v);
-		ret &= insertKeyValuePair(false, v, out);
-		if(!ret) {
-			break;
+		ret = insertKeyValuePair(false, v, out);
+		//if(ret) {
+		//	break;
+		//}
+		if(ret){
+			i++;
 		}
 	}
 
-	return ret;
+	out = std::string("{") + R"("put":)" + std::to_string((int) i) + std::string(",")
+			+ R"("result":true})";
+	
+	//return ret;
+	return true;
 }
 
 bool Core::putAtom(std::string body, std::string& out) {
@@ -2350,22 +2358,26 @@ bool Core::removeAtom(crow::json::rvalue& x, std::string& out) {
 
 	int i = 0;
 	for(auto& v : x) {
-		ret &= remove(v.s(), out);
-		if(!ret) {
-			break;
+		ret = remove(v.s(), out);
+		//if(!ret) {
+		//	break;
+		//}
+
+		//i++;
+		if(ret){
+			i++;
 		}
-
-		i++;
 	}
-	if(ret) {
-		out = std::string("{") + R"("result":)" + std::to_string((int) i) + std::string("}");
+	//if(ret) {
+	//if(i > 0){
+		out = std::string("{") + R"("removed":)" + std::to_string((int) i) + std::string(",")
+			+ R"("result":true})";
+	//} else {
+	//	std::string error = ",\"error\":\"could not remove all keys\"";
+	//	out = std::string("{") + R"("result":)" + std::to_string(i) + error + std::string("}");
+	//}
 
-	} else {
-		std::string error = ",\"error\":\"could not remove all keys\"";
-		out = std::string("{") + R"("result":)" + std::to_string(i) + error + std::string("}");
-	}
-
-	return ret;
+	return true;
 
 }
 
@@ -3624,22 +3636,31 @@ bool Core::atom(std::string body, std::string& out) {
 	}
 
 	out = std::string("{") + R"("result":false)" + std::string("}");
-
+	std::string removedResult;
+	std::string putResult;
+	
 	bool ret = true;
 
 	if(x.has("remove")) {
-		ret &= removeAtom(crow::json::dump(x["remove"]), out);
+		ret &= removeAtom(crow::json::dump(x["remove"]), removedResult);
 	}
 	if(x.has("removeall")) {
 		int removed = removeAll(x["removeall"].s());
-		out = std::string("{") + R"("result":)" + std::to_string(removed) + std::string("}");
+		removedResult = std::string("{") + R"("removed":)" + std::to_string(removed) + std::string("}");
 	}
 	if(ret) {
 		if(x.has("put")) {
-			ret &= putAtom(crow::json::dump(x["put"]), out);
+			ret &= putAtom(crow::json::dump(x["put"]), putResult);
 		}
 	}
 
+	if(ret){
+		out = std::string("{") + R"("result":true)" + std::string(R"(,"count":[)") 
+				+ removedResult + std::string(",") + putResult + std::string("]}");	
+	}
+	
+
+	
 	return ret;
 
 }
