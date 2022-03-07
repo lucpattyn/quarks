@@ -1023,6 +1023,49 @@ void BuildHttpRoutes(crow::SimpleApp& app){
 
 	};
 	
+	auto route_core_geoput_callback =
+	[](const crow::request& req) {
+
+		std::string out;
+
+		std::string body = req.body;
+
+		auto x = req.url_params.get("body");
+		if(x != nullptr) {
+			body = x;
+		}
+
+		Quarks::Core::_Instance.geoput(body, out);
+
+		return out;
+
+	};
+	
+	auto route_core_geonear_callback =
+	[](const crow::request& req) {
+
+		crow::json::wvalue out;
+		out["result"] = "";
+
+		std::vector<crow::json::wvalue> jsonResults;
+		bool ret = Quarks::Core::_Instance.geonear(req.body, out, jsonResults); // std::stoi(q.skip), std::stoi(q.limit));
+
+		if(jsonResults.size()) {
+			//w["result"] = jsonResults[0].s();
+			//CROW_LOG_INFO << "jsonResults[0] : "
+			//   <<  crow::json::dump(jsonResults[0])
+
+			out["result"] = std::move(jsonResults);
+		}
+		
+		if(!ret){
+			out["error"] = "geonear runtime error occured";
+		}
+
+		return out;
+
+	};
+	
 	auto route_core_backup_callback =
 	[](const crow::request& req) {
 
@@ -1311,6 +1354,13 @@ void BuildHttpRoutes(crow::SimpleApp& app){
 
 	CROW_ROUTE(app, "/searchjson")
 	.methods("GET"_method, "POST"_method)(route_core_searchjson_callback);
+	
+	// lat long stuff
+	CROW_ROUTE(app, "/geo/put")
+	.methods("GET"_method, "POST"_method)(route_core_geoput_callback);
+	
+	CROW_ROUTE(app, "/geo/near")
+	.methods("GET"_method, "POST"_method)(route_core_geonear_callback);
 	
 	// backup and restore
 	CROW_ROUTE(app, "/backup")

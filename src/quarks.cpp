@@ -6,6 +6,8 @@
 
 #include <quarkscloud.hpp>
 
+#include <geohash.hpp>
+
 #include "rocksdb/db.h"
 #include "rocksdb/utilities/checkpoint.h"
 
@@ -2427,7 +2429,6 @@ bool Core::removeAtom(std::string body, std::string& out) {
 bool Core::makePair(std::string body, crow::json::wvalue& out) {
 
 	auto x = crow::json::load(body);
-
 	if (!x) {
 		CROW_LOG_INFO << "invalid make body" << body;
 		//out = "invalid put body";
@@ -3876,6 +3877,100 @@ bool Core::incrementValue(std::string body, std::string& out) {
 	return  true;
 
 }
+
+
+// lat long stuff
+bool Core::geoput(std::string body, std::string& out){
+	auto x = crow::json::load(body);
+	if (!x) {
+		CROW_LOG_INFO << "invalid geoput body" << body;
+		//out = "invalid put body";
+
+		out = "{\"error\": \"Invalid geoput body\"}";
+
+		return false;
+
+	}
+
+
+	std::string key = "";
+	std::string value = "";
+	double lat = 0.0;
+	double lng = 0.0;
+	
+	if(x.has("key")) {
+		key = x["key"].s();
+	}
+	if(x.has("value")) {
+		value = x["value"].s();
+	} 	
+	if(x.has("lat")) {
+		lat = x["lat"].d();
+	}
+	if(x.has("lng")) {
+		lng = x["lng"].d();	
+	}
+	
+
+	return geoput(key, value, lat, lng, out);
+}
+
+bool Core::geoput(std::string key, std::string value, double lat, double lng, std::string& out){
+	char* hash = geohash_encode(lat, lng, 8);
+	dump(key, value, out);
+	
+	std::string hash_ = hash;
+	std::string hash_key = hash_ + std::string("_") + key;
+	
+	bool ret = dump(hash_key, key, out);
+	
+	delete [] hash;
+	
+	return ret;
+}
+
+bool Core::geonear(std::string body, crow::json::wvalue& out, std::vector<crow::json::wvalue>& matchedResults, double radius /*= 1.0*/){
+	auto x = crow::json::load(body);
+	if (!x) {
+		CROW_LOG_INFO << "invalid geonear body" << body;
+		
+		out["error"] = "invalid geonear body";
+		return false;
+	}
+
+	//auto q = QueryParams::Parse(req);
+	//std::stoi(q.skip), std::stoi(q.limit));
+
+	double lat = 0.0;
+	double lng = 0.0;
+	
+	if(x.has("lat")) {
+		lat = x["lat"].d();
+	}
+	if(x.has("lng")) {
+		lng = x["lng"].d();	
+	}
+
+	return geonear(lat, lng, matchedResults);
+	
+}
+
+bool Core::geonear(double lat, double lng, std::vector<crow::json::wvalue>& matchedResults, double radius /*= 1.0*/) {
+	char* hash = geohash_encode(lat, lng, 8);
+	
+	std::string hash_ = hash;
+	std::string hashPrefix = hash_.substr(0, 6); // 6 len hash covers 1 mile radius
+	
+	bool ret = getAll(hashPrefix, matchedResults);
+	
+	delete [] hash;
+	
+	return ret;
+	
+}
+
+////
+
 
 // backup and restore
 bool Core::backup(std::string path){
