@@ -1059,6 +1059,97 @@ bool Core::getAll(std::string wild,
 	return ret && dbStatus.ok();
 }
 
+
+bool Core::getAll(std::vector<std::string> wilds,
+                  std::vector<crow::json::wvalue>& matchedResults,
+                  int skip /*= 0*/, int limit /*= -1*/) {
+
+	bool ret = true;
+	if (dbStatus.ok()) {
+
+		
+		// create new iterator
+		rocksdb::ReadOptions ro;
+		rocksdb::Iterator* it = db->NewIterator(ro);
+
+		int i  = -1;
+		int count = (limit == -1) ? INT_MAX : limit;
+
+		int lowerbound  = skip - 1;
+		int upperbound = skip + count;
+
+		bool process = true;
+		for(auto wild : wilds){
+			std::size_t found = wild.find("*");
+			if(found != std::string::npos && found == 0) {
+				process = false;
+			}
+		
+			if(process){
+				std::string pre = wild.substr(0, found);
+				rocksdb::Slice prefix(pre);
+
+				//rocksdb::Slice prefixPrint = prefix;
+				//CROW_LOG_INFO << "prefix : " << prefixPrint.ToString();
+
+				for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
+		
+					if(wildcmp(wild.c_str(), it->key().ToString().c_str())) {
+						crow::json::wvalue w;
+		
+						try {
+		
+							i++;
+		
+							if(i > lowerbound && (i < upperbound || limit == -1)) {
+								auto x = crow::json::load(it->value().ToString());
+		
+								if(!x) {
+									w =  crow::json::load(std::string("[\"") +
+									                      it->value().ToString() + std::string("\"]"));
+		
+								} else {
+									w = x;
+								}
+		
+								//CROW_LOG_INFO << "w fwd: " << crow::json::dump(w) << " skip: "
+								//<< skip << ", limit: " << limit;
+		
+								matchedResults.push_back(std::move(w));
+		
+							}
+		
+							if((i == upperbound) && (limit != -1)) {
+								break;
+							}
+		
+						} catch (const std::runtime_error& error) {
+							CROW_LOG_INFO << "Runtime Error: " << i << it->value().ToString();
+		
+							w["error"] =  it->value().ToString();
+		
+							matchedResults.push_back(std::move(w));
+		
+							ret = false;
+						}
+		
+					}
+				}
+		
+				// do something after loop
+			}
+		
+			// end wilds for
+		}
+		
+
+		delete it;
+
+	}
+
+	return ret && dbStatus.ok();
+}
+
 // Needs serious review
 bool Core::getSorted(std::string wild, std::string sortby, bool ascending,
                      std::vector<crow::json::wvalue>& matchedResults,
@@ -3880,12 +3971,36 @@ bool Core::incrementValue(std::string body, std::string& out) {
 
 
 // lat long stuff
+void sanitizelatlng(double& lat, double& lng){
+	
+	static const double MAX_LAT  =  90.0;
+	static const double MIN_LAT  = -90.0;
+
+	static const double MAX_LONG = 180.0;
+	static const double MIN_LONG =-180.0;
+	
+	if(lat > MAX_LAT){
+		lat = MAX_LAT;
+	} else if(lat < MIN_LAT){
+		lat = MIN_LAT;
+	}
+
+	if(lng > MAX_LONG){
+		lng = MAX_LONG;
+	} else if(lng < MIN_LONG){
+		lng = MIN_LONG;
+	}
+	
+	//std::cout.precision(7);
+	//std::cout << "Lat: " << std::fixed << lat << std::endl;
+	//std::cout.precision(7);
+	//std::cout << "Lng: " << std::fixed << lng << std::endl;
+}
+
 bool Core::geoput(std::string body, std::string& out){
 	auto x = crow::json::load(body);
 	if (!x) {
 		CROW_LOG_INFO << "invalid geoput body" << body;
-		//out = "invalid put body";
-
 		out = "{\"error\": \"Invalid geoput body\"}";
 
 		return false;
@@ -3907,19 +4022,18 @@ bool Core::geoput(std::string body, std::string& out){
 	} 	
 	if(x.has("lat")) {
 		lat = x["lat"].d();
-		std::cout.precision(15);
-		std::cout << "Put Lat: " << std::fixed << lat << std::endl;
-		
+		//w["lat"] = lat;	
 	}
 	if(x.has("lng")) {
-		lng = x["lng"].d();	
-		std::cout.precision(15);
-		std::cout << "Put Lng: " << std::fixed << lng << std::endl;
+		lng = x["lng"].d();
+		//w["lng"] = lng;	
 	}
 	
-	char* hash = geohash_encode(lat, lng, 8);
+	sanitizelatlng(lat, lng);
 	
+	char* hash = geohash_encode(lat, lng, 8);	
 	std::string hash_ = hash;
+	w["hash"] = hash_;
 	std::string hash_key = hash_ + std::string("_") + key;
 	CROW_LOG_INFO << "geo hash key: " << hash_key;
 	
@@ -3944,34 +4058,49 @@ bool Core::geonear(std::string body, crow::json::wvalue& out, std::vector<crow::
 	double lng = 0.0;
 	
 	if(x.has("lat")) {
-		lat = x["lat"].d();
-		
-		std::cout.precision(15);
-		std::cout << "Near Lat: " << std::fixed << lat << std::endl;
+		lat = x["lat"].d();		
 	}
 	if(x.has("lng")) {
 		lng = x["lng"].d();	
-		
-		std::cout.precision(15);
-		std::cout << "Near Lng: " << std::fixed << lng << std::endl;
 	}
 
+	sanitizelatlng(lat, lng);
+	
+	int precision = 6; // 6 len hash covers  1 mile radius
+	if(x.has("precision")) {
+		precision = x["precision"].i();	
+	}
+	
+	std::vector<std::string> hashPrefixes;
+	
 	char* hash = geohash_encode(lat, lng, 8);
-	
 	std::string hash_ = hash;
-	//std::string hashPrefix = hash_.substr(0, 5) + std::string("*"); // 5 len hash covers  4.9 km radius
-	std::string hashPrefix = hash_.substr(0, 6) + std::string("*"); // 6 len hash covers  1 mile radius
+	std::string hashPrefix = hash_.substr(0, precision) + std::string("*"); 
+	CROW_LOG_INFO << "hash : " << hash << ", hashPrefix : " << hashPrefix;
 	
-	bool ret = getAll(hashPrefix, matchedResults);
+	hashPrefixes.push_back(hashPrefix);
+	
+	char hashNeighs[128];
+	strncpy(hashNeighs, hash_.substr(0, precision).c_str(), precision);
+    hashNeighs[precision] = '\0';
+    
+    CROW_LOG_INFO << "hashNeighs : " << hashNeighs;
+	// neighbours 
+	char** neighs = geohash_neighbors(hashNeighs);    
+	for(int i = 0; i < 8; i++){
+		CROW_LOG_INFO << "neighs" << i << ": " << neighs[i] + std::string("*");
+		hashPrefixes.push_back(neighs[i] + std::string("*"));
+		delete neighs[i];
+	}
+	delete neighs;
 	
 	delete [] hash;
 	
-	return ret;
+	return getAll(hashPrefixes, matchedResults, skip, limit);
+
 }
 
-
 ////
-
 
 // backup and restore
 bool Core::backup(std::string path){

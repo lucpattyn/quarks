@@ -62,7 +62,7 @@ static char char_map[34] =  "0123456789bcdefghjkmnpqrstuvwxyz";
  *  The follow character maps were created by Dave Troy and used in his Javascript Geohashing
  *  library. http://github.com/davetroy/geohash-js
  */
-/*static char *even_neighbors[] = {"p0r21436x8zb9dcf5h7kjnmqesgutwvy",
+static char *even_neighbors[] = {"p0r21436x8zb9dcf5h7kjnmqesgutwvy",
                                 "bc01fg45238967deuvhjyznpkmstqrwx", 
                                 "14365h7k9dcfesgujnmqp0r2twvyx8zb",
                                 "238967debc01fg45kmstqrwxuvhjyznp"
@@ -75,9 +75,9 @@ static char *odd_neighbors[] = {"bc01fg45238967deuvhjyznpkmstqrwx",
                                 };
 
 static char *even_borders[] = {"prxz", "bcfguvyz", "028b", "0145hjnp"};
-static char *odd_borders[] = {"bcfguvyz", "prxz", "0145hjnp", "028b"};*/
+static char *odd_borders[] = {"bcfguvyz", "prxz", "0145hjnp", "028b"};
 
-static char en1[34] = "p0r21436x8zb9dcf5h7kjnmqesgutwvy";
+/*static char en1[34] = "p0r21436x8zb9dcf5h7kjnmqesgutwvy";
 static char en2[34] = "bc01fg45238967deuvhjyznpkmstqrwx";
 static char en3[34] = "14365h7k9dcfesgujnmqp0r2twvyx8zb";
 static char en4[34] = "238967debc01fg45kmstqrwxuvhjyznp";
@@ -99,7 +99,7 @@ static char ob1[16] = "bcfguvyz";
 static char ob2[16] = "prxz";
 static char ob3[16] = "0145hjnp";
 static char ob4[16] = "028b";
-static char *odd_borders[5] = {ob1, ob2, ob3, ob4};
+static char *odd_borders[5] = {ob1, ob2, ob3, ob4};*/
 
 unsigned int index_for_char(char c, char *string) {
     
@@ -129,7 +129,7 @@ char* get_neighbor(char *hash, int direction) {
     char **border = is_odd ? odd_borders : even_borders;
     char **neighbor = is_odd ? odd_neighbors : even_neighbors; 
     
-    char *base = (char*)malloc(sizeof(char) * 1);
+    char *base = (char*)malloc(sizeof(char) * hash_length);
     base[0] = '\0';
     strncat(base, hash, hash_length - 1);
     
