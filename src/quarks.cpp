@@ -3892,17 +3892,18 @@ bool Core::geoput(std::string body, std::string& out){
 
 	}
 
-
-	std::string key = "";
-	std::string value = "";
+	crow::json::wvalue w;
+	
 	double lat = 0.0;
 	double lng = 0.0;
 	
+	std::string key = "";
 	if(x.has("key")) {
-		key = x["key"].s();
+		key	= x["key"].s();
+		w["key"] = key;
 	}
 	if(x.has("value")) {
-		value = x["value"].s();
+		w["value"] = x["value"];
 	} 	
 	if(x.has("lat")) {
 		lat = x["lat"].d();
@@ -3911,25 +3912,21 @@ bool Core::geoput(std::string body, std::string& out){
 		lng = x["lng"].d();	
 	}
 	
-
-	return geoput(key, value, lat, lng, out);
-}
-
-bool Core::geoput(std::string key, std::string value, double lat, double lng, std::string& out){
 	char* hash = geohash_encode(lat, lng, 8);
-	dump(key, value, out);
 	
 	std::string hash_ = hash;
 	std::string hash_key = hash_ + std::string("_") + key;
+	CROW_LOG_INFO << "geo hash key: " << hash_key;
 	
-	bool ret = dump(hash_key, key, out);
+	bool ret = dump(hash_key, crow::json::dump(w), out);
 	
 	delete [] hash;
 	
 	return ret;
 }
 
-bool Core::geonear(std::string body, crow::json::wvalue& out, std::vector<crow::json::wvalue>& matchedResults, double radius /*= 1.0*/){
+bool Core::geonear(std::string body, crow::json::wvalue& out, std::vector<crow::json::wvalue>& matchedResults, 
+						int skip /*= 0*/, int limit /*= -1*/, double radius /*= 1.0*/){
 	auto x = crow::json::load(body);
 	if (!x) {
 		CROW_LOG_INFO << "invalid geonear body" << body;
@@ -3937,9 +3934,6 @@ bool Core::geonear(std::string body, crow::json::wvalue& out, std::vector<crow::
 		out["error"] = "invalid geonear body";
 		return false;
 	}
-
-	//auto q = QueryParams::Parse(req);
-	//std::stoi(q.skip), std::stoi(q.limit));
 
 	double lat = 0.0;
 	double lng = 0.0;
@@ -3951,23 +3945,18 @@ bool Core::geonear(std::string body, crow::json::wvalue& out, std::vector<crow::
 		lng = x["lng"].d();	
 	}
 
-	return geonear(lat, lng, matchedResults);
-	
-}
-
-bool Core::geonear(double lat, double lng, std::vector<crow::json::wvalue>& matchedResults, double radius /*= 1.0*/) {
 	char* hash = geohash_encode(lat, lng, 8);
 	
 	std::string hash_ = hash;
-	std::string hashPrefix = hash_.substr(0, 6); // 6 len hash covers 1 mile radius
+	std::string hashPrefix = hash_.substr(0, 5) + std::string("*"); // 5 len hash covers  4.9 km radius
 	
 	bool ret = getAll(hashPrefix, matchedResults);
 	
 	delete [] hash;
 	
 	return ret;
-	
 }
+
 
 ////
 

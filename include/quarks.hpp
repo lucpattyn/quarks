@@ -129,12 +129,8 @@ namespace Quarks {
 			
 			// lat long apis
 			bool geoput(std::string body, std::string& out);
-			bool geoput(std::string key, std::string value, double lat, double lng, std::string& out);
-			bool geonear(std::string body, crow::json::wvalue& out, std::vector<crow::json::wvalue>& matchedResults, double radius = 1.0); // radius is based on miles
-			bool geonear(double lat, double lng, std::vector<crow::json::wvalue>& matchedResults, double radius = 1.0); // radius is based on miles
-			
-
-			bool makePair(std::string body, crow::json::wvalue& out);
+			bool geonear(std::string body, crow::json::wvalue& out, std::vector<crow::json::wvalue>& matchedResults, 
+						int skip = 0, int limit = -1, double radius = 1.0); // radius is based on miles
 			
 			/// counting stuff
 			std::mutex mtx;
@@ -146,6 +142,8 @@ namespace Quarks {
 			bool restore(std::string path);
 			
 			/////// r&d ////////////////
+			bool makePair(std::string body, crow::json::wvalue& out);
+			
 			bool fileTransfer(std::string moduleName, std::string funcName,
 			                  std::string channelName, std::string remoteDescription);
 
