@@ -3907,9 +3907,14 @@ bool Core::geoput(std::string body, std::string& out){
 	} 	
 	if(x.has("lat")) {
 		lat = x["lat"].d();
+		std::cout.precision(15);
+		std::cout << "Put Lat: " << std::fixed << lat << std::endl;
+		
 	}
 	if(x.has("lng")) {
 		lng = x["lng"].d();	
+		std::cout.precision(15);
+		std::cout << "Put Lng: " << std::fixed << lng << std::endl;
 	}
 	
 	char* hash = geohash_encode(lat, lng, 8);
@@ -3940,15 +3945,22 @@ bool Core::geonear(std::string body, crow::json::wvalue& out, std::vector<crow::
 	
 	if(x.has("lat")) {
 		lat = x["lat"].d();
+		
+		std::cout.precision(15);
+		std::cout << "Near Lat: " << std::fixed << lat << std::endl;
 	}
 	if(x.has("lng")) {
 		lng = x["lng"].d();	
+		
+		std::cout.precision(15);
+		std::cout << "Near Lng: " << std::fixed << lng << std::endl;
 	}
 
 	char* hash = geohash_encode(lat, lng, 8);
 	
 	std::string hash_ = hash;
-	std::string hashPrefix = hash_.substr(0, 5) + std::string("*"); // 5 len hash covers  4.9 km radius
+	//std::string hashPrefix = hash_.substr(0, 5) + std::string("*"); // 5 len hash covers  4.9 km radius
+	std::string hashPrefix = hash_.substr(0, 6) + std::string("*"); // 6 len hash covers  1 mile radius
 	
 	bool ret = getAll(hashPrefix, matchedResults);
 	
