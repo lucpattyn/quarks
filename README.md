@@ -468,28 +468,32 @@ BODY:
 1. Store data same way as putjson with additional parameters lat and lng. Geohashing is used to store data for future quick retrieval.
 
 Post Version:
-
+```
 POST: http://0.0.0.0:18080/geo/put
 BODY:
 {"key":"k1", "value": {"area":"xyz", "lat":23.79441056011852, "lng":90.41478673773013}
+```
 
 Get Version:
-
+```
 GET: http://0.0.0.0:18080/geo/put?body={"key":"k1", "value": {"area":"xyz", "lat":23.79441056011852, "lng":90.41478673773013}
+```
 
 2. Find nearby co-ordinates and associated key/value by providing lat, lng, radius (km) and precision (optional)
 
 Get Version:
-
+```
 GET:
 http://0.0.0.0:18080/geo/near?body={"lat":23.794803234501487, "lng":90.41410009224322, "radius":5.0, "precision":5}
+```
 
 Post Version:
-
+```
 POST: 
 http://0.0.0.0:18080/geo/near
 BODY:
 {"lat":23.794803234501487, "lng":90.41410009224322, "radius":5.0, "precision":5}
+```
 
 Precision is optional and mainly used to specify the grid area for lat/lng geo hashing for quick lookup
 
