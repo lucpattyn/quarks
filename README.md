@@ -476,7 +476,8 @@ BODY:
 
 Get Version:
 ```
-GET: http://0.0.0.0:18080/geo/put?body={"key":"k1", "value": {"area":"xyz", "lat":23.79441056011852, "lng":90.41478673773013}
+GET: http://0.0.0.0:18080/geo/put?body=
+	{"key":"k1", "value": {"area":"xyz", "lat":23.79441056011852, "lng":90.41478673773013}
 ```
 
 2. Find nearby co-ordinates and associated key/value by providing lat, lng, radius (km) and precision (optional)
@@ -484,7 +485,8 @@ GET: http://0.0.0.0:18080/geo/put?body={"key":"k1", "value": {"area":"xyz", "lat
 Get Version:
 ```
 GET:
-http://0.0.0.0:18080/geo/near?body={"lat":23.794803234501487, "lng":90.41410009224322, "radius":5.0, "precision":5}
+http://0.0.0.0:18080/geo/near?body=
+	{"lat":23.794803234501487, "lng":90.41410009224322, "radius":5.0, "precision":5}
 ```
 
 Post Version:
