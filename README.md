@@ -877,7 +877,9 @@ sock.onmessage = (e)=>{
 	msg.limit = -1;
 	
 	var m = JSON.stringify(msg);
-	sock.send(m); // check the message handling (sock.onmessage) section to see how to receive the list
+	// check the message handling (sock.onmessage) section 
+	// to see how to receive the list
+	sock.send(m); 
 
 ```
 
