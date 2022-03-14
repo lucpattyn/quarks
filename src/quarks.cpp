@@ -1062,7 +1062,8 @@ bool Core::getAll(std::string wild,
 
 bool Core::getAll(std::vector<std::string> wilds,
                   std::vector<crow::json::wvalue>& matchedResults,
-                  int skip /*= 0*/, int limit /*= -1*/) {
+                  std::function<bool(crow::json::rvalue&, crow::json::wvalue&)> passFilter,
+				  int skip /*= 0*/, int limit /*= -1*/) {
 
 	bool ret = true;
 	if (dbStatus.ok()) {
@@ -1115,7 +1116,9 @@ bool Core::getAll(std::vector<std::string> wilds,
 								//CROW_LOG_INFO << "w fwd: " << crow::json::dump(w) << " skip: "
 								//<< skip << ", limit: " << limit;
 		
-								matchedResults.push_back(std::move(w));
+								if(passFilter(x, w)){
+									matchedResults.push_back(std::move(w));
+								}
 		
 							}
 		
@@ -4022,14 +4025,14 @@ bool Core::geoput(std::string body, std::string& out){
 	} 	
 	if(x.has("lat")) {
 		lat = x["lat"].d();
-		//w["lat"] = lat;	
 	}
 	if(x.has("lng")) {
-		lng = x["lng"].d();
-		//w["lng"] = lng;	
+		lng = x["lng"].d();	
 	}
-	
+		
 	sanitizelatlng(lat, lng);
+	w["lat"] = lat;
+	w["lng"] = lng;	
 	
 	char* hash = geohash_encode(lat, lng, 8);	
 	std::string hash_ = hash;
@@ -4044,8 +4047,24 @@ bool Core::geoput(std::string body, std::string& out){
 	return ret;
 }
 
+
+double toRad(double degree) {
+	static const double  pi = 3.14159265358979323846;
+    return degree/180 * pi;
+}
+
+double geodistance(double lat1, double long1, double lat2, double long2) {
+    double dist = sin(toRad(lat1)) * sin(toRad(lat2)) + cos(toRad(lat1)) * cos(toRad(lat2)) * cos(toRad(long1 - long2));
+    dist = acos(dist);
+	//  dist = (6371 * pi * dist) / 180;
+    //	got dist in radian, no need to change back to degree and convert to rad again.
+    dist = 6371 * dist;
+    return dist;
+}
+
+
 bool Core::geonear(std::string body, crow::json::wvalue& out, std::vector<crow::json::wvalue>& matchedResults, 
-						int skip /*= 0*/, int limit /*= -1*/, double radius /*= 1.0*/){
+						int skip /*= 0*/, int limit /*= -1*/){
 	auto x = crow::json::load(body);
 	if (!x) {
 		CROW_LOG_INFO << "invalid geonear body" << body;
@@ -4066,9 +4085,28 @@ bool Core::geonear(std::string body, crow::json::wvalue& out, std::vector<crow::
 
 	sanitizelatlng(lat, lng);
 	
-	int precision = 6; // 6 len hash covers  1 mile radius
+	double radius = 5.0; // km
+	if(x.has("radius")) {
+		radius = x["radius"].d();	
+	}
+		
+	int precision = 5; // 5 len hash covers  5 x 5 km radius (approx.)
 	if(x.has("precision")) {
 		precision = x["precision"].i();	
+	}else{
+		if(radius < 1.0){
+			precision = 6;
+		} else if(radius < 10.0){
+			precision = 5;
+		} else if(radius < 40.0){
+			precision = 4;			
+		} else if(radius <  300.0){
+			precision = 3;
+		} else if(radius < 1000){
+			precision = 2;
+		} else {
+			precision = 1;
+		}
 	}
 	
 	std::vector<std::string> hashPrefixes;
@@ -4076,7 +4114,7 @@ bool Core::geonear(std::string body, crow::json::wvalue& out, std::vector<crow::
 	char* hash = geohash_encode(lat, lng, 8);
 	std::string hash_ = hash;
 	std::string hashPrefix = hash_.substr(0, precision) + std::string("*"); 
-	CROW_LOG_INFO << "hash : " << hash << ", hashPrefix : " << hashPrefix;
+	//CROW_LOG_INFO << "hash : " << hash << ", hashPrefix : " << hashPrefix;
 	
 	hashPrefixes.push_back(hashPrefix);
 	
@@ -4084,11 +4122,11 @@ bool Core::geonear(std::string body, crow::json::wvalue& out, std::vector<crow::
 	strncpy(hashNeighs, hash_.substr(0, precision).c_str(), precision);
     hashNeighs[precision] = '\0';
     
-    CROW_LOG_INFO << "hashNeighs : " << hashNeighs;
+    //CROW_LOG_INFO << "hashNeighs : " << hashNeighs;
 	// neighbours 
 	char** neighs = geohash_neighbors(hashNeighs);    
 	for(int i = 0; i < 8; i++){
-		CROW_LOG_INFO << "neighs" << i << ": " << neighs[i] + std::string("*");
+		//CROW_LOG_INFO << "neighs" << i << ": " << neighs[i] + std::string("*");
 		hashPrefixes.push_back(neighs[i] + std::string("*"));
 		delete neighs[i];
 	}
@@ -4096,7 +4134,27 @@ bool Core::geonear(std::string body, crow::json::wvalue& out, std::vector<crow::
 	
 	delete [] hash;
 	
-	return getAll(hashPrefixes, matchedResults, skip, limit);
+	bool ret = getAll(hashPrefixes, matchedResults,
+					[&lat,&lng,&radius](crow::json::rvalue& input, crow::json::wvalue& modifyOutput) -> bool {
+						if(!input){
+							return false;
+						}
+						
+						double xlat = 0.0, xlng = 0.0;
+						if(input.has("lat")) {
+							xlat = input["lat"].d();		
+						}
+						if(input.has("lng")) {
+							xlng = input["lng"].d();	
+						}
+						
+						double d = geodistance(lat, lng, xlat, xlng);
+						//CROW_LOG_INFO << "geo dis: " << d;
+						return (d <= radius);
+						
+	                }, skip, limit);
+				
+	return ret;
 
 }
 

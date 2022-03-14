@@ -1,5 +1,5 @@
 
-# quarks
+# Quarks
 A modern C++ based off-the-shelf server framework for storing, retrieving, processing data with high scalability and plugging in business logics.
 
 Quarks provides a highly scalable and distributable open source system based on actor model which can be easily deployed in closed networks.
@@ -37,6 +37,8 @@ ninja
 
 Thanks Tareq Ahmed Siraj  (https://github.com/tareqsiraj) for introduing Ninja,
 made life way easier
+
+See end of readme for quick start with ubuntu environment.
 
 ### Run
 
@@ -279,7 +281,7 @@ http://0.0.0.0:18080/iter?skip=3&limit=5
 (Useful to check if the https requests are actualy being processed by threads spawned by multiple cpu cores)
 
 ```
- http://localhost:18080/test?timeout=10
+ http://0.0.0.0:18080/test?timeout=10
 
 ```
 
@@ -461,8 +463,40 @@ BODY:
 
 ```
 
-### Joins and Filters
+### Geo data storing, Nearby lookup with Latitude/Longitude 
 
+1. Store data same way as putjson with additional parameters lat and lng. Geohashing is used to store data for future quick retrieval.
+
+Post Version:
+
+POST: http://0.0.0.0:18080/geo/put
+BODY:
+{"key":"k1", "value": {"area":"xyz", "lat":23.79441056011852, "lng":90.41478673773013}
+
+Get Version:
+
+GET: http://0.0.0.0:18080/geo/put?body={"key":"k1", "value": {"area":"xyz", "lat":23.79441056011852, "lng":90.41478673773013}
+
+2. Find nearby co-ordinates and associated key/value by providing lat, lng, radius (km) and precision (optional)
+
+Get Version:
+
+GET:
+http://0.0.0.0:18080/geo/near?body={"lat":23.794803234501487, "lng":90.41410009224322, "radius":5.0, "precision":5}
+
+Post Version:
+
+POST: 
+http://0.0.0.0:18080/geo/near
+BODY:
+{"lat":23.794803234501487, "lng":90.41410009224322, "radius":5.0, "precision":5}
+
+Precision is optional and mainly used to specify the grid area for lat/lng geo hashing for quick lookup
+
+If not specified, precision is estimated from the radius provided 
+
+
+### Joins and Filters
 
 In practical situaions, the need arose to incorporate the getjoinedmap api which joins multiple resultsets in a single query.
 What this api does is take a wildcard argument to iterate a range of keys (main keys).
@@ -481,7 +515,7 @@ It's preferable to use the POST method in this case.
 
 ```
 GET:
-http://localhost:18080/getjoinedmap?body=
+http://0.0.0.0:18080/getjoinedmap?body=
 { 	"keys":"roomkeys_*","splitby":"_","selindex":5,
 	"join":[{"prefix":"usercount_","suffix":""},
 		    {"prefix":"messagecount_","suffix":""},
@@ -497,7 +531,7 @@ Skip and Limit are only applicable for wildcard search of keys
 
 ```
 GET:
-http://localhost:18080/getjoinedmap?body=
+http://0.0.0.0:18080/getjoinedmap?body=
 { 	"keys":"roomkeys_*",
 	keylist":["roomkeys_roomid1", "roomkeys_roomid2"],
 	"splitby":"_","selindex":1,
@@ -512,7 +546,7 @@ http://localhost:18080/getjoinedmap?body=
 POST version:
 
 ```
-POST: http://localhost:18080/getjoinedmap&skip=2&limit=3
+POST: http://0.0.0.0:18080/getjoinedmap&skip=2&limit=3
 BODY:
 { 	"keys":"roomkeys_*",
 	"keylist":["roomkeys_roomid1", "roomkeys_roomid2"],
@@ -701,12 +735,12 @@ Quarks can send all put and remove requests made in it's core db to a logger
 
 To specify the address of the logger start by specifying the log parameter:
 ```
-./ocv_microservice_crow -port 18080 -log http://localhost:18081
+./ocv_microservice_crow -port 18080 -log http://0.0.0.0:18081
 
 ```
 
 This means a logger has been started at port 18081 and listening to
-http://localhost:18081/putjson and http://localhost:18081/remove api calls.
+http://0.0.0.0:18081/putjson and http://0.0.0.0:18081/remove api calls.
 These apis respectively get invoked whenever a put or remove operation has been made in the core db
 
 
@@ -717,7 +751,7 @@ If you start another quarks server in the 18081 port specifying a new database, 
 ```
 
 Instead of a Quarks server, you can start any server which implements and handles
-http://localhost:18081/putjson and http://localhost:18081/remove api calls
+http://0.0.0.0:18081/putjson and http://0.0.0.0:18081/remove api calls
 
 
 ### CACHING
@@ -882,7 +916,7 @@ Quarks has plans for dynamic plugins integration to extend its features .
 Currently, only OpenCV is provided as a readily available plugin (codes commented).
 
 For those interested in testing OpenCV as plugin (uncommenting the relevant codes),
-you should submit a POST request to http://localhost:18080/filters/gausian.
+you should submit a POST request to http://0.0.0.0:18080/filters/gausian.
 The body of this request should be your binary PNG image.
 The response should be a gausian filtered image from the submited image.
 
@@ -896,7 +930,7 @@ A browser based editor has been provided to run Quarks queries and visualize and
 (Thanks to https://github.com/json-editor/json-editor).
 To view the editor at work,
 Copy the "templates" folder inside "/examples" in the "build" folder and then hit the following in browser:
-http://localhost:18080/console
+http://0.0.0.0:18080/console
 
 Definitely Quarks has to be running to view the editor
 
@@ -906,10 +940,11 @@ Definitely Quarks has to be running to view the editor
 A guideline is provided for basic twitter like feed and chatrooms.
 
 Copy the "templates" folder inside "/examples" in the "build" folder and then hit the following in browser:
-http://localhost:18080/feed for feed example
-http://localhost:18080/chat for chat example
+http://0.0.0.0:18080/feed for feed example
+http://0.0.0.0:18080/chat for chat example
 
 Definitely Quarks has to be running to view the examples
+
 
 ### Quick Start: Dependencies installation for Ubuntu 18.04
 
@@ -937,16 +972,18 @@ Definitely Quarks has to be running to view the examples
  
  ## Changes for Ubuntu 20.04
 
-  1. In the CMakeLists.txt replace "node" with "v8" in the section 
+  1. Downgrade Boost version to 1.69
+  
+ ## Docker setup:
+ 
+  1. In the CMakeLists.txt replace "v8" with "node" in the section 
 	 target_include_directories(
          ocv_microservice_crow
          PRIVATE
          /usr/include/node
 	 )
 
-  2. Downgrade Boost version to 1.69
-  
- ## Docker setup:
+ 
  To build the docker image:
  ```
  docker build -t quarks:ubuntu-21.04 . 

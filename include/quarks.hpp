@@ -58,7 +58,8 @@ namespace Quarks {
 			            int skip = 0, int limit = -1);
 
 			bool getAll(std::vector<std::string> wilds,
-			            std::vector<crow::json::wvalue>& matchedResults,
+			            std::vector<crow::json::wvalue>& matchedResults, 
+						std::function<bool (crow::json::rvalue&, crow::json::wvalue&)> passFilter,
 			            int skip = 0, int limit = -1);
 
 			bool getSorted(std::string wild, std::string sortby, bool ascending,
@@ -134,7 +135,7 @@ namespace Quarks {
 			// lat long apis
 			bool geoput(std::string body, std::string& out);
 			bool geonear(std::string body, crow::json::wvalue& out, std::vector<crow::json::wvalue>& matchedResults, 
-						int skip = 0, int limit = -1, double radius = 1.0); // radius is based on miles
+						int skip = 0, int limit = -1); // radius is based on miles
 			
 			/// counting stuff
 			std::mutex mtx;
