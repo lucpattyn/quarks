@@ -480,14 +480,15 @@ GET: http://0.0.0.0:18080/geo/put?body=
 	{"key":"key_area2", "value": {"area":"xyz", "lat":23.79441056011852, "lng":90.41478673773013}
 ```
 
-2. Find nearby co-ordinates and associated key/value by providing lat, lng, radius (km) 
+2. Find nearby co-ordinates and associated key/value by providing lat, lng, radius (km).
    You can also optionally provide precision and keys
 
 Get Version:
 ```
 GET:
 http://0.0.0.0:18080/geo/near?body=
-	{"lat":23.794803234501487, "lng":90.41410009224322, "radius":5.0, "keys":"key_area*", "precision":5}
+	{"lat":23.794803234501487, "lng":90.41410009224322, "radius":5.0, 
+	"keys":"key_area*", "precision":5}
 ```
 
 Post Version:
@@ -495,7 +496,8 @@ Post Version:
 POST: 
 http://0.0.0.0:18080/geo/near
 BODY:
-{"lat":23.794803234501487, "lng":90.41410009224322, "radius":5.0, "keys":"key_area*", "precision":5}
+{"lat":23.794803234501487, "lng":90.41410009224322, "radius":5.0, 
+	"keys":"key_area*", "precision":5}
 ```
 
 "precision" is optional and mainly used to specify the grid area for lat/lng geo hashing for quick lookup
