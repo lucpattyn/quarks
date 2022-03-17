@@ -4109,6 +4109,12 @@ bool Core::geonear(std::string body, crow::json::wvalue& out, std::vector<crow::
 		}
 	}
 	
+	std::string keysFilter = "";
+	if(x.has("keys")){
+		std::string keys = x["keys"].s();
+		keysFilter = std::string("_") + keys;
+	}
+	
 	std::vector<std::string> hashPrefixes;
 	
 	char* hash = geohash_encode(lat, lng, 8);
@@ -4116,7 +4122,7 @@ bool Core::geonear(std::string body, crow::json::wvalue& out, std::vector<crow::
 	std::string hashPrefix = hash_.substr(0, precision) + std::string("*"); 
 	//CROW_LOG_INFO << "hash : " << hash << ", hashPrefix : " << hashPrefix;
 	
-	hashPrefixes.push_back(hashPrefix);
+	hashPrefixes.push_back(hashPrefix + keysFilter);
 	
 	char hashNeighs[128];
 	strncpy(hashNeighs, hash_.substr(0, precision).c_str(), precision);
@@ -4127,7 +4133,7 @@ bool Core::geonear(std::string body, crow::json::wvalue& out, std::vector<crow::
 	char** neighs = geohash_neighbors(hashNeighs);    
 	for(int i = 0; i < 8; i++){
 		//CROW_LOG_INFO << "neighs" << i << ": " << neighs[i] + std::string("*");
-		hashPrefixes.push_back(neighs[i] + std::string("*"));
+		hashPrefixes.push_back(neighs[i] + std::string("*") + keysFilter);
 		delete neighs[i];
 	}
 	delete neighs;
