@@ -4156,7 +4156,12 @@ bool Core::geonear(std::string body, crow::json::wvalue& out, std::vector<crow::
 						
 						double d = geodistance(lat, lng, xlat, xlng);
 						//CROW_LOG_INFO << "geo dis: " << d;
-						return (d <= radius);
+						bool ret = (d <= radius);
+						if(ret){
+							modifyOutput["far"] = d;
+						}
+						
+						return ret;
 						
 	                }, skip, limit);
 				
