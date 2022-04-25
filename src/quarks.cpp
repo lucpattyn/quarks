@@ -1,5 +1,9 @@
 #include <quarks.hpp>
+
+#ifdef _USE_V8_PLUGIN
 #include <v8engine.hpp>
+#endif 
+
 #include <HTTPRequest.hpp>
 
 #include <qsorter.hpp>
@@ -3673,9 +3677,12 @@ bool Core::searchJson(crow::json::rvalue& args,
                       int skip /*= 0*/, int limit /*= -1*/) {
 
 
+#ifdef _USE_V8_PLUGIN
+	
 	if (dbStatus.ok()) {
 
 		Core& core = *this;
+
 
 		v8Engine ve([](std::string log) {
 			CROW_LOG_INFO << log.c_str();
@@ -3803,6 +3810,8 @@ bool Core::searchJson(crow::json::rvalue& args,
 		return ve.load(moduleJS, funcOnV8EngineLoaded);
 
 	}
+
+#endif
 
 	return false;
 
@@ -4207,6 +4216,8 @@ bool Core::fileTransfer(std::string moduleName, std::string funcName, std::strin
 
 	//Core& core = *this;
 
+#ifdef _USE_V8_PLUGIN
+
 	v8Engine ve([](std::string log) {
 		CROW_LOG_INFO << log.c_str();
 	});
@@ -4228,7 +4239,10 @@ bool Core::fileTransfer(std::string moduleName, std::string funcName, std::strin
 	CROW_LOG_INFO << moduleJS;
 
 	return ve.load(moduleJS, v8Loaded);
-	// return true;
+
+#endif
+
+	 return false;
 }
 
 

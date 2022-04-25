@@ -91,8 +91,11 @@ endif()
 #windows powershell
 #target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb -lv8 -lzmq -lboost_system)
 
+#linux v8 included
+#target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb -lv8 -lzmq -lboost_system)
+
 #linux
-target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb -lv8 -lzmq -lboost_system)
+target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb -lzmq -lboost_system)
 
 if (BUILD_TESTS)
     find_package(GTest)

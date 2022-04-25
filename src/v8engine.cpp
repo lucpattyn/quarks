@@ -1,6 +1,8 @@
 // v8engine.cpp : Defines the entry point for the console application.
 //
 
+#ifdef _USE_V8_PLUGIN
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -253,4 +255,7 @@ std::string v8Engine::invoke(v8Context& context, std::string funcName, std::stri
     return *ascii;
 }
 
-#endif
+#endif // V8_LATEST
+
+
+#endif // _USE_V8_PLUGIN
