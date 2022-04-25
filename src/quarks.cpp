@@ -1,8 +1,6 @@
 #include <quarks.hpp>
 
-#ifdef _USE_V8_PLUGIN
 #include <v8engine.hpp>
-#endif 
 
 #include <HTTPRequest.hpp>
 

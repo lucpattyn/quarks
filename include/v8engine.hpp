@@ -1,8 +1,12 @@
 // v8engine.cpp : Defines the entry point for the console application.
 //
 
+
 #ifndef _V8ENGINE_H_
 #define _V8ENGINE_H_
+
+#define _DONOT_USE_V8_PLUGIN
+#ifdef _USE_V8_PLUGIN
 
 #include <string>
 #include <functional>
@@ -121,4 +125,8 @@ private:
 
 #endif
 
+#endif // _USE_V8_PLUGIN
+
 #endif // _V8ENGINE_H_
+
+

@@ -2,13 +2,14 @@
 #include <fstream>
 
 #ifdef _USE_PLUGINS
-#include <filter.hpp>
+ #include <filter.hpp>
 #endif
 
 #include <main.hpp>
 
 #include <quarks.hpp>
-#include <v8engine.hpp>
+
+ #include <v8engine.hpp>
 
 #include <qsocket.hpp>
 
@@ -110,9 +111,13 @@ int main(int argc, char ** argv) {
   		}		
 	}
 
+//#ifdef _USE_V8_PLUGIN
+
 #ifdef _V8_LATEST
 	v8EngineShutdownInMain();
 #endif
+
+//#endif
 
 	Quarks::Core::_Instance.shutDown();
 
