@@ -18,7 +18,7 @@ namespace crow
         int code{200};
         std::string body;
         json::wvalue json_value;
-
+        
         // `headers' stores HTTP headers.
         ci_map headers;
 

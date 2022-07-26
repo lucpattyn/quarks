@@ -6,26 +6,48 @@
 #endif
 
 #include <main.hpp>
-
 #include <quarks.hpp>
-
- #include <v8engine.hpp>
-
+#include <v8engine.hpp>
 #include <qsocket.hpp>
 
 #include <httprouting.hpp>
 #include <tcprouting.hpp>
 
 #include <quarkstcp.hpp>
-
 #include <quarkstaskqueue.hpp>
 
+#include <Wren++.hpp>
+
+
+std::string vm_request(std::string){
+	return "Quarks API Request";
+}
+
+std::string vm_getinfo(std::string){
+	return "Quarks ENV Request";
+}
 // LUC: 20210717 : ugliest of hacks
 int crow::detail::dumb_timer_queue::tick = 5;
 
 int main(int argc, char ** argv) {
+	
+	wrenpp::VM vm;
+  	vm.beginModule( "quarks" )
+    	.beginClass( "QuarksAPI" )
+      		.bindFunction< decltype(&vm_request), &vm_request >( true, "request(_)" )
+      		//.bindFunction< decltype(&tan), &tan >( true, "tan(_)" )
+      		//.bindFunction< decltype(&exp), &exp >( true, "exp(_)" )
+    		.endClass()
+			.beginClass( "QuarksEnv" )
+      			.bindFunction< decltype(&vm_getinfo), &vm_getinfo >( true, "request(_)" )
+      		.endClass()
+  	
+	.endModule();
 
-	crow::SimpleApp app;
+  	vm.executeModule("app");
+	
+	//crow::SimpleApp app;
+	crow::App<CrowMiddleware> app;
 	
 	Quarks::Core::_Instance.setEnvironment(argc, argv);
 
@@ -52,6 +74,31 @@ int main(int argc, char ** argv) {
 	// end websockets
 
 
+	// SSE 
+	CROW_ROUTE(app, "/sse")
+	([&app](const crow::request &req) {
+		
+		crow::response res;
+		res.code = 204;
+		
+		std::string msg = app.get_middleware<CrowMiddleware>().getMessage();
+		if(msg.compare("sse")){
+				app.get_middleware<CrowMiddleware>().setMessage("sse");
+			
+				auto body = req.body;
+				std::cout << "SSE : " << body;
+				
+				res.add_header("Access-Control-Allow-Origin", "*");
+				res.add_header("Content-Type", "text/event-stream");
+				res.add_header("Cache-Control", "no-cache");
+				res.add_header("Keep-Alive", "timeout=10, max=1000");
+				res.write("\ndata:\n");
+ 		}				
+			
+		
+		return res;
+	});
+	
 	std::cout << "Quarks launching .." << std::endl;
 
 	std::vector<std::thread> services;

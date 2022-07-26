@@ -51,6 +51,9 @@ file(GLOB ocv_microservice_crow_SOURCES
     "${PROJECT_SOURCE_DIR}/src/*.cpp"
 )
 
+SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} ${PROJECT_SOURCE_DIR}/lib)
+message(STATUS "Cmake library path ${CMAKE_LIBRARY_PATH}")
+		
 add_executable( ocv_microservice_crow ${ocv_microservice_crow_SOURCES} )
 target_include_directories(
     ocv_microservice_crow
@@ -85,6 +88,9 @@ else()
     message(FATAL_ERROR "Boost not found. Could not build this app.")
 endif()
 
+#wren vm
+target_link_libraries (ocv_microservice_crow  ${CMAKE_LIBRARY_PATH}/libwren.so)
+
 #mac
 #target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb libv8.dylib libv8_libplatform.dylib -lzmq -lboost_system)
 
@@ -92,10 +98,11 @@ endif()
 #target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb -lv8 -lzmq -lboost_system)
 
 #linux v8 included
-target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb -lv8 -lzmq -lboost_system)
+#target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb -lv8 -lzmq -lboost_system)
 
 #linux
-#target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb -lzmq -lboost_system)
+target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb -lzmq -lboost_system)
+
 
 if (BUILD_TESTS)
     find_package(GTest)

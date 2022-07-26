@@ -66,8 +66,43 @@ struct QueryParams {
 
 };
 
+struct CrowMiddleware
+{
+    std::string message;
 
-void BuildHttpRoutes(crow::SimpleApp& app){
+    CrowMiddleware() 
+    {
+        message = "";
+    }
+
+	std::string getMessage()
+	{
+		return message;
+	}
+    void setMessage(std::string newMsg)
+    {
+        message = newMsg;
+    }
+
+    struct context
+    {
+    };
+
+    void before_handle(crow::request& req, crow::response& res, context& /*ctx*/)
+    {
+		    // no-op
+        CROW_LOG_INFO << " BEFORE - HANDLE: " << message;            
+	}
+
+    void after_handle(crow::request& req, crow::response& res, context& /*ctx*/)
+    {
+        // no-op
+        CROW_LOG_INFO << " AFTER - HANDLE: " << message;
+    }
+};
+
+ 
+void BuildHttpRoutes(crow::App<CrowMiddleware>& app){
 
 	auto route_ping_callback = 
 	[](const crow::request& /*req*/) {
