@@ -1,0 +1,677 @@
+
+
+
+<!DOCTYPE html>
+<html lang="en" >
+
+<head>
+
+  <meta charset="UTF-8">
+  
+<link rel="apple-touch-icon" type="image/png" href="https://cpwebassets.codepen.io/assets/favicon/apple-touch-icon-5ae1a0698dcc2402e9712f7d01ed509a57814f994c660df9f7a952f3060705ee.png" />
+<meta name="apple-mobile-web-app-title" content="CodePen">
+
+<link rel="shortcut icon" type="image/x-icon" href="https://cpwebassets.codepen.io/assets/favicon/favicon-aec34940fbc1a6e787974dcd360f2c6b63348d4b1f4e06c77743096d55480f33.ico" />
+
+<link rel="mask-icon" type="" href="https://cpwebassets.codepen.io/assets/favicon/logo-pin-8f3771b1072e3c38bd662872f6b673a722f4b3ca2421637d5596661b4e2132cc.svg" color="#111" />
+
+
+  <title>Hot Topics</title>
+  
+  
+  
+  
+<style>
+@import url(https://fonts.googleapis.com/css?family=Lato:300,400);
+@import url(https://maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css);
+*,
+*:before,
+*:after {
+  margin: 0;
+  padding: 0;
+  -webkit-box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+body, html {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  font-family: "Lato", sans-serif;
+  font-size: 1rem;
+  color: #333;
+  background-color: #f4f4f4;
+}
+
+.user_avatar {
+  width: 65px;
+  height: 65px;
+  display: inline-block;
+  vertical-align: middle;
+}
+.user_avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+
+.comment_block {
+  width: 65%;
+  height: 100%;
+  margin: 0 auto;
+  padding: 10px;
+}
+.comment_block .create_new_comment {
+  width: 100%;
+  padding: 20px 0;
+}
+.comment_block .create_new_comment .input_comment {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 10px;
+  width: calc(100% - 75px);
+}
+.comment_block .create_new_comment .input_comment input[type=text] {
+  width: 100%;
+  font-family: "Lato", sans-serif;
+  font-weight: 300;
+  font-size: 1.3rem;
+  padding: 10px;
+  border: none;
+  border-bottom: 2px solid #f2f2f2;
+}
+.comment_block .create_new_comment .input_comment input[type=text]:focus {
+  outline: none;
+  border-bottom: 2px solid #e6e6e6;
+}
+.comment_block .new_comment {
+  width: 100%;
+  height: auto;
+  padding: 20px 0;
+  border-top: 1px solid #e6e6e6;
+}
+.comment_block .new_comment .user_comment {
+  list-style-type: none;
+}
+.comment_block .new_comment .comment_body {
+  display: inline-block;
+  vertical-align: middle;
+  width: calc(100% - 75px);
+  min-height: 65px;
+  margin-left: 10px;
+  padding: 5px 10px;
+  font-size: 0.9rem;
+  color: #555;
+  background-color: #FFF;
+  border-bottom: 2px solid #f2f2f2;
+}
+.comment_block .new_comment .comment_body .replied_to {
+  margin: 5px 0px;
+  background-color: #fafafa;
+  border-bottom: 2px solid #f2f2f2;
+  border-radius: 5px;
+}
+.comment_block .new_comment .comment_body .replied_to p {
+  padding: 5px;
+}
+.comment_block .new_comment .comment_body .replied_to span {
+  color: #6495ED;
+  margin-right: 2px;
+}
+.comment_block .new_comment .comment_toolbar {
+  width: 100%;
+}
+.comment_block .new_comment .comment_toolbar ul {
+  list-style-type: none;
+  padding-left: 75px;
+  font-size: 0;
+}
+.comment_block .new_comment .comment_toolbar ul li {
+  display: inline-block;
+  padding: 5px;
+  font-size: 0.7rem;
+  color: #d9d9d9;
+}
+.comment_block .new_comment .comment_toolbar ul li:hover {
+  cursor: pointer;
+}
+.comment_block .new_comment .comment_toolbar .comment_details {
+  display: inline-block;
+  vertical-align: middle;
+  width: 70%;
+  text-align: left;
+}
+.comment_block .new_comment .comment_toolbar .comment_tools {
+  display: inline-block;
+  vertical-align: middle;
+  width: 30%;
+  text-align: right;
+}
+.comment_block .new_comment .comment_toolbar .comment_tools li:hover {
+  color: #CCC;
+}
+.comment_block .new_comment .user:hover {
+  color: #6495ED;
+  text-decoration: underline;
+}
+.comment_block .new_comment .love:hover {
+  color: #FF6347;
+}
+</style>
+
+  <script>
+  window.console = window.console || function(t) {};
+</script>
+
+  
+  
+  <script>
+  if (document.location.search.match(/type=embed/gi)) {
+    window.parent.postMessage("resize", "*");
+  }
+</script>
+
+
+<script>
+
+// UI modal stuff
+var modalbox = null 
+var modalCloseControl = null;
+function modalComment(){
+  if(!modalbox){		
+		createModal('');
+  	};
+}
+
+var isReply = false;
+var currentId = "";
+
+function modalReply(feedId){
+	isReply = true;
+	currentId = feedId;
+
+	if(!modalbox){		
+		createModal('');
+  	};
+
+}
+
+function modalPost(){
+  	var name = document.getElementById("namebox").value;
+	var content = document.getElementById("contentbox").value;
+  
+  	if(name.length < 1){
+  		alert("Must provide username!!");
+  		return;
+  	}
+	
+	var userInfo = {};
+  	userInfo.id = "user_" + name;
+  	userInfo.name = name;
+  	
+  	setUserInfo(userInfo.id, userInfo);
+  
+  	if(isReply){
+  		postFeedReply(currentId, userInfo, content);
+	} else{
+  		postFeedItem(userInfo, content);
+	}
+	
+	isReply = false;
+  	currentId = "";	
+  	
+  	if(modalCloseControl){
+  		modalCloseControl.click();
+  		modalCloseControl = null;
+	}
+  	
+}
+  
+let createModal = (modalContent) => {  
+	
+  // Definitions
+  let modal = document.createElement("div"),
+      modalStyle = document.createElement("style"),
+      modalCSS = '.js-modal{ position: absolute; top: 15%; left: 50%; transform: translate(-50%, -50%); background-color: rgba(0, 0, 0, .1); max-width: 650px; border-radius: 5px; } .js-modal img, .js-modal iframe, .js-modal video{ max-width: 100%; } .js-modal-inner{ position: relative; padding: 10px; } .js-modal-close{ position: absolute; top: -10px; right: -10px; background-color: black; color: #eee; border-width: 0; font-size: 10px; height: 24px; width: 24px; border-radius: 100%; text-align: center; }',
+      modalClose = '<button id="post" onclick="modalPost()">Post</button><button class="js-modal-close" id="js_modal_close">X</button>',
+      theBody = document.getElementsByTagName('body')[0],
+      theHead = document.getElementsByTagName('head')[0];
+
+  // Add content and attributes to the modal
+  modal.setAttribute("class", "js-modal");
+  modal.innerHTML = '<div class="js-modal-inner">' + modalContent + 
+  						'User Name: <input id="namebox" />' + '<br/>Comment: <textarea id="contentbox"></textarea> &nbsp;' +  modalClose + '</div>';
+  theBody.appendChild(modal);
+
+  modalClose = document.querySelector("#js_modal_close");
+
+  // Add the modal styles dynamically
+  if(modalStyle.styleSheet){
+      modalStyle.styleSheet.cssText = modalCSS;
+  } else {
+      modalStyle.appendChild(document.createTextNode(modalCSS));
+  }
+  theHead.appendChild(modalStyle);
+	
+  modalbox = modal;
+  setTimeout(function(){
+	var name = document.getElementById("namebox");
+	name.focus();	
+  
+  }, 1);
+  
+  // Close the modal on button-click
+  if(modalClose) {
+  	modalCloseControl = modalClose;
+    modalClose.addEventListener('click', function() {
+      isReply = false;
+      
+	  modal.remove();
+      modalStyle.remove();
+      
+      modalbox = null;
+    });
+  }
+   
+}
+
+// UI Like 
+function like(itemid){
+	incrmentLikeCount(itemid, 1);
+}
+
+// end of UI stuff
+</script>
+
+</head>
+
+<body translate="no" >
+	<!-- comments container -->
+	<div class="comment_block">
+		
+	 <!-- used by #{user} to create a new comment -->
+	 <div class="create_new_comment">
+	
+		<!-- current #{user} avatar -->
+	 	<div class="user_avatar">
+	 		<img src="https://www.pngrepo.com/png/130092/512/user.png">
+	 	</div><!-- the input field --><div class="input_comment">
+	 		<input type="text" onclick="modalComment()" placeholder="Start a topic..">
+	 	</div>
+	
+	 </div>
+
+	<!--div class="new_comment"-->
+
+			<!-- build comment -->
+			<ul class="user_comment" id="user_comments">
+				<script id="feed-template" type="x-handlebars-template">
+				{{#each this}}
+				
+			 	<li>		
+				 	<div class="new_comment">	 		
+			 		<!-- current #{user} avatar -->
+						<div class="user_avatar">
+							<img src="https://www.pngrepo.com/png/130092/512/user.png">
+						</div><div class="comment_body">
+							<div class="replied_to">
+							 	<p><span class="user">{{value.username}}:</span>
+								 {{value.content}}</p>
+							</div>	
+						
+							<div class="create_new_comment">
+						
+							<!-- current #{user} avatar -->
+						 	<!-- the input field --><div class="input_comment">
+						 		<input type="text" id="{{value.itemid}}" onclick="modalReply(this.id)" placeholder="Join the conversation..">
+						 	</div>
+						
+						</div>					
+						
+						<!-- comments toolbar -->
+						<div class="comment_toolbar">
+						 	
+							<!-- inc. date and time -->
+					 		<div class="comment_details">
+					 			<ul>
+					 				<li><i class="fa fa-clock-o"></i> {{value.time}}</li>
+					 				<li><i class="fa fa-calendar"></i> {{value.date}}</li>
+					 				<li><i class="fa fa-pencil"></i> <span class="user">author</span></li>
+					 			</ul>
+					 		</div><!-- inc. share/reply and love --><div class="comment_tools">
+					 			<ul>
+					 				<li><i class="fa fa-share-alt"></i></li>
+					 				<!--li onclick="modalReply(this.id)" id="{{value.itemid}}"><i class="fa fa-reply"></i></li-->
+					 				<li onclick="like(this.id)" id="{{value.itemid}}"><i class="fa fa-heart love"><span class="love_amt"> {{value.points}}</span></i></li>
+					 			</ul>
+					 		</div>
+						
+						</div>
+						
+						{{#each value.replies}}						
+						<div class="replied_to"><p>
+							<span class="user">{{value.username}}:</span>
+							{{value.content}}
+						</div>
+						<!-- comments toolbar -->						
+						<div class="comment_toolbar" >
+						
+							<!-- inc. date and time -->
+					 		<div class="comment_details">
+					 			<ul>
+					 				<li><i class="fa fa-clock-o"></i> {{value.time}}</li>
+					 				<li><i class="fa fa-calendar"></i> {{value.date}}</li>
+					 				<li><i class="fa fa-pencil"></i> <span class="user">replied</span></li>
+					 			</ul>
+					 		</div><!-- inc. share/reply and love --><div class="comment_tools">
+					 			<ul>
+					 				<li><i class="fa fa-share-alt"></i></li>
+					 				<!--li onclick="modalReply(this.id)" id="{{value.itemid}}"><i class="fa fa-reply"></i></li-->
+					 				<li onclick="like(this.id)" id="{{value.itemid}}"><i class="fa fa-heart love"><span class="love_amt"> {{value.points}}</span></i></li>
+					 			</ul>
+					 		</div>
+			
+						</div>						
+						{{/each }}
+						
+					</div> <!-- </div><div class="comment_body"> -->
+
+				{{/each }}
+				</script>	
+				</div>		
+				</li>
+
+			</ul>
+
+		 <!--/div-->
+	</div> <!-- comment block -->
+  
+
+<script>	
+// Quarks Section
+// get/post utility functions
+
+function getJson(url, callback){
+	var xmlhtpp = new XMLHttpRequest();
+  	xmlhtpp.onreadystatechange = function() {
+    	if (this.readyState == 4) {
+      		callback(this.responseText, this.status);
+    	}
+  	};
+  
+  	xmlhtpp.open("GET", url, true);
+  	xmlhtpp.send();
+}
+
+function postJson(url, data, callback){
+	var xmlhttp = new XMLHttpRequest();   // new HttpRequest instance 
+	xmlhttp.open("POST", url);
+	//xmlhttp.setRequestHeader("Content-Type", "application/json");
+	//xmlhttp.withCredentials = true;
+	
+	xmlhttp.onreadystatechange = function () {
+    	if (this.readyState == 4) {
+  			callback(this.responseText, this.status);
+		}
+	};
+	
+	xmlhttp.send(JSON.stringify(data));
+}
+
+var updating = false;
+var needsFurtherUpdating = false;
+
+///////////////////////////////////////////////////////////////
+// middle layer apis and functions that communicate with Quarks
+
+var baseUrl = "http://localhost:18080";
+
+var fetchFeedListAPI = "/getkeys?keys=feed_*&reverse=true";
+var fetchFeedRepliesAPI = "/getkeys?keys=feedreply_";
+
+var postFeedItemAPI = "/putjson";
+var postFeedReplyAPI = "/putjson";
+
+var fetchLikeCountAPI = "/get";
+var incrLikeCountAPI = "/incrval";
+
+var feeddata = null;
+
+// Retrieving Data Section
+
+function getFeedReplies(feeditem, skip, limit){
+  
+  getJson(baseUrl + fetchFeedRepliesAPI + feeditem.itemid + "_*&skip=" + skip + "&limit=" + limit , function(response, status){
+		console.log("response: " + response);
+		console.log("status: " + status);
+		
+		var jsonResponse = JSON.parse(response);
+		feeditem.replies = jsonResponse.result;
+	
+		if(updating){
+			needsFurtherUpdating = true;
+		}
+		
+		if(!updating && (feeditem.replies.length > 0)){
+			updating = true;
+			// update UI after response received
+			var feedlist = theTemplate(feeddata); 
+	  		//console.log(feedlist);  
+	  		document.getElementById("user_comments").innerHTML = feedlist;
+	  		
+	  		updating = false;	  		
+	  		// when API calling updating finished, check if further updating is needed which were on hold
+	  		
+	  		if(needsFurtherUpdating){
+	  			feedlist = theTemplate(feeddata); 
+	  			//console.log(feedlist);  
+	  			document.getElementById("user_comments").innerHTML = feedlist;
+	  		
+	  			needsFurtherUpdating = false;
+			}
+  		}
+	});  
+}
+
+function getFeedList(skip, limit){
+  
+  getJson(baseUrl + fetchFeedListAPI + "&skip=" + skip + "&limit=" + limit , function(response, status){
+		console.log("response: " + response);
+		console.log("status: " + status);
+		
+		var jsonResponse = JSON.parse(response);
+		feeddata = jsonResponse.result;
+		
+		// update UI after response received
+		var feedlist = theTemplate(feeddata); 
+  		//console.log(feedlist);  
+  		document.getElementById("user_comments").innerHTML = feedlist;
+  		
+  		for(i=0; i< feeddata.length; i++){
+  			getFeedReplies(feeddata[i].value, skip, limit);
+  		}
+	});  
+}
+
+// Storing Data Section
+
+function postFeedItem(userInfo, content){
+	
+	var user = userInfo;
+	
+	// generate feed id using timestamp, so feed is automatically sorted by time in Quarks
+	var d = new Date();
+	var t = d.getTime();
+	var feedId = "feed_" + t + "_" + user.id;
+		
+	var postdata = {};
+	postdata.key = feedId;
+	
+	var feeditem = {};
+	feeditem.itemid = postdata.key;
+	feeditem.userid = user.id;
+	feeditem.username = user.name;
+	feeditem.content = content;
+	feeditem.points = 0;
+	feeditem.timestamp = d.getTime();		
+	var date = new Date(feeditem.timestamp);
+	/*console.log("Date: "+date.getDate()+
+          "/"+(date.getMonth()+1)+
+          "/"+date.getFullYear()+
+          " "+date.getHours()+
+          ":"+date.getMinutes()+
+          ":"+date.getSeconds());*/
+
+	feeditem.time = date.getHours()+
+          ":"+date.getMinutes()+
+          ":"+date.getSeconds();
+          
+    feeditem.date = date.getDate()+
+          "/"+(date.getMonth()+1)+
+          "/"+date.getFullYear();
+	
+	postdata.value = feeditem;
+	
+	//console.log(data);
+	
+	postJson(baseUrl + postFeedItemAPI , postdata, function(response, status){
+		console.log("response: " + response);
+		console.log("status: " + status);
+		
+		getFeedList(0, defaultLimit);
+	});
+	
+}
+
+function postFeedReply(feedId, userInfo, content){
+	var user = userInfo;
+	
+	var d = new Date();
+	var t = d.getTime();
+	// forming the key with feedId so reply can be easily related with feed
+	var replyId =  "feedreply_" + feedId + "_" + "rep_" + t; 
+					
+	var postdata = {};
+	postdata.key = replyId;
+	
+	var replyitem = {};
+	replyitem.itemid = postdata.key;
+	replyitem.userid = user.id;
+	replyitem.username = user.name;
+	replyitem.content = content;
+	replyitem.points = 0;
+	replyitem.timestamp = d.getTime();
+	
+	var date = new Date(replyitem.timestamp);
+	/*console.log("Date: "+date.getDate()+
+          "/"+(date.getMonth()+1)+
+          "/"+date.getFullYear()+
+          " "+date.getHours()+
+          ":"+date.getMinutes()+
+          ":"+date.getSeconds());*/
+
+	replyitem.time = date.getHours()+
+          ":"+date.getMinutes()+
+          ":"+date.getSeconds();
+          
+    replyitem.date = date.getDate()+
+          "/"+(date.getMonth()+1)+
+          "/"+date.getFullYear();
+	
+	postdata.value = replyitem;
+	
+	//console.log(data);
+	
+	postJson(baseUrl + postFeedReplyAPI , postdata, function(response, status){
+		console.log("response: " + response);
+		console.log("status: " + status);
+		
+		getFeedList(0, defaultLimit);
+	});
+	
+}
+
+// likes and gamification
+
+function incrmentLikeCount(itemid, incrementby){
+
+	var postdata = {};
+	postdata.key = itemid;
+	postdata.value = {};
+	postdata.value.points = 1;
+		
+	postJson(baseUrl + incrLikeCountAPI, postdata, function(response, status){
+		console.log("response: " + response);
+		console.log("status: " + status);
+	
+		getFeedList(0, defaultLimit);
+	});
+	
+}
+
+
+// User Info Fetching and Storing
+
+function getUserInfo(userId){
+	getJson(baseUrl + "/get?key=" + userId , function(response, status){
+		console.log("response: " + response);
+		console.log("status: " + status);
+		
+		var userInfo = JSON.parse(response);
+		
+		return userInfo;
+	}); 
+}
+
+function setUserInfo(userId, userInfo){
+	var postdata = {};
+	postdata.key = userId;
+	postdata.value = userInfo;
+
+	postJson(baseUrl + "/setuserinfo" , postdata, function(response, status){
+		console.log("response: " + response);
+		console.log("status: " + status);
+	});
+}
+
+// end of middle layer apis and functions
+//////////////////////////////////////////////
+
+// end of Quarks Section 
+</script>
+
+  
+<!-- Include Handlebars from a CDN -->
+<script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.js"></script>
+<script>
+  // compile the template
+  var template = Handlebars.compile("Handlebars <b>{{doesWhat}}</b>");
+  // execute the compiled template and print the output to the console
+  console.log(template({ doesWhat: "rocks!" }));
+  
+  var theTemplateScript = document.getElementById("feed-template").innerHTML;
+  //Compile the template?
+  var theTemplate = Handlebars.compile (theTemplateScript);
+
+  var defaultLimit = 100;	
+  getFeedList(0, defaultLimit);
+
+  // dummy self info (will be populated through login in real apps)
+  var selfId = "user_xxx";
+  
+  var selfInfo = {};
+  selfInfo.id = "user_" + "vin_diesel";
+  selfInfo.name = "vin_diesel";
+    
+  setUserInfo(selfInfo.id, selfInfo);
+    
+</script>  
+
+</body>
+
+</html>
+ 
+
+

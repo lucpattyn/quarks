@@ -74,7 +74,7 @@ public:
          		notifyStop = true;
 				 	
 		 	} else {
-		 		message = TCP::DispatchRequest(data);
+		 		message = TCPRouting::DispatchRequest(data);
 			}
 		 		
  			sock.async_write_some(

@@ -3,6 +3,8 @@
 
 #include <crow.h>
 
+////////////////////////////////UNDEFED INTENTIONALLY//////////////////////////////////////
+
 #ifdef _USE_RAPIDAPI
 
 #include <curl/curl.h>
@@ -14,6 +16,52 @@ static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *use
 }
 
 #endif
+////////////////////////////////////////////////////////////////////////////////////////
+
+struct CrowMiddleware
+{
+    std::string message;
+	
+
+    CrowMiddleware() : message(""), before_handler(nullptr), after_handler(nullptr)
+    {
+    	
+    }
+
+	std::string getMessage()
+	{
+		return message;
+	}
+    void setMessage(std::string newMsg)
+    {
+        message = newMsg;
+    }
+
+    struct context
+    {
+    };
+
+    void before_handle(crow::request& req, crow::response& res, context& ctx)
+    {
+        CROW_LOG_INFO << " BEFORE - HANDLE: " << message;            
+		
+		if(before_handler)
+			before_handler(req, res, ctx);
+	}
+	
+
+    void after_handle(crow::request& req, crow::response& res, context& ctx)
+    {
+    	if(after_handler)
+    		after_handler(req, res, ctx);
+        
+		CROW_LOG_INFO << " AFTER - HANDLE: " << message;
+    }
+    
+    std::function<void(crow::request& req, crow::response& res, context&)> before_handler;
+	std::function<void(crow::request& req, crow::response& res, context&)> after_handler;
+};
+
 
 static void handle_runtime_error(const std::runtime_error& error, crow::json::wvalue& out,
                                  std::vector<crow::json::wvalue>& jsonResults) {
@@ -66,42 +114,6 @@ struct QueryParams {
 
 };
 
-struct CrowMiddleware
-{
-    std::string message;
-
-    CrowMiddleware() 
-    {
-        message = "";
-    }
-
-	std::string getMessage()
-	{
-		return message;
-	}
-    void setMessage(std::string newMsg)
-    {
-        message = newMsg;
-    }
-
-    struct context
-    {
-    };
-
-    void before_handle(crow::request& req, crow::response& res, context& /*ctx*/)
-    {
-		    // no-op
-        CROW_LOG_INFO << " BEFORE - HANDLE: " << message;            
-	}
-
-    void after_handle(crow::request& req, crow::response& res, context& /*ctx*/)
-    {
-        // no-op
-        CROW_LOG_INFO << " AFTER - HANDLE: " << message;
-    }
-};
-
- 
 void BuildHttpRoutes(crow::App<CrowMiddleware>& app){
 
 	auto route_ping_callback = 
@@ -1615,6 +1627,17 @@ void BuildHttpRoutes(crow::App<CrowMiddleware>& app){
 	CROW_ROUTE(app, "/feed")
 	([&readFile](const crow::request& /*req*/) {
 		auto result = readFile("templates/feed.html");
+		std::ostringstream os;
+		os << result;
+
+		auto res = crow::response {os.str()};
+
+		return res;
+	});
+	
+	CROW_ROUTE(app, "/wrenfeed")
+	([&readFile](const crow::request& /*req*/) {
+		auto result = readFile("wren/feed.html");
 		std::ostringstream os;
 		os << result;
 
