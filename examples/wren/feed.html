@@ -116,6 +116,7 @@ body {
 .comment_block .new_comment .comment_body .replied_to p {
   padding: 5px;
 }
+
 .comment_block .new_comment .comment_body .replied_to span {
   color: #6495ED;
   margin-right: 2px;
@@ -350,30 +351,32 @@ function like(itemid){
 						
 						</div>
 						
-						{{#each value.replies}}						
-						<div class="replied_to"><p>
-							<span class="user">{{value.username}}:</span>
-							{{value.content}}
+						{{#each value.replies}}
+						<div style="margin-left:25px">						
+							<div class="replied_to"><p>
+								<span class="user">{{value.username}}:</span>
+								{{value.content}}
+							</div>
+							<!-- comments toolbar -->						
+							<div class="comment_toolbar" >
+							
+								<!-- inc. date and time -->
+						 		<div class="comment_details">
+						 			<ul>
+						 				<li><i class="fa fa-clock-o"></i> {{value.time}}</li>
+						 				<li><i class="fa fa-calendar"></i> {{value.date}}</li>
+						 				<li><i class="fa fa-pencil"></i> <span class="user">replied</span></li>
+						 			</ul>
+						 		</div><!-- inc. share/reply and love --><div class="comment_tools">
+						 			<ul>
+						 				<li><i class="fa fa-share-alt"></i></li>
+						 				<!--li onclick="modalReply(this.id)" id="{{value.itemid}}"><i class="fa fa-reply"></i></li-->
+						 				<li onclick="like(this.id)" id="{{value.itemid}}"><i class="fa fa-heart love"><span class="love_amt"> {{value.points}}</span></i></li>
+						 			</ul>
+						 		</div>
+				
+							</div>						
 						</div>
-						<!-- comments toolbar -->						
-						<div class="comment_toolbar" >
-						
-							<!-- inc. date and time -->
-					 		<div class="comment_details">
-					 			<ul>
-					 				<li><i class="fa fa-clock-o"></i> {{value.time}}</li>
-					 				<li><i class="fa fa-calendar"></i> {{value.date}}</li>
-					 				<li><i class="fa fa-pencil"></i> <span class="user">replied</span></li>
-					 			</ul>
-					 		</div><!-- inc. share/reply and love --><div class="comment_tools">
-					 			<ul>
-					 				<li><i class="fa fa-share-alt"></i></li>
-					 				<!--li onclick="modalReply(this.id)" id="{{value.itemid}}"><i class="fa fa-reply"></i></li-->
-					 				<li onclick="like(this.id)" id="{{value.itemid}}"><i class="fa fa-heart love"><span class="love_amt"> {{value.points}}</span></i></li>
-					 			</ul>
-					 		</div>
-			
-						</div>						
 						{{/each }}
 						
 					</div> <!-- </div><div class="comment_body"> -->
@@ -428,7 +431,8 @@ var needsFurtherUpdating = false;
 
 var baseUrl = "http://localhost:18080";
 
-var fetchFeedListAPI = "/getkeys?keys=feed_*&reverse=true";
+//var fetchFeedListAPI = "/getkeys?keys=feed_*&reverse=true";
+var fetchFeedListAPI = "/getfeedlist"
 var fetchFeedRepliesAPI = "/getkeys?keys=feedreply_";
 
 var postFeedItemAPI = "/putjson";
@@ -477,7 +481,7 @@ function getFeedReplies(feeditem, skip, limit){
 
 function getFeedList(skip, limit){
   
-  getJson(baseUrl + fetchFeedListAPI + "&skip=" + skip + "&limit=" + limit , function(response, status){
+  getJson(baseUrl + fetchFeedListAPI + "?skip=" + skip + "&limit=" + limit , function(response, status){
 		console.log("response: " + response);
 		console.log("status: " + status);
 		
@@ -615,7 +619,7 @@ function incrmentLikeCount(itemid, incrementby){
 // User Info Fetching and Storing
 
 function getUserInfo(userId){
-	getJson(baseUrl + "/get?key=" + userId , function(response, status){
+	getJson(baseUrl + "/getuserinfo?userid=" + userId , function(response, status){
 		console.log("response: " + response);
 		console.log("status: " + status);
 		
@@ -623,6 +627,8 @@ function getUserInfo(userId){
 		
 		return userInfo;
 	}); 
+	
+	
 }
 
 function setUserInfo(userId, userInfo){

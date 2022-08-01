@@ -350,30 +350,32 @@ function like(itemid){
 						
 						</div>
 						
-						{{#each value.replies}}						
-						<div class="replied_to"><p>
-							<span class="user">{{value.username}}:</span>
-							{{value.content}}
+						{{#each value.replies}}
+						<div style="margin-left:25px">					
+							<div class="replied_to"><p>
+								<span class="user">{{value.username}}:</span>
+								{{value.content}}
+							</div>
+							<!-- comments toolbar -->						
+							<div class="comment_toolbar" >
+							
+								<!-- inc. date and time -->
+						 		<div class="comment_details">
+						 			<ul>
+						 				<li><i class="fa fa-clock-o"></i> {{value.time}}</li>
+						 				<li><i class="fa fa-calendar"></i> {{value.date}}</li>
+						 				<li><i class="fa fa-pencil"></i> <span class="user">replied</span></li>
+						 			</ul>
+						 		</div><!-- inc. share/reply and love --><div class="comment_tools">
+						 			<ul>
+						 				<li><i class="fa fa-share-alt"></i></li>
+						 				<!--li onclick="modalReply(this.id)" id="{{value.itemid}}"><i class="fa fa-reply"></i></li-->
+						 				<li onclick="like(this.id)" id="{{value.itemid}}"><i class="fa fa-heart love"><span class="love_amt"> {{value.points}}</span></i></li>
+						 			</ul>
+						 		</div>
+				
+							</div>						
 						</div>
-						<!-- comments toolbar -->						
-						<div class="comment_toolbar" >
-						
-							<!-- inc. date and time -->
-					 		<div class="comment_details">
-					 			<ul>
-					 				<li><i class="fa fa-clock-o"></i> {{value.time}}</li>
-					 				<li><i class="fa fa-calendar"></i> {{value.date}}</li>
-					 				<li><i class="fa fa-pencil"></i> <span class="user">replied</span></li>
-					 			</ul>
-					 		</div><!-- inc. share/reply and love --><div class="comment_tools">
-					 			<ul>
-					 				<li><i class="fa fa-share-alt"></i></li>
-					 				<!--li onclick="modalReply(this.id)" id="{{value.itemid}}"><i class="fa fa-reply"></i></li-->
-					 				<li onclick="like(this.id)" id="{{value.itemid}}"><i class="fa fa-heart love"><span class="love_amt"> {{value.points}}</span></i></li>
-					 			</ul>
-					 		</div>
-			
-						</div>						
 						{{/each }}
 						
 					</div> <!-- </div><div class="comment_body"> -->
