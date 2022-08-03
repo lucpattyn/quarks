@@ -431,15 +431,14 @@ var needsFurtherUpdating = false;
 
 var baseUrl = "http://localhost:18080";
 
-//var fetchFeedListAPI = "/getkeys?keys=feed_*&reverse=true";
 var fetchFeedListAPI = "/getfeedlist"
-var fetchFeedRepliesAPI = "/getkeys?keys=feedreply_";
+var fetchFeedRepliesAPI = "/getfeedreplies";
 
-var postFeedItemAPI = "/putjson";
-var postFeedReplyAPI = "/putjson";
+var postFeedItemAPI = "/postfeeditem";
+var postFeedReplyAPI = "/postfeedreply";
 
-var fetchLikeCountAPI = "/get";
-var incrLikeCountAPI = "/incrval";
+//var fetchLikeCountAPI = "/get";
+var incrLikeCountAPI = "/like";
 
 var feeddata = null;
 
@@ -447,7 +446,7 @@ var feeddata = null;
 
 function getFeedReplies(feeditem, skip, limit){
   
-  getJson(baseUrl + fetchFeedRepliesAPI + feeditem.itemid + "_*&skip=" + skip + "&limit=" + limit , function(response, status){
+  getJson(baseUrl + fetchFeedRepliesAPI + "?feedid=" + feeditem.itemid + "&skip=" + skip + "&limit=" + limit , function(response, status){
 		console.log("response: " + response);
 		console.log("status: " + status);
 		
