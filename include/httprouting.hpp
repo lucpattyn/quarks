@@ -1,5 +1,5 @@
-#ifndef _ROUTES_H_
-#define _ROUTES_H_
+#ifndef _HTTP_ROUTES_H_
+#define _HTTP_ROUTES_H_
 
 #include <crow.h>
 

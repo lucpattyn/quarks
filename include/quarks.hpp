@@ -154,7 +154,7 @@ namespace Quarks {
 
 			bool openTCPSocketClient();
 
-			bool isAServer(){
+			bool isANode(){
 				return _broker || _writer || _reader;
 			}
 			
