@@ -924,15 +924,27 @@ and the other GET arguments as properties of JSON Body,
 
 ### PLUGINS
 
-Quarks has plans for dynamic plugins integration to extend its features .
-Currently, only OpenCV is provided as a readily available plugin (codes commented).
+Quarks has introduced dynamic plugins integration with the help of wren scripts to extend its capabilities.
+Copy the "plugins" and "wren" directory residing in "examples" to build directory for plugin examples.
+"app.wren" is executed immediately after Quarks starts running.
+"quarks.wren" provides the bridge between wren and Quarks interaction.
+
+The additional benefit of wren scripts is, now it can be used as BLL (business logic layer) 
+for further customization in Quarks API Handling.
+A good example of that is feed.html in wren directory. 
+The frontend simply calls apis as specified by the wren script in app.wren
+The example can be seen in action by calling http://0.0.0.0:18080/wrenfeed
+
+Seeing wren operating so efficiently, currently v8 engine has been commented out 
+which was initially introduced to do the same job
+
+As legacy codes, OpenCV has been kept as an integrated plugin (codes commented).
 
 For those interested in testing OpenCV as plugin (uncommenting the relevant codes),
 you should submit a POST request to http://0.0.0.0:18080/filters/gausian.
 The body of this request should be your binary PNG image.
 The response should be a gausian filtered image from the submited image.
 
-OpenCV however is a plugin (an additional feature) and not the main purpose behind Quarks.
 Currently it is turned off by using #ifdef _USE_PLUGIN in the codes and if (_USE_PLUGINS) in CMakeLists.txt
 
 

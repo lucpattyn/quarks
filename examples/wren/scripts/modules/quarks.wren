@@ -1,6 +1,4 @@
 class QuarksAPI {
-  foreign static getheader( ctx, x )
-  foreign static getparam( ctx, x )
   foreign static dispatch( x )
   foreign static get( x )
   foreign static getkeys( x, skip, limit )
@@ -11,8 +9,13 @@ class QuarksAPI {
 
 class QuarksEnv {
   foreign static get( x )
+  foreign static loadplugin( x )
+  foreign static unloadplugin( x )
+  foreign static callplugin(x, params, body)
 }
 
 class Request {
   foreign static on( url, handler )	
+  foreign static getheader( x )
+  foreign static getparam( x )
 }

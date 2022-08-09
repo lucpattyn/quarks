@@ -23,16 +23,10 @@ int crow::detail::dumb_timer_queue::tick = 5;
 
 int main(int argc, char ** argv) {
 	
-	//crow::SimpleApp app;
 	crow::App<CrowMiddleware> app;
 		
 	Quarks::Core::_Instance.setEnvironment(argc, argv);
 
-	/*v8::V8::InitializeICUDefaultLocation(argv[0]);
-	v8::V8::InitializeExternalStartupData(argv[0]);
-	std::unique_ptr<v8::Platform> platform = v8::platform::NewDefaultPlatform();
-	v8::V8::InitializePlatform(platform.get());
-	v8::V8::Initialize();*/
 	
 	BuildHttpRoutes(app);
 	

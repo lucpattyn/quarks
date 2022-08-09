@@ -3,6 +3,7 @@
 
 #include <Wren++.hpp>
 
+#include <plugins.hpp>
 
 std::map<std::string, std::string>vm_routes; // global declaration
 
@@ -156,6 +157,9 @@ void wrenEngineInitialize(crow::App<CrowMiddleware>& app){
 	    	.endClass()
 			.beginClass( "QuarksEnv" )
 	      			.bindFunction< decltype(&vm_envget), &vm_envget >( true, "get(_)" )
+	      			.bindFunction< decltype(&plugins::loadPlugin), & plugins::loadPlugin >( true, "loadplugin(_)" )
+	      			.bindFunction< decltype(&plugins::unloadPlugin), & plugins::unloadPlugin >( true, "unloadplugin(_)" )
+					.bindFunction< decltype(&plugins::executePluginFn), & plugins::executePluginFn >( true, "callplugin(_,_,_)" )
 	      	.endClass()
 	  		.beginClass( "Request" )
 	  			.bindFunction< decltype(&vm_setroute), &vm_setroute >( true, "on(_,_)" )

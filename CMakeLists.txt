@@ -92,16 +92,16 @@ endif()
 target_link_libraries (ocv_microservice_crow  ${CMAKE_LIBRARY_PATH}/libwren.so)
 
 #mac
-#target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb libv8.dylib libv8_libplatform.dylib -lzmq -lboost_system)
+#target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb libv8.dylib libv8_libplatform.dylib  -dynamiclib -flat_namespace -lzmq -lboost_system)
 
 #windows powershell
-#target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb -lv8 -lzmq -lboost_system)
+#target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb -lv8 -ldl -lzmq -lboost_system)
 
 #linux v8 included
-#target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb -lv8 -lzmq -lboost_system)
+#target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb -lv8 -lzmq -ldl -lboost_system)
 
 #linux
-target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb -lzmq -lboost_system)
+target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb -lzmq -ldl -lboost_system)
 
 
 if (BUILD_TESTS)

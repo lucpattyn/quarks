@@ -5,10 +5,9 @@ import "wren/scripts/modules/quarks" for Request
 import "wren/scripts/modules/json" for JSON
 
 class App {
-  static handleRequest( ctx, url, params, body ) {
+  static handleRequest( url, params, body ) {
     System.print( "url:" + url )
-	System.print("ctx:" + ctx)
-	var header = QuarksAPI.getheader(ctx, "Connection")
+	var header = Request.getheader("Connection")
 	if(header){
 		System.print("header: " + header)
 	}
@@ -31,9 +30,9 @@ class App {
    
   }
   
-  static getUserInfo( ctx, params, body ){
+  static getUserInfo( params, body ){
   	System.print("UserInfo Requested .. ")
-  	var key = QuarksAPI.getparam(ctx, "userId")
+  	var key = Request.getparam("userId")
 	var result = QuarksAPI.get(key)
 	
 	var ret = { "code" : 200, "result" : result }
@@ -42,15 +41,15 @@ class App {
   	
   }
   
-  static getFeedList( ctx, params, body ) {
+  static getFeedList( params, body ) {
   	System.print("Feedinfo Requested .. ")
   	
-  	var skip = QuarksAPI.getparam(ctx, "skip")
+  	var skip = Request.getparam("skip")
   	System.print("Skip: " + skip)
 	if(!skip){
 		skip = 0
 	}
-	var limit = QuarksAPI.getparam(ctx, "limit")
+	var limit = Request.getparam("limit")
 	System.print("Limit: " + limit)
 	if(!limit){
 		limit = 100
@@ -63,18 +62,18 @@ class App {
   
   }
   
-  static getFeedReplies( ctx, params, body ) {
+  static getFeedReplies( params, body ) {
   	System.print("FeedReplies Requested .. ")
   	
-  	var feedId = QuarksAPI.getparam(ctx, "feedid")
+  	var feedId = Request.getparam("feedid")
   	System.print("FeedId:" + feedId)
   	
-  	var skip = QuarksAPI.getparam(ctx, "skip")
+  	var skip = Request.getparam("skip")
   	System.print("Skip: " + skip)
 	if(!skip){
 		skip = 0
 	}
-	var limit = QuarksAPI.getparam(ctx, "limit")
+	var limit = Request.getparam("limit")
 	System.print("Limit: " + limit)
 	if(!limit){
 		limit = 100
@@ -87,7 +86,7 @@ class App {
   
   }
  
-  static postFeedItem( ctx, params, body ) {
+  static postFeedItem( params, body ) {
 	var result = QuarksAPI.put(body)	
 	var ret = { "code" : 200, "result" : result }
     
@@ -95,7 +94,7 @@ class App {
 
   }
 
-  static postFeedReply( ctx, params, body ) {
+  static postFeedReply( params, body ) {
 	var result = QuarksAPI.put(body)	
 	var ret = { "code" : 200, "result" : result }
     
@@ -103,7 +102,7 @@ class App {
 
   }
  
-  static incrLikeCount( ctx, params, body ) {
+  static incrLikeCount( params, body ) {
 	var result = QuarksAPI.incrval(body)	
 	var ret = { "code" : 200, "result" : result }
     
@@ -113,13 +112,15 @@ class App {
   
 }
 
-System.print( QuarksAPI.dispatch("") )
-System.print( QuarksEnv.get("") )
+//System.print( QuarksAPI.dispatch("") )
+System.print( QuarksEnv.loadplugin("ffmpegplugin.so") )
+System.print( QuarksEnv.callplugin("ffmpegplugin.so", "mp4tohls", "feluda.mp4") )
+System.print( QuarksEnv.unloadplugin("ffmpegplugin.so") )
 
-Request.on( "/getuserinfo", "getUserInfo(_,_,_)" )
-Request.on( "/getfeedlist", "getFeedList(_,_,_)" )
-Request.on( "/getfeedreplies", "getFeedReplies(_,_,_)" )
-Request.on( "/postfeeditem", "postFeedItem(_,_,_)" )
-Request.on( "/postfeedreply", "postFeedReply(_,_,_)" )
-Request.on( "/like", "incrLikeCount(_,_,_)" )
+Request.on( "/getuserinfo", "getUserInfo(_,_)" )
+Request.on( "/getfeedlist", "getFeedList(_,_)" )
+Request.on( "/getfeedreplies", "getFeedReplies(_,_)" )
+Request.on( "/postfeeditem", "postFeedItem(_,_)" )
+Request.on( "/postfeedreply", "postFeedReply(_,_)" )
+Request.on( "/like", "incrLikeCount(_,_)" )
 
