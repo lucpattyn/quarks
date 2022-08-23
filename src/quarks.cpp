@@ -44,7 +44,6 @@ std::mutex __critical_mtx;
 std::mutex __cache_mtx;
 //
 
-
 Core Core::_Instance;
 //Matrix Matrix::_Instance;
 
@@ -4357,21 +4356,11 @@ void SocketInterceptor::broadcast(std::string room, std::string data,
 }
 
 void SocketInterceptor::onOpen(crow::websocket::connection& conn) {
-	CROW_LOG_INFO << "QuarksSCIR::Open << " << conn.userdata();
-	
-	char* _id = (char*)conn.userdata();
-	if(_id != nullptr) {
-		std::string room = "default";
-		
-		std::string roomKey = room + std::string("_") + _id;
-		_connMap[roomKey] = &conn;	
-
-		CROW_LOG_INFO << "QuarksSCIR::usercreate << " << roomKey;
-	}
 	
 }
 
 void SocketInterceptor::onClose(crow::websocket::connection& conn) {
+	
 	char* _id = (char*)conn.userdata();
 	if(_id != nullptr) {
 
@@ -4396,7 +4385,7 @@ void SocketInterceptor::onClose(crow::websocket::connection& conn) {
 				wsend["timestamp"] = getCurrentTimestamp();
 				std::string send = crow::json::dump(wsend);
 				
-				broadcast(room, send);
+				//broadcast(room, send);
 
 				std::string roomKey = room + std::string("_") + _id;
 				_connMap.erase(roomKey);
@@ -4414,7 +4403,8 @@ void SocketInterceptor::onClose(crow::websocket::connection& conn) {
 
 bool SocketInterceptor::onQueryMessage(crow::websocket::connection& conn,
                                   const crow::json::rvalue& rdata, bool is_binary){
-    try {
+    
+	try {
 
 		//char* _id = (char*)conn.userdata();
 
@@ -4452,6 +4442,8 @@ bool SocketInterceptor::onQueryMessage(crow::websocket::connection& conn,
 bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
                                   const std::string& data, bool is_binary) {
 
+	//std::lock_guard<std::mutex> _(__sock_mtx);
+	
 	if(data.size() == 0) {
 		CROW_LOG_INFO << "empty data" << data;
 		return true;
@@ -4468,6 +4460,20 @@ bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
 	try {
 
 		char* _id = (char*)conn.userdata();
+
+		if(x.has("connect") && x["connect"].b()){
+			if(_id != nullptr) {
+			
+				std::string room = "default";
+				CROW_LOG_INFO << "QuarksSCIR::Accessing id ...";
+				std::string roomKey = room + std::string("_") + _id;
+				CROW_LOG_INFO << "QuarksSCIR::accessing connmap << " << roomKey;
+				_connMap[roomKey] = &conn;	
+	
+				CROW_LOG_INFO << "QuarksSCIR::usercreate << " << roomKey;
+			}
+				
+		}
 
 		if(x.has("join")) {
 			std::string room = x["join"].s();

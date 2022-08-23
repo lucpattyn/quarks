@@ -43,8 +43,8 @@ public:
         
         conn->userdata(_id);
         
-        open_handler_(*conn);
-        
+        std::string data = R"({"connect":true})";
+		message_handler_(*conn, data, false);   
         
     }
 #ifdef CROW_ENABLE_SSL
