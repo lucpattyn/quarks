@@ -4326,30 +4326,43 @@ auto SocketInterceptor::lookup(const pairs& items, const std::string& key)
 
 void SocketInterceptor::broadcast(std::string room, std::string data) {
 
+	CROW_LOG_INFO << "broadcasting to " << room;
 	auto items = lookup(_connMap, room);
-	auto itBegin = items.first;
-	auto itEnd = items.second;
+	{
+		auto itBegin = items.first;
+		auto itEnd = items.second;
 
-	if(_connMap.size() > 0) {
-		for (auto it=itBegin; it!=itEnd; ++it) {
-			auto u = it->second;
-			u->send_text(data);
+		if(_connMap.size() > 0) {
+			for (auto it=itBegin; it!=itEnd; ++it) {
+				auto u = it->second;
+				u->send_text(data);
+			}
 		}
 	}
+	
 }
 
 void SocketInterceptor::broadcast(std::string room, std::string data,
                                   crow::websocket::connection& skipconn) {
 
-	auto items = lookup(_connMap, room);
-	auto itBegin = items.first;
-	auto itEnd = items.second;
+	CROW_LOG_INFO << "broadcasting (with skip) to " << room;
 
-	if(_connMap.size() > 0) {
-		for (auto it=itBegin; it!=itEnd; ++it) {
-			auto u = it->second;
-			if(u != &skipconn) {
-				u->send_text(data);
+	auto items = lookup(_connMap, room);	
+	{
+
+		auto itBegin = items.first;
+		auto itEnd = items.second;
+	
+		if(_connMap.size() > 0) {
+			for (auto it=itBegin; it!=itEnd; ++it) {
+				auto u = it->second;
+				if(u != &skipconn) {
+					CROW_LOG_INFO << "sending text (with skip)";
+
+					u->send_text(data);
+
+					CROW_LOG_INFO << "done sending text";
+				}
 			}
 		}
 	}
@@ -4363,6 +4376,7 @@ void SocketInterceptor::onClose(crow::websocket::connection& conn) {
 	
 	char* _id = (char*)conn.userdata();
 	if(_id != nullptr) {
+		CROW_LOG_INFO << "Socket Closing In Server!" << _id;
 
 		// Needs real improvement to find the rooms.
 		std::string leaveId = _id;
@@ -4372,11 +4386,9 @@ void SocketInterceptor::onClose(crow::websocket::connection& conn) {
 		auto itBegin = rooms.first;
 		auto itEnd = rooms.second;
 
-		if(_notifyAllOnClose) {
-			
-			for (auto it=itBegin; it!=itEnd; ++it) {
-				auto room = it->second;
-				
+		for (auto it=itBegin; it!=itEnd; ++it) {
+			auto room = it->second;
+			if(_notifyAllOnClose){	
 				crow::json::wvalue wsend;
 				wsend["left"] = room;
 				if(_id != nullptr) {
@@ -4385,12 +4397,12 @@ void SocketInterceptor::onClose(crow::websocket::connection& conn) {
 				wsend["timestamp"] = getCurrentTimestamp();
 				std::string send = crow::json::dump(wsend);
 				
-				//broadcast(room, send);
-
-				std::string roomKey = room + std::string("_") + _id;
-				_connMap.erase(roomKey);
-
+				broadcast(room, send, conn);
 			}
+
+			std::string roomKey = room + std::string("_") + _id;
+			CROW_LOG_INFO << "connmap erasing : " << roomKey; 
+			_connMap.erase(roomKey);
 
 		}
 
@@ -4465,11 +4477,14 @@ bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
 			if(_id != nullptr) {
 			
 				std::string room = "default";
-				CROW_LOG_INFO << "QuarksSCIR::Accessing id ...";
+				CROW_LOG_INFO << "QuarksSCIR::Accessing id ..." << _id;
 				std::string roomKey = room + std::string("_") + _id;
 				CROW_LOG_INFO << "QuarksSCIR::accessing connmap << " << roomKey;
 				_connMap[roomKey] = &conn;	
 	
+				std::string userKey = std::string(_id) + std::string("_") + room;
+				_userRoomsMap[userKey] = room;
+
 				CROW_LOG_INFO << "QuarksSCIR::usercreate << " << roomKey;
 			}
 				
