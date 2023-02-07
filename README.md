@@ -1,5 +1,5 @@
 
-# quarks
+# Quarks
 A modern C++ based off-the-shelf server framework for storing, retrieving, processing data with high scalability and plugging in business logics.
 
 Quarks provides a highly scalable and distributable open source system based on actor model which can be easily deployed in closed networks.
@@ -18,9 +18,9 @@ The current codebase uses a compiled version of RocksDB, Chrome v8 Engine and Ze
 It requires the following packages:
 
 - Crow Library v0.1
-- GCC with support to C++17
+- GCC with support for C++17
 - Cmake 1.13
-- Boost::System
+- Boost::System (1.69)
 - RocksDB
 - v8 Javascript Engine
 - ZeroMQ
@@ -38,11 +38,26 @@ ninja
 Thanks Tareq Ahmed Siraj  (https://github.com/tareqsiraj) for introduing Ninja,
 made life way easier
 
+See end of readme for quick start with ubuntu environment.
+
 ### Run
 
 ```
 ./ocv_microservice_crow
 ```
+
+It is possible to specify a server time out value with the 'timeout' parameter:
+```
+./ocv_microservice_crow -timeout 125
+
+```
+
+It is possible to change default db name where data will be written through 'store' parameter:
+```
+./ocv_microservice_crow -store quarks_1
+
+```
+
 
 ### Testing
 
@@ -53,7 +68,7 @@ After running the executable, perform get and post requests as follows:
 
 ### Description
 
-a)  Put key vs value
+1)  Put key vs value
 
 ```
  http://0.0.0.0:18080/put?body={"key":"g1_u1","value":{"msg":"m1"}}
@@ -75,17 +90,20 @@ a)  Put key vs value
  In those cases you have to use the methods in POST section (putjson, postjson etc.)
 
 
-b) Get value against key
+2) Get value against key
 
 ```
  http://0.0.0.0:18080/get?key=g1_u1
 ```
 
-c) List values by wildcard search with keys (you can specifiy skip and limit optionally)
+3) List values by wildcard search with keys You can specifiy skip and limit optionally
 ```
  http://0.0.0.0:18080/getall?keys=g1_u*&skip=5&limit=10
 ```
-d) List sorted values by wildcard search with keys (you can specifiy skip and limit optionally)
+
+4) List sorted values by wildcard search with keys and specifying the sortby attribute of value. 
+   It is preferable to already keep the stored key value pairs sorted by using keys instead of invoking sort api,
+   since stored elements are pre-sorted by keys. You can specifiy skip and limit optionally
 ```
  http://0.0.0.0:18080/getsorted?keys=g1_u*&sortby=msg&skip=5&limit=10
 
@@ -106,7 +124,7 @@ http://0.0.0.0:18080/getsorted?keys=g1_u*&filter={"where":{"messageTo":{"eq_any"
 
 ```
 
-e) List keys vs values by wildcard search with keys (you can specifiy skip and limit optionally)
+5) List keys vs values by wildcard search with key prefixes (you can specifiy skip and limit optionally)
 
 ```
  http://0.0.0.0:18080/getkeys?keys=g1_u*&skip=5&limit=10
@@ -116,55 +134,61 @@ To get the keys in reverse order run
 http://0.0.0.0:18080/getkeys?keys=g1_u*&skip=5&limit=10&reverse=true
 ```
 
-f) Get count of keys matched by wildcard search
+6) Get count of keys matched by wildcard search
 ```
 http://0.0.0.0:18080/getcount?keys=g1*
 ```
 
-g)  remove a key
+7)  remove a key
 ```
 http://0.0.0.0:18080/remove?key=g1_u1
 ```
 number of keys successfully deleted would be returned
 
-h) remove keys by wildcard search
+8) remove keys by wildcard search
 ```
 http://0.0.0.0:18080/removeall?keys=g1_u*
 ```
-
 number of keys successfully deleted would be returned
 
-i) check if a key already exists
+
+9) check if a key already exists
 ```
 http://0.0.0.0:18080/exists?key=g1_u1
 ```
 
-j) get a list of key value pair given a list of keys
+10) get a list of key value pair given a list of keys
 ```
 http://0.0.0.0:18080/getlist?body=["g1_u1", "g2_u2"]
 ```
 (You can specify skip and limit to this as well but should not need it)
 
-k) increment a value saved as integer by a specified amount
+11) get a json object containing values against a given a list of keys
+```
+http://0.0.0.0:18080/getitems?body=["g1_u1", "g2_u2"]
+```
+(You can specify skip and limit to this as well but should not need it)
+
+12) increment a value saved as integer by a specified amount
 ```
 http://0.0.0.0:18080/incr?body={"key":"somecounter","step":5}
 
 Note: Value to increment must be saved as integer with a previous call to put -
 http://0.0.0.0:18081/put?body={"key":"somecounter", "value":1}
 ```
-The more advance version is incrval where you can specify the specific attribute (must be integer) to increment
+The more advanced version is incrval where you can specify the specific attribute (must be integer) to increment
 ```
 http://0.0.0.0:18080/incrval?body={"key":"feed_user_johnwick", "value":{"points":3}}
 ```
 In the above example if points were previously set as 7, after the API call it becomes 10.
 Both incr and incrval works with POST methods as well
 
-l) Execute Atoms: Atoms are set of Put and Remove operations which can be executed in a single API call
+l3) Execute Atoms: Atoms are set of Put and Remove operations which can be executed in a single API call
 
 To run a set of put operations together, run:
 
 ```
-POST: http://0.0.0.0:18080/put/atom?body=
+GET: http://0.0.0.0:18080/put/atom?body=
 [
 {"key":"g1_u2", "value":{"msg":"m1"}},
 {"key":"g2_u2", "value":{"msg":"m2"}},
@@ -175,14 +199,14 @@ POST: http://0.0.0.0:18080/put/atom?body=
 
 To run a set of remove operations together, run:
 ```
-POST: http://0.0.0.0:18080/remove/atom?body=
+GET: http://0.0.0.0:18080/remove/atom?body=
 ["g1_u1","g1_u2", "g3_u3"]
 
 ```
 
 To run a set of remove operations followed by a set of put operations, run:
 ```
-POST: http://0.0.0.0:18080/atom?body=
+GET: http://0.0.0.0:18080/atom?body=
 {
 put:[
 {"key":"g1_u2", "value":{"msg":"m1"}},
@@ -194,14 +218,20 @@ remove:["g1_u1","g1_u2", "g3_u3"]
 }
 
 ```
-* Notes about Atoms,
-   1) "Remove" operations will always be executed before "Put" in ../atom call
-   2) Atoms should be used sparingly - if you have only a single put/remove operation then,
-      use the put/remove apis provided for the specific purpose, not atomic ones
-   3) If you have a number of put operations and no removes then use  ../put/atom (and not  ../atom)
-   4) If you have a number of remove operations and no puts then use  ../remove/atom (and not ../atom)
 
-m) autogenerate key with prefix and value provided
+Notes about Atoms:
+```
+   i)   "Remove" operations will always be executed before "Put" in ../atom call
+   
+   ii)  Atoms should be used sparingly - if you have only a single put/remove operation then,
+        use the put/remove apis provided for the specific purpose, not atomic ones
+      
+   iii) If you have a number of put operations and no removes then use  ../put/atom (and not  ../atom)
+   
+   iv)  If you have a number of remove operations and no puts then use  ../remove/atom (and not ../atom)
+```
+
+14) autogenerate key with prefix and value provided
 
 ```
  http://0.0.0.0:18080/make?body={"prefix":"dev_","value":"101"}
@@ -210,8 +240,10 @@ m) autogenerate key with prefix and value provided
 * returns the key value pair as json object; if "key" is specified along with prefix
  then a key is formed with prefix+key and no key generation occurs
 
-n) provide a prefix, key pair for which all keys (along with values) greater than the passed key,
-   starting with the prefix are returned
+
+15) provide a prefix, key pair for which all keys (along with values) greater than the passed compare key,
+   starting with the prefix are returned. You can specify skip and limit optionally.
+   Notice there is no '*' while specifying the prefix
 
 ```
 http://0.0.0.0:18080/getkeysafter?body=["key_prefix", "comparekey"]
@@ -223,8 +255,9 @@ http://0.0.0.0:18080/getkeysafter?body=["key_pre1", "key1", "key_pre2", "key2", 
 
 ```
 
-o) provide a prefix, key pair for which the highest key (along with values and index) greater than the passed key,
-   starting with the prefix is returned
+16) provide a prefix, key pair for which the highest key (along with values and index) greater than the passed compare key,
+   starting with the prefix is returned (Useful for fetching things like last sent message).
+   Notice there is no '*' while specifying the prefix
 
 ```
 http://0.0.0.0:18080/getkeyslast?body=["key_prefix", "comparekey"]
@@ -236,12 +269,35 @@ http://0.0.0.0:18080/getkeyslast?body=["key_pre1", "key1", "key_pre2", "key2", .
 
 ```
 
+17) List keys vs values by wildcard search with array of key prefixes. You can specifiy skip and limit optionally.
+   The key prefix format is the same as /getkeys API 
+```
+http://0.0.0.0:18080/getkeysmulti?body=["key1_pre*", "key*_pre2", ... key*_preN"]&skip=0&limit=10
+
+```
+
+18) List keys vs values by iterating entries in the range specified by skip and limit
+```
+http://0.0.0.0:18080/iter?skip=3&limit=5
+
+```
+(You can use reverse=true to iterate in reverse order)
+
+19) Testing API that halts the request processing thread for specified number of seconds as mentioned by the timeout parameter
+(Useful to check if the https requests are actualy being processed by threads spawned by multiple cpu cores)
+
+```
+ http://0.0.0.0:18080/test?timeout=10
+
+```
+
+
 ### POST REQUESTS
 
 
 ### Description
 
-i) Put a json object against a key:
+1) Put a json object against a key:
  POST: http://0.0.0.0:18080/putjson
 ```
 BODY:
@@ -249,10 +305,10 @@ BODY:
 ```
 Note: In the json body, it is required to have a "key" attribute and a "value" attribute as a part of the json object.  The json object {"msg":"m3"}  under attribute "value" is saved against the key "g3_u3" in the persistent storage
 
-If the intention is to insert only if the key doesn't exist then use the following api:
+If the intention is to insert if and only if the key doesn't exist then use the following api:
 
-POST: http://0.0.0.0:18080/postjson
 ```
+POST: http://0.0.0.0:18080/postjson
 BODY:
 {"key":"g3_u3", "value":{ "msg":"m3"}}
 ```
@@ -260,23 +316,24 @@ If the key already exists then the call fails.
 This is more useful than calling the "exists" api to check if key exists and then call putjson,
 since it's reduces an extra api call
 
-
-ii) Retrieve the json object by key:
-POST: http://0.0.0.0:18080/getjson
+2) Retrieve the json object by key:
 ```
+POST: http://0.0.0.0:18080/getjson
 BODY: {"key":"g3_u3"}
 ```
-iii) Retrieve an array of json objects by wildcard matching of keys..
-POST: http://0.0.0.0:18080/iterjson
+
+3) List keys vs values by wildcard search with array of key prefixes:
 ```
-BODY: {"keys":"g3_u*"}
+POST: http://0.0.0.0:18080/getkeysmulti&skip=0&limit=10
+BODY: ["g3_u*", "*_u3" ]
 ```
-To test this API,
+
+To test these set of APIs,
 You could  post a few values against keys with putjson, for example
 
 ```
-BODY:
 POST: http://0.0.0.0:18080/putjson
+BODY:
 {"key":"g1_u2", "value":{"msg":"m1"}}
 
 POST: http://0.0.0.0:18080/putjson
@@ -290,11 +347,12 @@ BODY:
 ```
 and then check the results by
 ```
-POST: http://0.0.0.0:18080/iterjson
-BODY: {"keys":"g3_u*"}
+POST: http://0.0.0.0:18080/getkeysmulti?skip=0&limit=20
+BODY: ["g*_u1", "g2_u*", "g*" ]
+
 ```
 
-iv) Get a list of key value pair given a list of keys
+4) Get a list of key value pair given a list of keys
 ```
 POST: http://0.0.0.0:18080/getlist
 BODY: ["g1_u1", "g2_u2"]
@@ -302,8 +360,16 @@ BODY: ["g1_u1", "g2_u2"]
 ```
 (You can specify skip and limit as query parameters but should not need it)
 
+5) Get a json object containing values against a list of keys
+```
+POST: http://0.0.0.0:18080/getitems
+BODY: ["g1_u1", "g2_u2"]
 
-v) Execute Atoms: Atoms are set of Put and Remove operations which can be executed in a single API call
+```
+(You can specify skip and limit as query parameters but should not need it)
+
+
+6) Execute Atoms: Atoms are set of Put and Remove operations which can be executed in a single API call
 
 To run a set of put operations together, run:
 
@@ -344,15 +410,21 @@ remove:["g1_u1","g1_u2", "g3_u3"]
 }
 
 ```
-* Notes about Atoms,
- 1) "Remove" operations will always be executed before "Put" in ../atom call
- 2) Atoms should be used sparingly - if you have only a single put/remove operation then,
-     use the put/remove apis provided for the specific purpose, not atomic ones
- 3) If you have a number of put operations and no removes then use  ../put/atom (and not  ../atom)
- 4) If you have a number of remove operations and no puts then use  ../remove/atom (and not ../atom)
+
+Notes about Atoms:
+```
+   i)   "Remove" operations will always be executed before "Put" in ../atom call
+   
+   ii)  Atoms should be used sparingly - if you have only a single put/remove operation then,
+        use the put/remove apis provided for the specific purpose, not atomic ones
+      
+   iii) If you have a number of put operations and no removes then use  ../put/atom (and not  ../atom)
+   
+   iv)  If you have a number of remove operations and no puts then use  ../remove/atom (and not ../atom)
+```
 
 
-vi) Autogenerate key and make a key value pair given a key-prefix and value
+7) Autogenerate key and make a key value pair given a key-prefix and value
 ```
 POST: http://0.0.0.0:18080/make
 BODY:
@@ -362,7 +434,7 @@ BODY:
 * returns the key value pair as json object; if "key" is specified along with prefix
 then a key is formed with prefix+key and no key generation occurs
 
-vii) provide a prefix, key pair for which all keys (along with values) greater than the passed key,
+8) provide a prefix, key pair for which all keys (along with values) greater than the passed key,
    starting with the prefix are returned
 
 ```
@@ -379,7 +451,7 @@ BODY:
 
 ```
 
-viii) provide a prefix, key pair for which the highest key (along with value and index) greater than the passed key,
+9) provide a prefix, key pair for which the highest key (along with value and index) greater than the passed key,
    starting with the prefix is returned
 
 ```
@@ -397,8 +469,50 @@ BODY:
 
 ```
 
-### Joins and Filters
+### Geodata Storing, Nearby Lookup with Latitude/Longitude 
 
+1. Store data same way as putjson with additional parameters lat and lng. Geohashing is used to store data for quick retrieval.
+
+Post Version:
+```
+POST: http://0.0.0.0:18080/geo/put
+BODY:
+{"key":"key_area1", "value": {"area":"xyz", "lat":23.79441056011852, "lng":90.41478673773013}
+```
+
+Get Version:
+```
+GET: http://0.0.0.0:18080/geo/put?body=
+	{"key":"key_area2", "value": {"area":"xyz", "lat":23.79441056011852, "lng":90.41478673773013}
+```
+
+2. Find nearby co-ordinates and associated key/value by providing lat, lng, radius (km).
+   You can also optionally provide precision and keys
+
+Get Version:
+```
+GET:
+http://0.0.0.0:18080/geo/near?body=
+	{"lat":23.794803234501487, "lng":90.41410009224322, "radius":5.0, 
+	"keys":"key_area*", "precision":5}
+```
+
+Post Version:
+```
+POST: 
+http://0.0.0.0:18080/geo/near
+BODY:
+{"lat":23.794803234501487, "lng":90.41410009224322, "radius":5.0, 
+	"keys":"key_area*", "precision":5}
+```
+
+"precision" is optional and mainly used to specify the grid area for lat/lng geo hashing for quick lookup
+If not specified, precision is estimated from the radius provided 
+
+"keys" (optional) is provided for filtering capabilities through wildcard search and works same as keys in getall api
+
+
+### Joins and Filters
 
 In practical situaions, the need arose to incorporate the getjoinedmap api which joins multiple resultsets in a single query.
 What this api does is take a wildcard argument to iterate a range of keys (main keys).
@@ -417,7 +531,7 @@ It's preferable to use the POST method in this case.
 
 ```
 GET:
-http://localhost:18080/getjoinedmap?body=
+http://0.0.0.0:18080/getjoinedmap?body=
 { 	"keys":"roomkeys_*","splitby":"_","selindex":5,
 	"join":[{"prefix":"usercount_","suffix":""},
 		    {"prefix":"messagecount_","suffix":""},
@@ -427,10 +541,32 @@ http://localhost:18080/getjoinedmap?body=
 
 ```
 
+You can also provide your own keylist, if you don't want a wildcard search or want both.
+If you provide both, keylist keys are processed after the wildcard search keys.
+Skip and Limit are only applicable for wildcard search of keys
+
 ```
-POST: http://localhost:18080/getjoinedmap&skip=2&limit=3
+GET:
+http://0.0.0.0:18080/getjoinedmap?body=
+{ 	"keys":"roomkeys_*",
+	keylist":["roomkeys_roomid1", "roomkeys_roomid2"],
+	"splitby":"_","selindex":1,
+	"join":[{"prefix":"usercount_","suffix":""},
+		    {"prefix":"messagecount_","suffix":""},
+		    {"prefix":"notificationcount_","suffix":"user"}
+		   ]
+}&skip=2&limit=3
+
+```
+
+POST version:
+
+```
+POST: http://0.0.0.0:18080/getjoinedmap&skip=2&limit=3
 BODY:
-{ 	"keys":"roomkeys_*","splitby":"_","selindex":5,
+{ 	"keys":"roomkeys_*",
+	"keylist":["roomkeys_roomid1", "roomkeys_roomid2"],
+	"splitby":"_","selindex":1,
 	"join":[{"prefix":"usercount_","suffix":""},
 		    {"prefix":"messagecount_","suffix":""},
 		    {"prefix":"notificationcount_","suffix":"user"}
@@ -448,7 +584,8 @@ There is also provision to run ORM style queries with searchjson and applying fi
 POST: http://0.0.0.0:18080/searchjson
 
 Sample Query Format for
-"querying items which are up for sale with key like item* (i.e item1, item2 etc.) , then find the sellers of such items (items has a seller_id field that contains the user_id of the seller) "
+"querying items which are up for sale with key like item* (i.e item1, item2 etc.) , 
+then find the sellers of such items (items has a seller_id field that contains the user_id of the seller) "
 
 ```
 {
@@ -501,7 +638,8 @@ BODY:
 Finally, check the results by
 POST: http://0.0.0.0:18080/searchjson
 
-So we are able to iterate items (by "keys":"item*") and then run a join operation with the filter attribute ("filter":...) through the keyword map ({"map": {"field":"seller_id", "as":"seller"}})
+So we are able to iterate items (by "keys":"item*") and then run a join operation with the filter attribute ("filter":...) 
+through the keyword map ({"map": {"field":"seller_id", "as":"seller"}})
 
 v8 engine has been integrated to support scripting in server side to further filter/sort queried results.
 
@@ -540,7 +678,8 @@ function jsFilter() {
 Here module main is the main.js file residing in the server in the same path as the executable.
 function is the name of the JS Function which we will use to further filter the data.
 
-The idea is the mentioned script main.js will have a filter function with a predefined form filter(elem, params), or a sort function with predefined form sort(elem1, elem2, params) to further fitler/sort the data.
+The idea is the mentioned script main.js will have a filter function with a predefined form filter(elem, params), 
+or a sort function with predefined form sort(elem1, elem2, params) to further fitler/sort the data.
 
 'elem' is an individual item (one of many) found by the Quarks lookup through "keys":"item*" .
 We are invoking the JS module and the function while finding and iterating the matching items in C++.
@@ -550,29 +689,6 @@ It is up to the user to interpret the params in the server side and write the sc
 In our example, we named the function - "jsFilter" in main.js.
 
 Quarks will allow minimum usage of scripting to ensure the server side codes remain super optimized.
-
-
-
-## Backup and Restore
-```
-For backing up the database try:
-http://0.0.0.0:18080/backup?body={"path":"quarks_backup_1"}
-
-To restore simply run quarks next time using the "store" commandline parameter
- ./ocv_microservice_crow -store quarks_backup_1
- 
- -store followed by the path denotes the rocksdb directory path to use when starting quarks
-
-```
-
-
-### BENCHMARKING
-```
-https://github.com/kaisarh/quarks/tree/dev/benchmark/results?
-fbclid=IwAR2ea_PuZ6drbdg4PUuFfhirXdHC4rtlQ3I1KDR9G-PSaIJlFfA0FXNjUw8
-
-```
-Thanks Kaisar Haq (https://github.com/kaisarh) :)
 
 
 After v8 engine integration and scripting support,
@@ -635,12 +751,12 @@ Quarks can send all put and remove requests made in it's core db to a logger
 
 To specify the address of the logger start by specifying the log parameter:
 ```
-./ocv_microservice_crow -port 18080 -log http://localhost:18081
+./ocv_microservice_crow -port 18080 -log http://0.0.0.0:18081
 
 ```
 
 This means a logger has been started at port 18081 and listening to
-http://localhost:18081/putjson and http://localhost:18081/remove api calls.
+http://0.0.0.0:18081/putjson and http://0.0.0.0:18081/remove api calls.
 These apis respectively get invoked whenever a put or remove operation has been made in the core db
 
 
@@ -651,7 +767,29 @@ If you start another quarks server in the 18081 port specifying a new database, 
 ```
 
 Instead of a Quarks server, you can start any server which implements and handles
-http://localhost:18081/putjson and http://localhost:18081/remove api calls
+http://0.0.0.0:18081/putjson and http://0.0.0.0:18081/remove api calls
+
+
+### CACHING
+To enable caching for fast lookup and iteration (specially for getkeys and getcount),
+specify the cached parameter at start up :
+```
+./ocv_microservice_crow -port 18080 -cached 
+
+```
+
+## Backup and Restore
+```
+For backing up the database try:
+http://0.0.0.0:18080/backup?body={"path":"quarks_backup_1"}
+
+To restore simply run quarks next time using the "store" commandline parameter
+ ./ocv_microservice_crow -store quarks_backup_1
+ 
+ -store followed by the path denotes the rocksdb directory path to use when starting quarks
+
+```
+
 
 ### WEBSOCKETS
 Websocket support has been added (Still not optimized).
@@ -697,7 +835,8 @@ sock.onclose = ()=>{
 	
 	// to send to a specific user use the following:
 	//msg.to = "useridxxx"; // specifying room is optional in this case
-	//msg.key = msg.room + "_" + useridxxx; //specifying a key saves msg.send along with meta data as Value in Quarks against that key
+	//msg.key = msg.room + "_" + useridxxx; 
+	//specifying a key saves {msg.send, msg.room, timestamp} as Value in Quarks against that key
 	
 	var m = JSON.stringify(msg);
 	sock.send(m);
@@ -748,24 +887,86 @@ sock.onmessage = (e)=>{
 	msg.limit = -1;
 	
 	var m = JSON.stringify(msg);
-	sock.send(m); // check the message handling (sock.onmessage) section to see how to receive the list
+	// check the message handling (sock.onmessage) section 
+	// to see how to receive the list
+	sock.send(m); 
 
 ```
 
+### TCP SOCKETS
 
-Quarks has plans for plugins integration.
+Inorder for faster communicaton, Quarks provides pure tcp socket communication.
+You need to run Quarks TCP Service with the following:
+```
+    ./ocv_microservice_crow -tcpserver 127.0.0.1:18070
 
-### PLUGINS
+```
+Then use any TCP Client to query Quarks to avail the same features as GET request section.
+NodeJS TCP Client example can be found in "examples/node" folder
 
-Currently, only OpenCV is provided as a plugin (codes commented).
+The body of the request should be of this form:
+```
+    var req = {};
+    req.query = "/getkeys";
+    req.keys = "g1_u*";
+    req.skip = 0;
+    req.limit = 10;
+
+```
+Another example: 
+```
+    var req = {};
+    req.query = "/getlist";
+    req.body=["g1_u1", "g2_u2"]
+    req.skip = 0;
+    req.limit = 10;
+
+```
+(Skip, limits are as usual optional.)
+Basically, all the GET Requests can be formed as a query for TCP Communication. 
+You only need to specify the url in query parameter as shown above, 
+and the other GET arguments as properties of JSON Body,
+
+
+### PLUGINS and SCRIPTING
+
+Quarks has introduced dynamic plugins integration with the help of wren scripts to extend its capabilities.
+Copy the "plugins" and "wren" directory residing in "examples" to build directory for plugin examples.
+"app.wren" is executed immediately after Quarks starts running.
+"quarks.wren" provides the bridge between wren and Quarks interaction.
+Currently get, getkeys, getkeysreversed, put and incrval Quarks core APIs (C++) can be invoked with Wren. 
+
+The benefit of wren scripts is, now it can be used as BLL (business logic layer) 
+for further customization in Quarks API Handling.
+A good example of that is feed.html in wren directory. 
+The frontend simply calls apis as specified by the wren script in app.wren (lines 120 - 125)
+The example can be seen in action by calling http://0.0.0.0:18080/wrenfeed
+
+Dynamic plugin loading and execution is done using similar codes as lines 116 -118 :
+```
+System.print( QuarksEnv.loadplugin("ffmpegplugin.so") )
+System.print( QuarksEnv.callplugin("ffmpegplugin.so", "mp4tohls", "some.mp4") )
+System.print( QuarksEnv.unloadplugin("ffmpegplugin.so") )
+```
+This dynamically loaded plugin can convert an mp4 to hls when invoked (Can be in response to an API call).
+
+Seeing wren operating so efficiently, currently v8 engine has been commented out 
+which was initially introduced to do the same job
+
+Currently "Wren" feature for plugins and scripting is turned off in the source codes,
+using #ifdef _USE_WREN in main.cpp and option(_USE_WREN "Use wren" OFF) in CMakeLists.txt
+
+As legacy codes, OpenCV has been kept as an integrated plugin (codes commented).
 
 For those interested in testing OpenCV as plugin (uncommenting the relevant codes),
-you should submit a POST request to http://localhost:18080/filters/gausian.
+you should submit a POST request to http://0.0.0.0:18080/filters/gausian.
 The body of this request should be your binary PNG image.
 The response should be a gausian filtered image from the submited image.
 
-OpenCV however is a plugin (an additional feature) and not the main purpose behind Quarks.
 Currently it is turned off by using #ifdef _USE_PLUGIN in the codes and if (_USE_PLUGINS) in CMakeLists.txt
+
+If turned on, you would need the correct version of libwren.so for the OS placed in lib directory
+The current version in lib folder is compiled for Ubuntu 20.04
 
 
 ### EDITOR
@@ -774,7 +975,7 @@ A browser based editor has been provided to run Quarks queries and visualize and
 (Thanks to https://github.com/json-editor/json-editor).
 To view the editor at work,
 Copy the "templates" folder inside "/examples" in the "build" folder and then hit the following in browser:
-http://localhost:18080/console
+http://0.0.0.0:18080/console
 
 Definitely Quarks has to be running to view the editor
 
@@ -784,10 +985,11 @@ Definitely Quarks has to be running to view the editor
 A guideline is provided for basic twitter like feed and chatrooms.
 
 Copy the "templates" folder inside "/examples" in the "build" folder and then hit the following in browser:
-http://localhost:18080/feed for feed example
-http://localhost:18080/chat for chat example
+http://0.0.0.0:18080/feed for feed example
+http://0.0.0.0:18080/chat for chat example
 
 Definitely Quarks has to be running to view the examples
+
 
 ### Quick Start: Dependencies installation for Ubuntu 18.04
 
@@ -812,15 +1014,46 @@ Definitely Quarks has to be running to view the examples
 
  Build and Run:
  Check #How to Build section for compilation and binary creation and #Run section for how to run
+ 
+ ## Changes for Ubuntu 20.04
 
+  1. Downgrade Boost version to 1.69
+  
  ## Docker setup:
+ 
+  1. In the CMakeLists.txt replace "v8" with "node" in the section 
+	 target_include_directories(
+         ocv_microservice_crow
+         PRIVATE
+         /usr/include/node
+	 )
+
+ 
  To build the docker image:
  ```
- docker build -t quarks:ubuntu-21.04 .
+ docker build -t quarks:ubuntu-21.04 . 
  ```
+ (Might fail due to _V8_NO_LATEST specified in v8engine.hpp)
 
  To run the docker image:
  ```
  docker run -it -v $PWD:/quarks -p 18080:18080 --cap-add sys_ptrace quarks:ubuntu-21.04
  ```
+
+
+### BENCHMARKING
+
+The repo for benchmarking quarks is available on : 
+https://github.com/kaisarh/quarks/tree/dev/benchmark
+
+The results are stored here:
+
+```
+https://github.com/kaisarh/quarks/tree/dev/benchmark/results?
+fbclid=IwAR2ea_PuZ6drbdg4PUuFfhirXdHC4rtlQ3I1KDR9G-PSaIJlFfA0FXNjUw8
+
+```
+Thanks Kaisar Haq (https://github.com/kaisarh) :)
+
+
 

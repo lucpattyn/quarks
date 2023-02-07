@@ -1,11 +1,14 @@
 // v8engine.cpp : Defines the entry point for the console application.
 //
 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <v8engine.hpp>
+
+#ifdef _USE_V8_PLUGIN
 
 #ifdef _V8_LATEST
 
@@ -145,6 +148,8 @@ std::string v8Engine::invoke(v8Engine::v8Context& v8Ctx, std::string funcName, s
 
 #else
 
+//////////////// V8 NO LATEST ///////////////////////////////////////////////////
+
 v8Engine::v8Engine(std::function<void (std::string)> logFunc /*= nullptr*/){
     _logFunc = logFunc;
 }
@@ -253,4 +258,7 @@ std::string v8Engine::invoke(v8Context& context, std::string funcName, std::stri
     return *ascii;
 }
 
-#endif
+#endif // V8_LATEST
+
+
+#endif // _USE_V8_PLUGIN

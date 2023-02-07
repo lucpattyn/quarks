@@ -116,6 +116,7 @@ body {
 .comment_block .new_comment .comment_body .replied_to p {
   padding: 5px;
 }
+
 .comment_block .new_comment .comment_body .replied_to span {
   color: #6495ED;
   margin-right: 2px;
@@ -351,7 +352,7 @@ function like(itemid){
 						</div>
 						
 						{{#each value.replies}}
-						<div style="margin-left:25px">					
+						<div style="margin-left:25px">						
 							<div class="replied_to"><p>
 								<span class="user">{{value.username}}:</span>
 								{{value.content}}
@@ -430,14 +431,14 @@ var needsFurtherUpdating = false;
 
 var baseUrl = "http://localhost:18080";
 
-var fetchFeedListAPI = "/getkeys?keys=feed_*&reverse=true";
-var fetchFeedRepliesAPI = "/getkeys?keys=feedreply_";
+var fetchFeedListAPI = "/getfeedlist"
+var fetchFeedRepliesAPI = "/getfeedreplies";
 
-var postFeedItemAPI = "/putjson";
-var postFeedReplyAPI = "/putjson";
+var postFeedItemAPI = "/postfeeditem";
+var postFeedReplyAPI = "/postfeedreply";
 
-var fetchLikeCountAPI = "/get";
-var incrLikeCountAPI = "/incrval";
+//var fetchLikeCountAPI = "/get";
+var incrLikeCountAPI = "/like";
 
 var feeddata = null;
 
@@ -445,7 +446,7 @@ var feeddata = null;
 
 function getFeedReplies(feeditem, skip, limit){
   
-  getJson(baseUrl + fetchFeedRepliesAPI + feeditem.itemid + "_*&skip=" + skip + "&limit=" + limit , function(response, status){
+  getJson(baseUrl + fetchFeedRepliesAPI + "?feedid=" + feeditem.itemid + "&skip=" + skip + "&limit=" + limit , function(response, status){
 		console.log("response: " + response);
 		console.log("status: " + status);
 		
@@ -479,7 +480,7 @@ function getFeedReplies(feeditem, skip, limit){
 
 function getFeedList(skip, limit){
   
-  getJson(baseUrl + fetchFeedListAPI + "&skip=" + skip + "&limit=" + limit , function(response, status){
+  getJson(baseUrl + fetchFeedListAPI + "?skip=" + skip + "&limit=" + limit , function(response, status){
 		console.log("response: " + response);
 		console.log("status: " + status);
 		
@@ -617,7 +618,7 @@ function incrmentLikeCount(itemid, incrementby){
 // User Info Fetching and Storing
 
 function getUserInfo(userId){
-	getJson(baseUrl + "/get?key=" + userId , function(response, status){
+	getJson(baseUrl + "/getuserinfo?userid=" + userId , function(response, status){
 		console.log("response: " + response);
 		console.log("status: " + status);
 		
@@ -625,6 +626,8 @@ function getUserInfo(userId){
 		
 		return userInfo;
 	}); 
+	
+	
 }
 
 function setUserInfo(userId, userInfo){
@@ -632,7 +635,7 @@ function setUserInfo(userId, userInfo){
 	postdata.key = userId;
 	postdata.value = userInfo;
 
-	postJson(baseUrl + "/putjson" , postdata, function(response, status){
+	postJson(baseUrl + "/setuserinfo" , postdata, function(response, status){
 		console.log("response: " + response);
 		console.log("status: " + status);
 	});

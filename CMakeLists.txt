@@ -17,6 +17,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/CMakeModules)
 
 option(BUILD_DOCS "build docs alongside the project" OFF)
 option(_USE_PLUGINS "Use plugins" OFF)
+option(_USE_WREN "Use wren" OFF)
 
 find_program(CTEST_MEMORYCHECK_COMMAND NAMES valgrind)
 find_program(CTEST_COVERAGE_COMMAND NAMES gcov)
@@ -51,11 +52,18 @@ file(GLOB ocv_microservice_crow_SOURCES
     "${PROJECT_SOURCE_DIR}/src/*.cpp"
 )
 
+if (NOT _USE_WREN)
+list(REMOVE_ITEM ocv_microservice_crow_SOURCES "${PROJECT_SOURCE_DIR}/src/Wren++.cpp")
+endif()
+
+SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} ${PROJECT_SOURCE_DIR}/lib)
+message(STATUS "Cmake library path ${CMAKE_LIBRARY_PATH}")
+		
 add_executable( ocv_microservice_crow ${ocv_microservice_crow_SOURCES} )
 target_include_directories(
     ocv_microservice_crow
     PRIVATE
-    /usr/include/node
+    /usr/include/v8
 )
 
 set(CROW_ROOT_DIR PATH "${PROJECT_SOURCE_DIR}/third-party/crow")
@@ -85,14 +93,23 @@ else()
     message(FATAL_ERROR "Boost not found. Could not build this app.")
 endif()
 
+#wren vm
+if (USE_WREN)
+target_link_libraries (ocv_microservice_crow  ${CMAKE_LIBRARY_PATH}/libwren.so)
+endif()
+
 #mac
-#target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb libv8.dylib libv8_libplatform.dylib)
+#target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb libv8.dylib libv8_libplatform.dylib  -dynamiclib -flat_namespace -lzmq -lboost_system)
 
 #windows powershell
-#target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb -lv8 -lzmq -lboost_system)
+#target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb -lv8 -ldl -lzmq -lboost_system)
+
+#linux v8 included
+#target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb -lv8 -lzmq -ldl -lboost_system)
 
 #linux
-target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb -lv8 -lzmq -lboost_system)
+target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb -lzmq -ldl -lboost_system)
+
 
 if (BUILD_TESTS)
     find_package(GTest)

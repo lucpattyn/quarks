@@ -57,6 +57,11 @@ namespace Quarks {
 			            std::vector<crow::json::wvalue>& matchedResults,
 			            int skip = 0, int limit = -1);
 
+			bool getAll(std::vector<std::string> wilds,
+			            std::vector<crow::json::wvalue>& matchedResults, 
+						std::function<bool (crow::json::rvalue&, crow::json::wvalue&)> passFilter,
+			            int skip = 0, int limit = -1);
+
 			bool getSorted(std::string wild, std::string sortby, bool ascending,
 			               std::vector<crow::json::wvalue>& matchedResults,
 			               int skip = 0, int limit = -1, std::string filter = "");
@@ -64,17 +69,28 @@ namespace Quarks {
 			bool getKeys(std::string wild,
 			             std::vector<crow::json::wvalue>& matchedResults,
 			             int skip = 0, int limit = -1);
+			bool getKeys(std::string wild,
+			             std::string& out,
+			             int skip = 0, int limit = -1);
 
 			bool getKeysReversed(std::string wild,
 			                     std::vector<crow::json::wvalue>& matchedResults,
 			                     int skip = 0, int limit = -1);
+			bool getKeysReversed(std::string wild,
+			                     std::string& out,
+			                     int skip = 0, int limit = -1);
 
+			bool getKeysMulti(std::string wilds,
+			             std::vector<crow::json::wvalue>& matchedResults,
+			             int skip = 0, int limit = -1);
+			
 			bool getCount(std::string wild,
 			              long& out,
 			              int skip = 0, int limit = -1);
 
-			bool iter(std::string wild,
-			          std::vector<std::string>& matchedResults,
+			bool iter(std::vector<crow::json::wvalue>& matchedResults,
+			          int skip = 0, int limit = -1);
+			bool iterReversed(std::vector<crow::json::wvalue>& matchedResults,
 			          int skip = 0, int limit = -1);
 
 			bool remove(std::string key, std::string& out);
@@ -83,19 +99,19 @@ namespace Quarks {
 			bool removeAtom(std::string body, std::string& out);
 
 			//bool putJson(std::string key, crow::json::rvalue& x, crow::json::wvalue& out);
-			bool makePair(std::string body, crow::json::wvalue& out);
 
 			bool getJson(std::string key, crow::json::wvalue& out);
-
-
-			bool iterJson(std::string wild,
-			            std::vector<crow::json::wvalue>& matchedResults,
-			            int skip = 0, int limit = -1);
 
 			bool getList(crow::json::rvalue& args,
 			            std::vector<crow::json::wvalue>& matchedResults,
 			            int skip = 0, int limit = -1);
-			
+			bool getList(crow::json::rvalue& args,
+			            std::string& out,
+			            int skip = 0, int limit = -1);
+			bool getItems(crow::json::rvalue& args,
+                   crow::json::wvalue& jsonResult,
+                   int skip = 0, int limit = -1);
+
 			bool getJoinedMap(crow::json::rvalue& args,
 			            std::vector<crow::json::wvalue>& matchedResults,
 			            int skip = 0, int limit = -1);
@@ -115,8 +131,12 @@ namespace Quarks {
 
 			
 			bool atom(std::string body, std::string& out);
-
-
+			
+			// lat long apis
+			bool geoput(std::string body, std::string& out);
+			bool geonear(std::string body, crow::json::wvalue& out, std::vector<crow::json::wvalue>& matchedResults, 
+						int skip = 0, int limit = -1); // radius is based on miles
+			
 			/// counting stuff
 			std::mutex mtx;
 			bool increment(std::string key, int stepBy, std::string& out);
@@ -127,12 +147,14 @@ namespace Quarks {
 			bool restore(std::string path);
 			
 			/////// r&d ////////////////
+			bool makePair(std::string body, crow::json::wvalue& out);
+			
 			bool fileTransfer(std::string moduleName, std::string funcName,
 			                  std::string channelName, std::string remoteDescription);
 
 			bool openTCPSocketClient();
 
-			bool isAServer(){
+			bool isANode(){
 				return _broker || _writer || _reader;
 			}
 			
@@ -256,7 +278,5 @@ namespace Quarks {
 	};
 
 }
-
-#include <matrix.hpp>
 
 #endif

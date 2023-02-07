@@ -22,7 +22,9 @@
 #define crow_json_unlikely(x) x
 #endif
 
-
+// LUC:
+//#include <iomanip> 
+ 
 namespace crow
 {
     namespace mustache
@@ -1404,14 +1406,28 @@ namespace crow
                 case type::True: out += "true"; break;
                 case type::Number: 
                     {
+                    	
                         char outbuf[128];
 #ifdef _MSC_VER
-                        sprintf_s(outbuf, 128, "%g", v.d);
+                        sprintf_s(outbuf, 128, "%0.10g", v.d);
 #else
-                        sprintf(outbuf, "%g", v.d);
+                        sprintf(outbuf, "%0.10g", v.d);
 #endif
-
-                        out += outbuf;
+						out += outbuf;
+						
+						//  LUC:
+						// Create an output string stream
+    					/*std::ostringstream streamObj;
+    					// Set Fixed -Point Notation
+    					streamObj << std::fixed;
+    					// Set precision to 8 digits
+    					streamObj << std::setprecision(8);
+    					//Add double to stream
+    					streamObj << v.d;
+    					// Get string from output string stream
+    					std::string strObj = streamObj.str();
+                        
+                        out += strObj;*/
                     }
                     break;
                 case type::String: dump_string(v.s, out); break;

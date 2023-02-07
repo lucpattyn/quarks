@@ -18,8 +18,6 @@
 // The author accepts no liability for any damage/loss of business that
 // this product may cause.
 //
-// For use with CGridCtrl v2.20+
-//
 //////////////////////////////////////////////////////////////////////
 
 #if !defined(MATRIX__INCLUDED_)

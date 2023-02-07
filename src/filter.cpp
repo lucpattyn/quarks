@@ -7,7 +7,7 @@
 
 #include <algorithm>
 
-using namespace Core;
+using namespace OCV;
 
 std::string Filter::gaussian(std::string &image_data) {
 

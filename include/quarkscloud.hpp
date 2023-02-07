@@ -10,7 +10,10 @@
 #include <windows.h>
 
 #define sleep(n)    Sleep(n)
+
 #endif
+
+#define sleep_for_ms(N) std::this_thread::sleep_for(std::chrono::milliseconds(N));
 
 #define BROKER_OK "brokerok"
 
