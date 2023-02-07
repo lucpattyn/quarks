@@ -46,9 +46,15 @@ See end of readme for quick start with ubuntu environment.
 ./ocv_microservice_crow
 ```
 
-It is possible to specify a server time out value with the timeout parameter:
+It is possible to specify a server time out value with the 'timeout' parameter:
 ```
 ./ocv_microservice_crow -timeout 125
+
+```
+
+It is possible to change default db name where data will be written through 'store' parameter:
+```
+./ocv_microservice_crow -store quarks_1
 
 ```
 
@@ -922,21 +928,33 @@ You only need to specify the url in query parameter as shown above,
 and the other GET arguments as properties of JSON Body,
 
 
-### PLUGINS
+### PLUGINS and SCRIPTING
 
 Quarks has introduced dynamic plugins integration with the help of wren scripts to extend its capabilities.
 Copy the "plugins" and "wren" directory residing in "examples" to build directory for plugin examples.
 "app.wren" is executed immediately after Quarks starts running.
 "quarks.wren" provides the bridge between wren and Quarks interaction.
+Currently get, getkeys, getkeysreversed, put and incrval Quarks core APIs (C++) can be invoked with Wren. 
 
-The additional benefit of wren scripts is, now it can be used as BLL (business logic layer) 
+The benefit of wren scripts is, now it can be used as BLL (business logic layer) 
 for further customization in Quarks API Handling.
 A good example of that is feed.html in wren directory. 
-The frontend simply calls apis as specified by the wren script in app.wren
+The frontend simply calls apis as specified by the wren script in app.wren (lines 120 - 125)
 The example can be seen in action by calling http://0.0.0.0:18080/wrenfeed
+
+Dynamic plugin loading and execution is done using similar codes as lines 116 -118 :
+```
+System.print( QuarksEnv.loadplugin("ffmpegplugin.so") )
+System.print( QuarksEnv.callplugin("ffmpegplugin.so", "mp4tohls", "some.mp4") )
+System.print( QuarksEnv.unloadplugin("ffmpegplugin.so") )
+```
+This dynamically loaded plugin can convert an mp4 to hls when invoked (Can be in response to an API call).
 
 Seeing wren operating so efficiently, currently v8 engine has been commented out 
 which was initially introduced to do the same job
+
+Currently "Wren" feature for plugins and scripting is turned off in the source codes,
+using #ifdef _USE_WREN in main.cpp and option(_USE_WREN "Use wren" OFF) in CMakeLists.txt
 
 As legacy codes, OpenCV has been kept as an integrated plugin (codes commented).
 
@@ -946,6 +964,9 @@ The body of this request should be your binary PNG image.
 The response should be a gausian filtered image from the submited image.
 
 Currently it is turned off by using #ifdef _USE_PLUGIN in the codes and if (_USE_PLUGINS) in CMakeLists.txt
+
+If turned on, you would need the correct version of libwren.so for the OS placed in lib directory
+The current version in lib folder is compiled for Ubuntu 20.04
 
 
 ### EDITOR

@@ -17,6 +17,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/CMakeModules)
 
 option(BUILD_DOCS "build docs alongside the project" OFF)
 option(_USE_PLUGINS "Use plugins" OFF)
+option(_USE_WREN "Use wren" OFF)
 
 find_program(CTEST_MEMORYCHECK_COMMAND NAMES valgrind)
 find_program(CTEST_COVERAGE_COMMAND NAMES gcov)
@@ -50,6 +51,10 @@ include_directories( ${OpenCV_INCLUDE_DIRS} )
 file(GLOB ocv_microservice_crow_SOURCES
     "${PROJECT_SOURCE_DIR}/src/*.cpp"
 )
+
+if (NOT _USE_WREN)
+list(REMOVE_ITEM ocv_microservice_crow_SOURCES "${PROJECT_SOURCE_DIR}/src/Wren++.cpp")
+endif()
 
 SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} ${PROJECT_SOURCE_DIR}/lib)
 message(STATUS "Cmake library path ${CMAKE_LIBRARY_PATH}")
@@ -89,7 +94,9 @@ else()
 endif()
 
 #wren vm
+if (USE_WREN)
 target_link_libraries (ocv_microservice_crow  ${CMAKE_LIBRARY_PATH}/libwren.so)
+endif()
 
 #mac
 #target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb libv8.dylib libv8_libplatform.dylib  -dynamiclib -flat_namespace -lzmq -lboost_system)

@@ -16,7 +16,9 @@
 #include <quarkstcp.hpp>
 #include <quarkstaskqueue.hpp>
 
+#ifdef _USE_WREN
 #include <wrenengine.hpp>
+#endif
 
 // LUC: 20210717 : ugliest of hacks
 int crow::detail::dumb_timer_queue::tick = 5;
@@ -39,7 +41,9 @@ int main(int argc, char ** argv) {
 	v8EngineInitializeInMain(argc, argv);
 #endif
 
+#ifdef _USE_WREN
 	wrenEngineInitialize(app);
+#endif
 	
 	////////////////////////////////////web sockets //////////////////////////////////////////////////////
 	              
