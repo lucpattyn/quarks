@@ -181,7 +181,7 @@
         	var sock = null;
         	function connect(){
 				// socket stuff			
-				sock = new WebSocket("ws://localhost:18080/ws?_id="
+				sock = new WebSocket("wss://api.quarkshub.com/ws?_id="
 	                                 + _id);
 	
 				
@@ -234,7 +234,7 @@
 					
 					}else if(msg["received"]){
 						msgLines = [{}];
-						document.getElementById(msg.key).innerHTML = "tick";
+						document.getElementById(msg.key).innerHTML = " sent \u2713";
 					}
 					
 					var chatBoxArea = null;
@@ -284,7 +284,7 @@
 		    var node = document.createElement("div");
 		    node.className = "msgln";
 			node.innerHTML = '<span class="chat-time">' + d.toLocaleTimeString() + '</span>' +  
-								'<span class="chat-time" id="' + msg.key + '"'  + '>&nbsp' + '</span>' +  
+								'<span class="chat-time" style="color:green";  id="' + msg.key + '"'  + '>' + '</span>' +  
 				'<b class="user-name">user_' + _id + ':</b>' + usrmsg + '<br/>';
 				
 			chatBoxArea.appendChild(node);
@@ -323,3 +323,4 @@
         
     </body>
 </html>
+
