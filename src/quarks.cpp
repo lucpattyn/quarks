@@ -4597,8 +4597,9 @@ bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
 			
 			if(x.has("key")){
 				std::string out;
-				CROW_LOG_INFO << "Save Key: " << x["key"].s();
-				bool ret = Quarks().dump(x["key"].s(), send, out);
+				auto key = x["key"].s();
+				CROW_LOG_INFO << "Save Key: " << key;
+				bool ret = Quarks().dump(key, send, out);
 				if(!ret){
 					crow::json::wvalue err;
 					err["error"] = out;
@@ -4606,6 +4607,13 @@ bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
 					conn.send_text(crow::json::dump(err));
 
 					return true;
+					
+				}else{
+					crow::json::wvalue resp;
+					resp["received"] = true;
+					resp["key"] = key;
+					conn.send_text(crow::json::dump(resp));
+					
 				}
 			
 			}
