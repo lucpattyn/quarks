@@ -231,6 +231,10 @@
 						
 					}else if(msg["replygetkeys"]){
 						msgLines = msg.replygetkeys;
+					
+					}else if(msg["received"]){
+						msgLines = [{}];
+						document.getElementById(msg.key).innerHTML = "tick";
 					}
 					
 					var chatBoxArea = null;
@@ -269,22 +273,23 @@
 		    
 		    var usrmsg = document.getElementById("usermsg").value;
 		    var d = new Date();
-		    
+		
+			var msg = {};
+			msg.room = "testroom";		
+			msg.send = usrmsg;
+			
+			msg.key = msg.room + "_" + d.getTime() + "_" + _id; //specifying a key saves msg.send along with meta data as Value in Quarks against that key
+    
 		    let chatBoxArea = document.getElementById("chatbox");
 		    var node = document.createElement("div");
 		    node.className = "msgln";
 			node.innerHTML = '<span class="chat-time">' + d.toLocaleTimeString() + '</span>' +  
+								'<span class="chat-time" id="' + msg.key + '"'  + '>&nbsp' + '</span>' +  
 				'<b class="user-name">user_' + _id + ':</b>' + usrmsg + '<br/>';
 				
 			chatBoxArea.appendChild(node);
 			
-			var msg = {};
-			msg.room = "testroom";
-			
-			msg.send = usrmsg;
-			
-			msg.key = msg.room + "_" + d.getTime() + "_" + _id; //specifying a key saves msg.send along with meta data as Value in Quarks against that key
-			
+					
 			var m = JSON.stringify(msg);
 			console.log(m);
 			sock.send(m);
