@@ -4474,7 +4474,7 @@ bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
 		char* _id = (char*)conn.userdata();
 
 		if(x.has("connect") && x["connect"].b()){
-			if(_id != nullptr) {
+			/*if(_id != nullptr) { // no need to force into a room
 			
 				std::string room = "default";
 				CROW_LOG_INFO << "QuarksSCIR::Accessing id ..." << _id;
@@ -4486,7 +4486,7 @@ bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
 				_userRoomsMap[userKey] = room;
 
 				CROW_LOG_INFO << "QuarksSCIR::usercreate << " << roomKey;
-			}
+			}*/
 				
 		}
 
@@ -4580,7 +4580,7 @@ bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
 			conn.send_text(crow::json::dump(wlist));
 
 		} else if(x.has("send")) {			
-			std::string room = "default"; // check onOpen
+			std::string room = "";//"default"; // check onOpen // commented out 
 			if(x.has("room")){
 				room = x["room"].s();
 			}		
@@ -4610,6 +4610,7 @@ bool SocketInterceptor::onMessage(crow::websocket::connection& conn,
 					
 				}else{
 					crow::json::wvalue resp;
+					resp["room"] = room;
 					resp["received"] = true;
 					resp["key"] = key;
 					conn.send_text(crow::json::dump(resp));

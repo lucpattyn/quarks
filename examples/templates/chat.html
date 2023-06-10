@@ -164,7 +164,7 @@
  
             <div id="chatbox">
 				<div class='msgln'><span class='chat-time'></span> 
-					<b class='user-name'>user_system</b> Welcome to the chatroom!<br/>				
+					<b class='user-name'>user_system</b> <span id="welcomeuser"></span><br/>				
 				</div>
 			</div>
 			<div>
@@ -177,22 +177,43 @@
         
         <script>
 			let _id =  Math.round(Math.random()*1000000);
+			var _channel = "general";
 	        	 
         	var sock = null;
         	function connect(){
-				// socket stuff			
-				sock = new WebSocket("wss://api.quarkshub.com/ws?_id="
+        		var hash = window.location.hash;
+				if(hash.length > 0){
+        			_channel = hash;
+				}
+        		
+				// socket stuff		
+				var protocol = "ws://";
+				if(window.location.protocol == "https:"){
+					protocol = "wss://";
+				}
+				sock = new WebSocket(protocol + window.location.host + "/ws?_id="
 	                                 + _id);
-	
 				
+				var pingInterval = null;
 				sock.onopen = ()=>{
 				    console.log('open');
 				    // join room
-				    sock.send('{"join":"testroom", "notifyjoin":true, "notifyleave":true}');
+				    sock.send('{"join":"' + _channel + '", "notifyjoin":true, "notifyleave":true}');
 				    
-				    sock.send('{"getkeys":"testroom_*", "skip":0, "limit":100}');
+				    // retrieve last 100 chat messages
+				    sock.send('{"getkeys":"' + _channel + '_*' + '", "skip":0, "limit":100}');
+				    
+				    var welcomeMsg = "You are in chatroom <b>" + _channel + "</b> !";
+				    if(_channel == "general"){
+						welcomeMsg += " You can use #channelname after the url to create your custom channel (ex. http://api.quarkshub.com/chat#channel34)";
+					}
+				    document.getElementById("welcomeuser").innerHTML = welcomeMsg;
 				    
 				    document.getElementById("me").innerHTML = "user_" + _id;
+				    
+				    pingInterval = setInterval(function(){
+				    	sock.send('{"ping":"1"}'); // keep ngnix websocket alive
+				    }, 30000);
 				}
 				sock.onerror = (e)=>{
 					console.log('error',e);
@@ -201,6 +222,10 @@
 				sock.onclose = ()=>{
 				    console.log('close');
 				    document.getElementById("me").innerHTML = "connection closed.. " + "user_" + _id;
+				    if(pingInterval){
+				    	clearInterval(pingInterval);
+				    	pingInterval = null;
+					}
 				}
 				sock.onmessage = (e)=>{
 					console.log(e.data);
@@ -223,7 +248,7 @@
 						msgLines[0].value.message = " I went offline!";
 						
 					}else if(msg["message"]){
-						console.log("message received: " + msg);
+						//console.log("message received: " + msg);
 						
 					}else if(msg["replyuserlist"]){
 						msgLines[0].value.from = "system";
@@ -233,7 +258,7 @@
 						msgLines = msg.replygetkeys;
 					
 					}else if(msg["received"]){
-						msgLines = [{}];
+						msgLines = [];
 						document.getElementById(msg.key).innerHTML = " sent \u2713";
 					}
 					
@@ -275,7 +300,7 @@
 		    var d = new Date();
 		
 			var msg = {};
-			msg.room = "testroom";		
+			msg.room = _channel;		
 			msg.send = usrmsg;
 			
 			msg.key = msg.room + "_" + d.getTime() + "_" + _id; //specifying a key saves msg.send along with meta data as Value in Quarks against that key
@@ -305,7 +330,7 @@
 		function listusers(){
 			
 			var msg = {};
-			msg.userlist = "testroom";
+			msg.userlist = _channel;
 			msg.skip = 0;
 			msg.limit = -1;
 			
