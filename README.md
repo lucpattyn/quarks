@@ -1029,6 +1029,7 @@ Definitely Quarks has to be running to view the examples
  ```
  	git clone https://github.com/lucpattyn/quarks.git
    	cd quarks
+
 	docker build -t kingrayhan/quarks .
  ```
 
