@@ -1007,6 +1007,7 @@ Definitely Quarks has to be running to view the examples
  -$ sudo apt-get install libboost-system-dev
 
  -$ sudo apt-get install libv8-dev
+    (Not needed if you don't want to use the v8 engine)
 
  -$ sudo apt-get install librocksdb-dev
 
@@ -1019,25 +1020,16 @@ Definitely Quarks has to be running to view the examples
 
   1. Downgrade Boost version to 1.69
   
- ## Docker setup:
+ ## Docker:
  
-  1. In the CMakeLists.txt replace "v8" with "node" in the section 
-	 target_include_directories(
-         ocv_microservice_crow
-         PRIVATE
-         /usr/include/node
-	 )
+   Please refer to: https://hub.docker.com/r/kingrayhan/quarks
 
- 
- To build the docker image:
+   To build the docker image locally 
+   
  ```
- docker build -t quarks:ubuntu-21.04 . 
- ```
- (Might fail due to _V8_NO_LATEST specified in v8engine.hpp)
-
- To run the docker image:
- ```
- docker run -it -v $PWD:/quarks -p 18080:18080 --cap-add sys_ptrace quarks:ubuntu-21.04
+ 	git clone https://github.com/lucpattyn/quarks.git
+   	cd quarks
+	docker build -t kingrayhan/quarks .
  ```
 
 
