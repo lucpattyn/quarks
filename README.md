@@ -1019,26 +1019,26 @@ Definitely Quarks has to be running to view the examples
 
   1. Downgrade Boost version to 1.69
   
- ## Docker setup:
- 
-  1. In the CMakeLists.txt replace "v8" with "node" in the section 
-	 target_include_directories(
-         ocv_microservice_crow
-         PRIVATE
-         /usr/include/node
-	 )
+ ## Get started with Docker:
+ To quickly get started, follow these steps:
 
- 
- To build the docker image:
- ```
- docker build -t quarks:ubuntu-21.04 . 
- ```
- (Might fail due to _V8_NO_LATEST specified in v8engine.hpp)
+1. **Install Docker**: Ensure that Docker is installed on your system. If not, follow the official Docker installation instructions for your platform: [Get Docker](https://docs.docker.com/get-docker/).
 
- To run the docker image:
- ```
- docker run -it -v $PWD:/quarks -p 18080:18080 --cap-add sys_ptrace quarks:ubuntu-21.04
- ```
+2. **Pull the Docker Image**: You can pull the Docker image from Docker Hub using the following command:
+
+    ```bash
+    docker pull kingrayhan/quarks:latest
+    ```
+
+3. **Run the Docker Container**: Once the image is pulled, you can run a container from it using the following command:
+
+    ```bash
+    docker run -v <local-path>:/quarks/build/quarks_db -p 18080:18080 kingrayhan/quarks:latest
+    ```
+
+    Replace `<local-path>` with the absolute path on your local machine where you want to map the volume for the Quarks database.
+
+    The port 18080 in the container is mapped to port 18080 on the host machine.
 
 
 ### BENCHMARKING
