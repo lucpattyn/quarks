@@ -1019,7 +1019,7 @@ Definitely Quarks has to be running to view the examples
 
   1. Downgrade Boost version to 1.69
   
- ## Get started with Docker:
+ ## Get started with Docker image:
  To quickly get started, follow these steps:
 
 1. **Install Docker**: Ensure that Docker is installed on your system. If not, follow the official Docker installation instructions for your platform: [Get Docker](https://docs.docker.com/get-docker/).
