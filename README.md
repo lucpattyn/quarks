@@ -601,7 +601,7 @@ http://0.0.0.0:18080/searchjson?body=
 {
 "keys":"item*",
     "include":{
-        "map": {"field":"seller_id", "as":"seller"},
+        "map": {"field":"seller_id", "as":"seller"}
     }
 }
 
