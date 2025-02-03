@@ -583,7 +583,113 @@ There is also provision to run ORM style queries with searchjson and applying fi
 
 POST: http://0.0.0.0:18080/searchjson
 
-Sample Query Format for
+searchjson can be used to retrieve data in similar manner to left join.
+
+For example if you have user1 with key user1, and another user with key user2,
+saved by /put, for example: http://0.0.0.0:18080/put?body={"key":"user1", "value":{"name":"u1", "age":34}}
+
+And then you have an item which is sold by user1 and saved with 
+http://0.0.0.0:18080/put?body={
+"key":"item1",
+"value":{
+"id": "item1",
+"seller_id": "user1"
+}
+
+Then you can query those items including the user info in the following forma  
+http://0.0.0.0:18080/searchjson?body=
+{
+"keys":"item*",
+    "include":{
+        "map": {"field":"seller_id", "as":"seller"},
+    }
+}
+
+It is recommended to use the POST format which would be:
+
+POST: http://0.0.0.0:18080/searchjson
+```
+{
+    "keys":"item*",
+    "include":{
+        "map": {"field":"seller_id", "as":"seller"}
+    }
+
+}
+
+```
+
+Then the result will fetch all the items and exact value of seller_id will be searched in the whole database 
+and if found the result will come in this format:
+
+```
+{"result":[{"key":"item1","value":{"seller":{"name":"u2","age":39},
+			"id":"item1","seller_id":"user1","rating":4,"approved":"1"}}]}
+
+```
+
+
+To test it out,
+First insert some users->
+
+POST: http://0.0.0.0:18080/putjson
+BODY:
+```
+{"key":"user1", "value":{"name":"u1", "age":34}}
+{"key":"user2", "value":{"name":"u2", "age":43}}
+```
+
+then insert some items->
+POST: http://0.0.0.0:18080/putjson
+BODY:
+```
+{
+"key":"item1",
+"value":{
+"id": "item1",
+"seller_id": "user1"
+}
+
+{
+"key":"item2",
+"value":{
+"id": "item2",
+"seller_id": "user2"
+}
+
+```
+
+Finally, check the results by
+POST: http://0.0.0.0:18080/searchjson
+BODY:
+```
+{
+    "keys":"item*",
+    "include":{
+        "map": {"field":"seller_id", "as":"seller"}
+    }
+
+}
+
+```
+
+Expected output:
+
+```
+{"result":
+	[
+		{"key":"item1","value":{"seller":{"name":"u2","age":39},"id":"item1","seller_id":"user1"}},
+		{"key":"item2","value":{"seller":{"name":"u2","age":43},"id":"item1","seller_id":"user2"}}
+	]
+}
+
+```
+
+* skip and limit is allowed like other api calls
+
+
+To apply server side filter v8 Engine has to be enabled (currently disabled).
+Sample Query Format when V8 Engine is Enabled
 "querying items which are up for sale with key like item* (i.e item1, item2 etc.) , 
 then find the sellers of such items (items has a seller_id field that contains the user_id of the seller) "
 
@@ -598,7 +704,6 @@ then find the sellers of such items (items has a seller_id field that contains t
     }
 
 }
-
 
 ```
 

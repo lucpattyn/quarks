@@ -3808,6 +3808,299 @@ bool Core::searchJson(crow::json::rvalue& args,
 
 	}
 
+#else
+	if (dbStatus.ok()) {
+
+		Core& core = *this;
+
+		std::string sArgs =  crow::json::dump(args);
+		CROW_LOG_INFO << "args : " << sArgs;
+
+		std::string wild = args["keys"].s();
+		CROW_LOG_INFO << "keys : " << wild.c_str();
+
+		bool ascending = true;
+		bool isSortable = false;
+		
+		crow::json::wvalue wArgs;
+		crow::json::wvalue wFilter;
+		std::string mapField = "";
+		std::string mapAs = "_includeid";
+		
+		std::string sortby = "";
+				
+		if(args.has("include")){
+		
+			wArgs["include"] = args["include"];
+			CROW_LOG_INFO << "include : " << crow::json::dump(wArgs);
+	
+			
+			wFilter["include"]= std::move(wArgs["include"]);
+			CROW_LOG_INFO << "include : " << crow::json::dump(wFilter["include"]);
+	
+			std::string sFilter = crow::json::dump(wFilter["include"]);
+			crow::json::rvalue filter = crow::json::load(sFilter);
+			
+			if(filter.has("map")){
+				mapField = filter["map"]["field"].s();
+				mapAs = filter["map"]["as"].s();
+			}
+				
+			if(filter.has("sortby")){
+				sortby = filter["sortby"].s();
+			}
+			
+			isSortable = sortby.size() > 0;
+	
+			ascending = true;
+			if(filter.has("des")) {
+				ascending = !(filter["des"].b());
+			}
+		}
+	
+		std::vector<crow::json::rvalue> allResults;
+
+		//auto funcOnV8EngineLoaded = [&core, &ve, &wild, &funcName, &params, &mapField, &mapAs, &matchedResults, &skip, &limit]
+		//(v8Engine::v8Context& v8Ctx) -> int {
+
+			// create new iterator
+			std::size_t found = wild.find("*");
+			if(found != std::string::npos && found == 0) {
+				return false;
+			}
+
+			// create new iterator
+			rocksdb::ReadOptions ro;
+			rocksdb::Iterator* it = db->NewIterator(ro);
+
+			std::string pre = wild.substr(0, found);
+
+			rocksdb::Slice prefix(pre);
+
+			//rocksdb::Slice prefixPrint = prefix;
+			//CROW_LOG_INFO << "prefix : " << prefixPrint.ToString();
+			int i  = -1;
+			int count = (limit == -1) ? INT_MAX : limit;
+	
+			int lowerbound  = skip - 1;
+			int upperbound = skip + count;
+	
+			for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
+
+			bool ret = false;
+			if(wildcmp(wild.c_str(), it->key().ToString().c_str())) {
+
+				i++;
+
+				if(i > lowerbound && (i < upperbound || limit == -1)) {
+					crow::json::wvalue w;
+
+					try {
+						auto x = crow::json::load(it->value().ToString());
+
+						if(!x) {
+							w["value"] =  crow::json::load(std::string("[\"") +
+							                               it->value().ToString() + std::string("\"]"));
+
+						} else {
+							w["value"] = x;
+						}
+						
+						w["key"] = it->key().ToString();
+					
+						if(mapField.size() > 0){
+							std::string mapKey = x[mapField.c_str()].s();
+							crow::json::wvalue mapJson;
+							
+							if(core.getJson(mapKey, mapJson)) {
+								w["value"][mapAs] = std::move(mapJson);
+							}	
+						}
+
+					} catch (const std::runtime_error& error) {
+						CROW_LOG_INFO << "Runtime Error: " << i << it->value().ToString();
+
+						w["error"] =  it->value().ToString();
+
+						matchedResults.push_back(std::move(w));
+
+						ret = false;
+					}
+
+					
+					
+					//crow::json::wvalue push;
+					//push["result"] = std::move(w)
+					//CROW_LOG_INFO << "w key fwd: " << crow::json::dump(w) << " skip: "
+					//<< skip << ", limit: " << limit;
+					//allResults.push_back((crow::json::rvalue)push["result"])
+					//CROW_LOG_INFO << "all results push_back : " << crow::json::dump(w);
+					matchedResults.push_back(std::move(w));
+
+				}
+
+				if((i == upperbound) && (limit != -1)) {
+					break;
+				}
+
+			}
+		}
+
+			return true;
+			// create new iterator
+			/*rocksdb::ReadOptions ro;
+			rocksdb::Iterator* it = db->NewIterator(ro);
+
+			std::size_t found = wild.find("*");
+			if(found != std::string::npos && found == 0) {
+				return false;
+			}
+			rocksdb::Slice prefix(wild.substr(0, found));
+
+			int i  = -1;
+			int count = (limit == -1) ? INT_MAX : limit;
+
+			int lowerbound  = skip - 1;
+			int upperbound = skip + count;
+				
+			// iterate all entries
+			//for (  ; prefixSearch ? (it->Valid() && it->key().starts_with(prefix)) : it->Valid();
+			//it->Next()) {
+			*/
+			
+			for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()){
+
+				std::string elem = it->value().ToString();
+
+				CROW_LOG_INFO << "iterate : " << it->key().ToString() << ": " <<  elem ;
+				
+				crow::json::wvalue w;
+				if(wildcmp(wild.c_str(), it->key().ToString().c_str())) {
+					//crow::json::rvalue r;
+					auto r = crow::json::load(it->value().ToString());
+					if(!r) {
+						r =  crow::json::load(std::string("[\"") +
+						it->value().ToString() + std::string("\"]"));
+
+					}
+					
+					w["key"] = it->key().ToString().c_str();
+					w["value"] = r;
+					CROW_LOG_INFO << "r : " << elem;
+					
+					if(mapField.size() > 0){
+						std::string mapKey = r[mapField.c_str()].s();
+						crow::json::wvalue mapJson;
+						
+						if(core.getJson(mapKey, mapJson)) {
+							w["value"][mapAs] = std::move(mapJson);
+						}	
+					}
+					
+					//std::string allow = ve.invoke("matcher", sfilter.c_str(), //filterParams.c_str());
+					//std::string e = crow::json::dump(w);
+					//std::string allow = ve.invoke(v8Ctx, funcName, e, params.c_str());
+					//if(atoi(allow.c_str()) == 1) {
+						i++;
+
+						///////////////////////////////////////
+
+						//matchedResults.push_back(std::move(w));
+
+						// Serialize wvalue to string
+    					std::string jsonString = crow::json::dump(w);
+    					// Parse the string back into an rvalue
+    					CROW_LOG_INFO << "w : " << jsonString;
+    					
+						crow::json::rvalue rval = crow::json::load(jsonString);
+						
+						//allResults.push_back(rval);
+						
+						CROW_LOG_INFO << "all results push_back : " << jsonString;
+						
+						///////////////////////////////////////
+					//}
+
+				}
+			}
+			// do something after loop
+			
+			/// sorting codes
+			
+			if(isSortable) {
+			//CROW_LOG_INFO << "sorter: " << sortby;
+			//Sorter::JsonComparer c(sortby, ascending);
+				try {
+					std::sort(allResults.begin(), allResults.end(), QSorter::JsonComparer(sortby));
+	
+				} catch (const std::runtime_error& error) {
+					CROW_LOG_INFO << "Runtime Sort Error 3: Not Sortable";
+				}
+
+			}
+
+
+			i = -1;
+			if(!ascending) {
+				for(auto& x : QSorter::backwards< std::vector<crow::json::rvalue> >(allResults)) {
+					i++;
+					if(i > lowerbound && (i < upperbound || limit == -1)) {
+						try {
+							crow::json::wvalue w;
+							w["value"] = std::move(x["value"]);
+							w["key"] = std::move(x["key"]);
+							//CROW_LOG_INFO << "sorted object: " << i << ". " << crow::json::dump(w);
+							matchedResults.push_back(std::move(w));
+	
+						} catch (const std::runtime_error& error) {
+							CROW_LOG_INFO << "Runtime Sort Error 4.1: " << error.what() << " , " << i;
+						}
+					}
+	
+					if((i == upperbound) && (limit != -1)) {
+						break;
+					}
+				}
+			} else {
+				
+				for(auto& x : allResults) {
+					i++;
+					if(i > lowerbound && (i < upperbound || limit == -1)) {
+						try {
+							//crow::json::wvalue w;
+							//w["value"] = std::move(x["value"]);
+							//w["key"] = std::move(x["key"]);
+	
+							CROW_LOG_INFO << "sorted object: " << i << ". " << crow::json::dump(x);
+							//matchedResults.push_back(std::move(w));
+							matchedResults.push_back(x);
+	
+						} catch (const std::runtime_error& error) {
+							CROW_LOG_INFO << "Runtime Sort Error 4.2: " << error.what() << " , " << i;
+						}
+					}
+	
+					if((i == upperbound) && (limit != -1)) {
+						break;
+					}
+				}
+	
+			}
+			////////////////
+								
+			bool ret = it->status().ok();
+			delete it;
+
+			return ret;
+
+
+		//}; // funcOnV8EngineLoaded
+
+		//std::string moduleJS = moduleName + ".js";
+		//return ve.load(moduleJS, funcOnV8EngineLoaded);
+
+	}
+
 #endif
 
 	return false;

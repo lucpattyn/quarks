@@ -1026,10 +1026,17 @@ void BuildHttpRoutes(crow::App<CrowMiddleware>& app){
 	auto route_core_searchjson_callback =
 	[](const crow::request& req) {
 
+		std::string body = req.body;
+		auto p = req.url_params.get("body");
+		if(p != nullptr) {
+			body = p;
+		}
+		CROW_LOG_INFO << "searchjson request body : " << body;
+		
 		crow::json::wvalue w;
 		w["result"] = "";
 
-		auto x = crow::json::load(req.body);
+		auto x = crow::json::load(body);
 		if (!x) {
 			w["error"] = "invalid parameters";
 			return w;
@@ -1042,8 +1049,7 @@ void BuildHttpRoutes(crow::App<CrowMiddleware>& app){
 
 		if(jsonResults.size()) {
 			//w["result"] = jsonResults[0].s();
-			//CROW_LOG_INFO << "jsonResults[0] : "
-			//   <<  crow::json::dump(jsonResults[0])
+			CROW_LOG_INFO << "jsonResults[0] : " <<  crow::json::dump(jsonResults[0]);
 
 			w["result"] = std::move(jsonResults);
 		}
