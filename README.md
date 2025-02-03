@@ -1020,6 +1020,27 @@ Definitely Quarks has to be running to view the examples
 
   1. Downgrade Boost version to 1.69
   
+ ## Get started with Docker image:
+ To quickly get started, follow these steps:
+
+1. **Install Docker**: Ensure that Docker is installed on your system. If not, follow the official Docker installation instructions for your platform: [Get Docker](https://docs.docker.com/get-docker/).
+
+2. **Pull the Docker Image**: You can pull the Docker image from Docker Hub using the following command:
+
+    ```bash
+    docker pull kingrayhan/quarks:latest
+    ```
+
+3. **Run the Docker Container**: Once the image is pulled, you can run a container from it using the following command:
+
+    ```bash
+    docker run -v <local-path>:/quarks/build/quarks_db -p 18080:18080 kingrayhan/quarks:latest
+    ```
+
+    Replace `<local-path>` with the absolute path on your local machine where you want to map the volume for the Quarks database.
+
+    The port 18080 in the container is mapped to port 18080 on the host machine.
+=======
  ## Docker:
  
    Please refer to: https://hub.docker.com/r/kingrayhan/quarks
