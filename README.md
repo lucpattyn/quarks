@@ -1007,6 +1007,7 @@ Definitely Quarks has to be running to view the examples
  -$ sudo apt-get install libboost-system-dev
 
  -$ sudo apt-get install libv8-dev
+    (Not needed if you don't want to use the v8 engine)
 
  -$ sudo apt-get install librocksdb-dev
 
@@ -1039,6 +1040,19 @@ Definitely Quarks has to be running to view the examples
     Replace `<local-path>` with the absolute path on your local machine where you want to map the volume for the Quarks database.
 
     The port 18080 in the container is mapped to port 18080 on the host machine.
+=======
+ ## Docker:
+ 
+   Please refer to: https://hub.docker.com/r/kingrayhan/quarks
+
+   To build the docker image locally 
+   
+ ```
+ 	git clone https://github.com/lucpattyn/quarks.git
+   	cd quarks
+
+	docker build -t kingrayhan/quarks .
+ ```
 
 
 ### BENCHMARKING
