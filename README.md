@@ -795,8 +795,56 @@ In our example, we named the function - "jsFilter" in main.js.
 
 Quarks will allow minimum usage of scripting to ensure the server side codes remain super optimized.
 
+### Fuzzy Search
 
-After v8 engine integration and scripting support,
+Fuzzy search now works for queries of varying lengths.
+You can retrieve words like "world" even when searching for "worl".
+Levenshtein distance is being used to count the number of edits, and you can set a threshold (maxEdits) 
+for how "fuzzy" the match should be.
+You can adjust the maxEdits parameter to control the fuzziness of the search.
+
+
+Sample Usage:
+
+Store some items for quick search by /fuzzy/insert
+You can supply a tag to group items by category and supply userdata with meta attribute
+When retriving the exact components will be returned if a match found so you have context data
+
+```
+http://0:0:0:0:18080/fuzzy/insert?body={"word":"world","tag":"noun","meta":"planet"}
+http://0:0:0:0:18080/fuzzy/insert?body={"word":"wordl","tag":"noun","meta":"globe"}
+
+```
+Now look up world or wordl by passing worl and maxedits (role of maxedits has been discussed already)
+
+```
+http://0:0:0:0:18080/fuzzy/query?body={"word":"worl","maxedits":1}
+
+```
+
+Expected output:
+
+```
+{"result":[{"meta":"globe","tag":"noun","word":"wordl"},{"meta":"planet","tag":"noun","word":"world"}]}
+
+```
+
+You can also find an exact match instead of fuzzy search by the following api:
+
+```
+http://0:0:0:0:18080/fuzzy/match?body={"word":"wordl"}
+
+```
+
+Expected output:
+
+```
+{"result":[{"meta":"globe","tag":"noun","word":"wordl"}]}
+
+```
+
+
+After search implementation, v8 engine integration and scripting support,
 the next target was to allow listener support through zero mq to communicate with other processes and services
 and creating the Quarks Cloud which is partially done.
 

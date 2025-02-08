@@ -20,6 +20,8 @@
 #include <wrenengine.hpp>
 #endif
 
+#include <qsearch.hpp>
+
 // LUC: 20210717 : ugliest of hacks
 int crow::detail::dumb_timer_queue::tick = 5;
 
@@ -29,12 +31,16 @@ int main(int argc, char ** argv) {
 		
 	Quarks::Core::_Instance.setEnvironment(argc, argv);
 
+	CROW_LOG_INFO << "Building Routes and Setting up Search Engine ..";
 	
-	BuildHttpRoutes(app);
+	QSearch s;
+	s.BuildHttpRoutes(&app);
+	s.TestRun();
+	
+	HttpRouter::BuildHttpRoutes(app);
 	
 	Routing::BuildRoutes(Routing::DefaultRouter()); // for VM and TCP Routing
-
-
+	
 	/////////////////////////scripting initialize///////////////////////////////////////////////////
 		
 #ifdef _V8_LATEST
@@ -42,6 +48,7 @@ int main(int argc, char ** argv) {
 #endif
 
 #ifdef _USE_WREN
+	CROW_LOG_INFO << "Initializing Wren Engine ..";
 	wrenEngineInitialize(app);
 #endif
 	
@@ -140,9 +147,13 @@ int main(int argc, char ** argv) {
 
 //#endif
 
+	CROW_LOG_INFO << "-----Cleaning up search engine!!--------";
+	s.cleanup();
+	
 	Quarks::Core::_Instance.shutDown();
 
 	CROW_LOG_INFO << "<<<<<<<<<<<>>>>>>>>>>>\nQuarks Has Shut Down!!";
+	
 	exit(-1);
 
 	return 0;
