@@ -184,7 +184,110 @@ public:
         }
     }
 
-    void expandIfNeeded() {
+    // Recursive helper function for fuzzy prefix search
+	void fuzzyPrefixHelper(TrieNode* node, const std::string& currentWord, 
+                       const std::string& targetPrefix, int index, int edits, int maxEdits, 
+                       std::vector<std::pair<std::string, WordData>>& results) {
+	    if (!node || edits > maxEdits) return;
+	
+	    // If we've reached the end of the prefix and this is a valid word, add it
+	    if (index >= targetPrefix.length() && node->isEndOfWord) {
+	        //results.push_back({currentWord, node->metadata});
+	   		for (auto* data : node->metadata) {
+                results.push_back({currentWord, *data});
+            }
+	    }
+	
+	    // Check for possible character matches and mismatches
+	    for (const auto& [ch, child] : node->children) {
+	        if (index < targetPrefix.length()) {
+	            char expectedChar = targetPrefix[index];
+	            fuzzyPrefixHelper(child, currentWord + ch, targetPrefix, index + 1, 
+	                              edits + (ch != expectedChar), maxEdits, results);
+	        } else {
+	            // If we're past the prefix, just collect all words below this node
+	            fuzzyPrefixHelper(child, currentWord + ch, targetPrefix, index, edits, maxEdits, results);
+	        }
+	    }
+	}
+
+	// Main function to perform fuzzy prefix search
+	std::vector<std::pair<std::string, WordData>> fuzzyPrefixSearch(const std::string& prefix, int maxEdits) {
+    	std::lock_guard<std::mutex> lock(trieMutex);
+    	std::vector<std::pair<std::string, WordData>> results;
+    	fuzzyPrefixHelper(root, "", prefix, 0, 0, maxEdits, results);
+    
+		return results;
+	}
+
+	// substring search
+	void substringSearchHelper(TrieNode* node, const std::string& substring, std::string currentWord, 
+		std::vector<std::pair<std::string, WordData>>& results) {
+	    
+		if (node == nullptr) return;
+	
+	    // If this node represents a complete word, check if it contains the substring
+	    if (node->isEndOfWord && currentWord.find(substring) != std::string::npos) {
+	        //results.push_back({currentWord, node->metadata});
+	   		for (auto* data : node->metadata) {
+                results.push_back({currentWord, *data});
+            }
+	    }
+	
+	    // Recursively explore children
+	    for (auto& [ch, nextNode] : node->children) {
+	        substringSearchHelper(nextNode, substring, currentWord + ch, results);
+	    }
+	}
+
+	std::vector<std::pair<std::string, WordData>> substringSearch(const std::string& substring) {
+    	
+		std::vector<std::pair<std::string, WordData>> results;
+        	// Start searching from the root of the Trie
+    	substringSearchHelper(root, substring, "", results);
+    
+   		return results;
+	}
+
+	// Recursive helper function to collect words from a given node
+	void collectWordsFromNode(TrieNode* node, const std::string& prefix, 
+                          std::vector<std::pair<std::string, WordData>>& results) {
+    	if (node == nullptr) return;
+
+    	if (node->isEndOfWord) {
+        	//results.push_back({prefix, node->metadata});
+        	for (auto* data : node->metadata) {
+                results.push_back({prefix, *data});
+            }
+    	}
+
+    	for (const auto& [ch, child] : node->children) {
+        	collectWordsFromNode(child, prefix + ch, results);
+    	}
+	}	
+
+	// Main function to search words by prefix
+	std::vector<std::pair<std::string, WordData>> searchByPrefix(const std::string& prefix) {
+    	std::lock_guard<std::mutex> lock(trieMutex);
+    	TrieNode* node = root;
+    	std::vector<std::pair<std::string, WordData>> results;
+    	// Traverse to the last node of the given prefix
+    	for (char ch : prefix) {
+        	if (node->children.find(ch) == node->children.end()) {
+            	return results;  // Prefix not found, return empty result
+        	}
+        	node = node->children[ch];
+    	}
+
+    	// Collect all words from this node
+    	collectWordsFromNode(node, prefix, results);
+    	return results;
+	}
+
+	/////////////////////////////// end of search functions ///////////////////////////////////////
+
+
+	void expandIfNeeded() {
         std::lock_guard<std::mutex> lock(trieMutex);
         size_t currentSize = qGetFileSize(FILE_NAME);
         if (currentSize >= mmap_size - 1024) {
@@ -199,9 +302,8 @@ public:
             mmap_size = newSize;
         }
     }
+
 };
-
-
 
 
 class QSearch {
@@ -220,7 +322,7 @@ public:
 	
 	void BuildHttpRoutes(void* appContext);
 	
-	void insert(const std::string& word, const std::string& category, const std::string& userData) {
+	/*void insert(const std::string& word, const std::string& category, const std::string& userData) {
 		_trie->insert(word, category, userData);
 	}
 	
@@ -232,7 +334,7 @@ public:
 	// fuzzy search
 	std::vector<std::pair<std::string, WordData>> fuzzySearch(const std::string& query, int maxEdits) {
 		return _trie->fuzzySearch(query, maxEdits);
-	}
+	}*/
 	
 	void TestRun();
 	

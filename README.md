@@ -843,8 +843,77 @@ Expected output:
 
 ```
 
+There is provision for efficient prefix and substring search as well
 
-After search implementation, v8 engine integration and scripting support,
+// prefix search
+
+First make a few entries
+```
+http://0:0:0:0:18080/fuzzy/insert?body={"word":"apple","tag":"fruit","meta":"red"}
+http://0:0:0:0:18080/fuzzy/insert?body={"word":"apex","tag":"noun","meta":"globe"}
+
+```
+
+Lookup using prefix "ap"
+```
+http://0:0:0:0:18080/fuzzy/prefix?body={"word":"ap","maxedits":1}
+
+```
+
+Expected output:
+
+```
+{"result":[{"meta":"peak","tag":"word","word":"apex"},{"meta":"red","tag":"fruit","word":"apple"}]}
+
+```
+*For conventional prefix search without fuzzy logic use maxedits:-1
+
+Lookup using prefix "ape"
+```
+http://0:0:0:0:18080/fuzzy/prefix?body={"word":"ape","maxedits":-1}
+
+```
+
+Expected output:
+
+```
+{"result":[{"meta":"peak","tag":"word","word":"apex"}]}
+
+```
+
+For substring search use the following
+
+
+```
+http://0:0:0:0:18080/fuzzy/substring?body={"word":"pex"}
+
+```
+Expected output:
+
+```
+{"result":[{"meta":"peak","tag":"word","word":"apex"}]}
+
+```
+
+*** All of the fuzzy urls support POST format and is recommended to use
+
+Example:
+http://0:0:0:0:18080/fuzzy/prefix
+
+POST BODY : 
+
+```
+{"word":"ap","maxedits":1}
+
+```
+Expected output:
+
+```
+{"result":[{"meta":"peak","tag":"word","word":"apex"},{"meta":"red","tag":"fruit","word":"apple"}]}
+
+```
+
+*After search implementation, v8 engine integration and scripting support,
 the next target was to allow listener support through zero mq to communicate with other processes and services
 and creating the Quarks Cloud which is partially done.
 
