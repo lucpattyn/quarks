@@ -118,15 +118,18 @@ Apply equal-to filter on a value (using eq) :
 http://0.0.0.0:18080/getsorted?keys=g1_u*&skip=0&limit=10&filter={"where":{"messageTo":{"eq":"u2"}}}
 
 ```
-* if you want to do a not equal to filter, use neq
+* if you want to do a not equal to filter, use "neq".
+ex.
 _http://0.0.0.0:18080/getsorted?keys=g1_u*&skip=0&limit=10&filter={"where":{"messageTo":{"neq":"u2"}}}_
+
 
 Apply equal-to filter on a value performing multiple comparisons (using eq_any):
 ```
 http://0.0.0.0:18080/getsorted?keys=g1_u*&filter={"where":{"messageTo":{"eq_any":["u2","u4"]}}}
 
 ```
-* you can do a not in check also as follows
+* you can do "not_in" check also.
+ex.
 _http://0.0.0.0:18080/getsorted?keys=g1_u*&filter={"where":{"messageTo":{"not_in":["u2","u4"]}}}_
 
 **ORM style operators 'or', 'and' can be used also.**
