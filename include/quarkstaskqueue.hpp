@@ -12,6 +12,8 @@
 #include <queue>
 #include <tuple>
 
+#include <optional>
+
 class Task {
 	public:
 	 Task(unsigned int id, std::chrono::milliseconds duration,

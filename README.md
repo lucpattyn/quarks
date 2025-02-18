@@ -118,11 +118,45 @@ Apply equal-to filter on a value (using eq) :
 http://0.0.0.0:18080/getsorted?keys=g1_u*&skip=0&limit=10&filter={"where":{"messageTo":{"eq":"u2"}}}
 
 ```
+* if you want to do a not equal to filter, use neq
+_http://0.0.0.0:18080/getsorted?keys=g1_u*&skip=0&limit=10&filter={"where":{"messageTo":{"neq":"u2"}}}_
+
 Apply equal-to filter on a value performing multiple comparisons (using eq_any):
 ```
 http://0.0.0.0:18080/getsorted?keys=g1_u*&filter={"where":{"messageTo":{"eq_any":["u2","u4"]}}}
 
 ```
+* you can do a not in check also as follows
+_http://0.0.0.0:18080/getsorted?keys=g1_u*&filter={"where":{"messageTo":{"not_in":["u2","u4"]}}}_
+
+**ORM style operators 'or', 'and' can be used also.**
+
+Apply "or" :
+```
+http://0.0.0.0:18080/getsorted?keys=g1_u*&filter={
+  "where": {
+    "or": [
+      { "messageTo": { "eq": "u2" } },
+      { "messageTo": { "eq": "u3" } }
+    ]
+  }
+}
+
+
+```
+Apply "and" :
+```
+http://0.0.0.0:18080/getsorted?keys=g1_u*&filter={
+  "where": {
+    "and": [
+      { "messageTo": { "eq": "u2" } },
+      { "msg": { "eq": "m2" } }
+    ]
+  }
+}
+
+```
+
 
 5) List keys vs values by wildcard search with key prefixes (you can specifiy skip and limit optionally)
 

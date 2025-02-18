@@ -1219,7 +1219,7 @@ bool Core::getSorted(std::string wild, std::string sortby, bool ascending,
 					keyVal += std::string(",") + R"("key":")";
 					keyVal +=  key + R"("})";
 
-					//CROW_LOG_INFO << "get sorted keyVal: " << keyVal << ". " << i;
+					CROW_LOG_INFO << "get sorted keyVal: " << keyVal << ". " << i;
 					auto x = crow::json::load(keyVal);
 
 					if(!x) {
@@ -1231,7 +1231,8 @@ bool Core::getSorted(std::string wild, std::string sortby, bool ascending,
 								if(filter.size() > 0) {
 									CROW_LOG_INFO << "apply filter: " << applyFilter << ". " << crow::json::dump(filterBy);
 								}
-								if(!applyFilter || QSorter::JsonComparer().validate(x["value"], filterBy)) {
+								//if(!applyFilter || QSorter::JsonComparer().validate(x["value"], filterBy)) {
+								if(!applyFilter || QSorter::ORM().validate(x["value"], filterBy)) {
 									i++;
 									CROW_LOG_INFO << "obj to sort: " << i << ". " << crow::json::dump(x);
 									allResults.push_back(std::move(x));
