@@ -1038,17 +1038,46 @@ specify the cached parameter at start up :
 ```
 
 ## Backup and Restore
-```
+
 For backing up the database try:
+
+```
 http://0.0.0.0:18080/backup?body={"path":"quarks_backup_1"}
+```
 
 To restore simply run quarks next time using the "store" commandline parameter
+
+```
  ./ocv_microservice_crow -store quarks_backup_1
  
  -store followed by the path denotes the rocksdb directory path to use when starting quarks
 
 ```
 
+## File uploading
+For uploading files use multipart file posting:
+
+```
+http://0.0.0.0:18080/upload
+
+```
+Copy the "static" folder from examples and fetch
+
+'http://0.0.0.0:18080/static/uploader.html' as an example of how to do file uploading
+
+Inorder to ensure a unique filename is generated in the server and doesn't replace any existing files, use :
+
+```
+http://0.0.0.0:18080/upload/guid
+
+```
+Uploaded filenames are returned as array in json format
+
+To access the uploaded files use the url: 
+
+*http://0.0.0.0:18080/uploads/* .. followed by your desired filename. 
+
+ex. http://localhost:18080/uploads/active%20programmer.png
 
 ### WEBSOCKETS
 Websocket support has been added (Still not optimized).

@@ -105,7 +105,7 @@ public:
   
 	void handle_write(const boost::system::error_code& err, size_t bytes_transferred){
 	    if (!err) {
-	       	//std::cout << "Server sent "<< message <<  std::endl;
+	       	std::cout << "bytes transffered  "<< bytes_transferred <<  std::endl;
 	    } else {
 	       	std::cerr << "TCP: handle_write error: " << err.message() << " (possible connection close)" << std::endl;
 	       	sock.close();
@@ -132,22 +132,6 @@ public:
 
 class TCPServer 
 {
-private:
-   tcp::acceptor acceptor_;
-   boost::asio::io_service& io_service_;
-   
-	void start_accept(){
-	    // socket
-	    tcp_con_handler::pointer connection = tcp_con_handler::create(acceptor_.get_io_service());
-
-    	// asynchronous accept operation and wait for a new connection.
-     	acceptor_.async_accept(connection->socket(),
-        	boost::bind(&TCPServer::handle_accept, this, connection,
-        	boost::asio::placeholders::error));
-        
-        
-        std::cout << "TCP: start_accept" << std::endl;
-	}
 
 public:
 	//constructor for accepting connection from client
@@ -170,6 +154,24 @@ public:
   		boost::asio::io_service& io_service = io_service_;
 		io_service.stop();	
 	}
+
+private:
+	void start_accept(){
+	    // socket
+	    tcp_con_handler::pointer connection = tcp_con_handler::create(acceptor_.get_io_service());
+
+    	// asynchronous accept operation and wait for a new connection.
+     	acceptor_.async_accept(connection->socket(),
+        	boost::bind(&TCPServer::handle_accept, this, connection,
+        	boost::asio::placeholders::error));
+        
+        
+        std::cout << "TCP: start_accept" << std::endl;
+	}
+	
+	boost::asio::io_service& io_service_;
+   	tcp::acceptor acceptor_;
+   
 };
 
 struct TCPCommand{

@@ -18,8 +18,39 @@ static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *use
 #endif
 ////////////////////////////////////////////////////////////////////////////////////////
 
+#include <filesystem>
+
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <chrono>
+#include <iostream>
+
+
 struct CrowMiddleware
 {
+
+	static std::string uri_decode(const std::string& encoded) {
+	    std::string decoded;
+	    for (size_t i = 0; i < encoded.length(); ++i) {
+	        if (encoded[i] == '%') {
+	            // Decode percent-encoded characters (e.g., %20 -> space)
+	            if (i + 2 < encoded.length() && std::isxdigit(encoded[i + 1]) && std::isxdigit(encoded[i + 2])) {
+	                // Convert the next two characters from hexadecimal
+	                int value;
+	                std::istringstream(encoded.substr(i + 1, 2)) >> std::hex >> value;
+	                decoded += static_cast<char>(value);
+	                i += 2; // Skip the next two characters
+	            }
+	        } else if (encoded[i] == '+') {
+	            // Convert '+' to space, as '+' represents a space in query strings
+	            decoded += ' ';
+	        } else {
+	            decoded += encoded[i];
+	        }
+	    }
+	    return decoded;
+	}
+
     std::string message;
 	
 
@@ -396,56 +427,7 @@ public:
 	
 		};
 	
-		/*auto route_core_getkeys_callback =
-		[](const crow::request& req) {
-			crow::json::wvalue out;
-	
-			std::vector<crow::json::wvalue> jsonResults;
-	
-			try {
-				auto q = QueryParams::Parse(req);
-	
-				//CROW_LOG_INFO << "wild: " << q.wild << " (size: " << q.wild.size() << "), skip: " << q.skip << ", /limit: " << q.limit;
-	
-				bool ret = false;
-				if(q.wild.size() > 0) {
-					auto rev = req.url_params.get("reverse");
-					std::string reverse = (rev == nullptr || !strlen(rev))  ? "false" : rev;
-	
-					if(!reverse.compare("true")) {
-						ret = Quarks::Core::_Instance.getKeysReversed(q.wild, jsonResults,
-						        std::stoi(q.skip), std::stoi(q.limit));
-					} else {
-						ret = Quarks::Core::_Instance.getKeys(q.wild, jsonResults,
-						                                      std::stoi(q.skip), std::stoi(q.limit));
-					}
-	
-					out["result"] = std::move(jsonResults);
-					if(!ret) {
-						out["error"] = R"({"error" : "query returned error"})";
-					}
-	
-				} else {
-					out["error"] = "{\"error\":\"parameter 'keys' missing\"}";
-	
-				}
-	
-			} catch (const std::runtime_error& error) {
-				handle_runtime_error(error, out, jsonResults);
-			}
-	
-			std::ostringstream os;
-			os << crow::json::dump(out);
-	
-			auto res = crow::response{os.str()};
-		    res.add_header("Access-Control-Allow-Origin", "*");
-		    //res.add_header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
-		    //res.add_header("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
-	
-			return res;
-	
-		};*/
-	
+			
 		auto route_core_getkeys_callback =
 		[](const crow::request& req) {
 			std::string out;
@@ -1275,6 +1257,121 @@ public:
 	
 		};*/
 	
+	
+		// file upload
+		auto fileupload =
+		[](const crow::request& req, bool unique, std::string& out) {
+			std::string uploadDir = "uploads";
+			std::filesystem::path uploadPath = uploadDir; // Specify the directory name
+	
+			// Check if the directory exists
+			if (!std::filesystem::exists(uploadPath)) {
+				// If it doesn't exist, create the directory
+				if (std::filesystem::create_directory(uploadPath)) {
+					std::cout << "Directory created successfully!" << std::endl;
+				} else {
+					std::cerr << "Failed to create directory!" << std::endl;
+					out = "Failed to create directory";
+					return 500;
+				}
+			} //else {
+				//std::cout << "Directory already exists!" << std::endl;
+			//}
+	
+			auto save_file = [&uploadDir](const std::string& filename, const std::string& content) {
+				std::ofstream file(filename, std::ios::binary);
+				if (file) {
+					file.write(content.c_str(), content.size());
+					file.close();
+				} else {
+					throw std::runtime_error("Failed to open file for writing");
+				}
+			};
+		
+		    try {
+		    	std::string fileNames = "[";
+		    	
+	            auto content_type = req.get_header_value("Content-Type");
+	
+	            if (content_type.find("multipart/form-data") == std::string::npos) {
+	                out = "Invalid content type";
+	                return 400;
+	            }
+	
+	            // Simple boundary extraction
+	            auto boundary_pos = content_type.find("boundary=");
+	            if (boundary_pos == std::string::npos) {
+	                out = "Boundary not found";
+					return 400;
+	            }
+	
+	            std::string boundary = "--" + content_type.substr(boundary_pos + 9);
+	
+	            // Split by boundary
+	            size_t pos = 0, end;
+	            while ((end = req.body.find(boundary, pos)) != std::string::npos) {
+	                std::string part = req.body.substr(pos, end - pos);
+	                pos = end + boundary.size();
+	
+	                // Extract file name
+	                size_t filename_pos = part.find("filename=");
+	                if (filename_pos == std::string::npos) continue;
+	
+	                size_t filename_start = part.find('"', filename_pos) + 1;
+	                size_t filename_end = part.find('"', filename_start);
+	                std::string filename = part.substr(filename_start, filename_end - filename_start);
+	
+	                // Extract file content
+	                size_t file_content_start = part.find("\r\n\r\n", filename_end) + 4;
+	                size_t file_content_end = part.find_last_of("\r\n-");
+	                std::string file_content = part.substr(file_content_start, file_content_end - file_content_start);
+					
+					if(unique){
+						 // Generate UUID
+					    boost::uuids::random_generator generator;
+					    boost::uuids::uuid uuid = generator();				    
+					    // Convert UUID to string
+					    std::string uuidString = boost::uuids::to_string(uuid);
+					    // Get the current time in milliseconds
+					    auto now = std::chrono::system_clock::now().time_since_epoch().count();
+					    
+					    // Create a unique prefix
+					    std::string uniquePrefix = uuidString.substr(0, 8) + std::to_string(now);						
+						filename = uniquePrefix + "_" + filename;
+					}
+					save_file(uploadDir + "/" + filename, file_content);
+					
+					fileNames += "'" + filename + "',";
+	            }
+	
+				fileNames[fileNames.size() - 1] = ']';
+				
+	            out = fileNames;
+	            return 200;
+	            
+	        } catch (const std::exception& e) {
+	            out = std::string("Server error: ") + e.what();
+				return 500;
+	        }
+		};
+				 
+		auto route_core_upload_callback = 
+		[&fileupload](const crow::request& req){
+			
+			std::string str = "";
+			int code = fileupload(req, false, str); 
+			
+			return crow::response(code, str);
+		};
+	
+		auto route_core_upload_withuid_callback = 
+		[&fileupload](const crow::request& req){
+			
+			std::string str = "";
+			int code = fileupload(req, true, str); 
+			
+			return crow::response(code, str);
+		};	
 		auto route_ai_callback =
 		[](const crow::request& /*req*/) {
 			
@@ -1430,6 +1527,94 @@ public:
 		// experimental
 		CROW_ROUTE(app, "/filetransfer")
 		.methods("GET"_method, "POST"_method)(route_core_filetransfer_callback);
+	
+		//////// file upload /////////////
+		
+		CROW_ROUTE(app, "/upload")
+		.methods("GET"_method, "POST"_method)(route_core_upload_callback);
+		
+		CROW_ROUTE(app, "/upload/guid")
+		.methods("GET"_method, "POST"_method)(route_core_upload_withuid_callback);
+		///////////////////////////////////
+		
+		//// file get //////
+		
+		auto getMimeType = [](const std::string& extension) -> std::string {
+			
+			std::unordered_map<std::string, std::string> mimeTypes = {
+			    {".html", "text/html"},
+			    {".css", "text/css"},
+			    {".js", "application/javascript"},
+			    {".json", "application/json"},
+			    {".png", "image/png"},
+			    {".jpg", "image/jpeg"},
+			    {".jpeg", "image/jpeg"},
+			    {".gif", "image/gif"},
+			    {".txt", "text/plain"},
+			    {".pdf", "application/pdf"},
+			    // Audio MIME types
+			    {".mp3", "audio/mpeg"},
+			    {".wav", "audio/wav"},
+			    {".ogg", "audio/ogg"},
+			    {".flac", "audio/flac"},
+			    {".aac", "audio/aac"},
+			    {".m4a", "audio/mp4"},
+			    // Video MIME types
+			    {".mp4", "video/mp4"},
+			    {".avi", "video/x-msvideo"},
+			    {".mov", "video/quicktime"},
+			    {".mkv", "video/x-matroska"},
+			    {".webm", "video/webm"},
+			    {".flv", "video/x-flv"},
+			    {".mpg", "video/mpeg"},
+			    // Default unknown MIME type
+			    {".txt", "text/plain"}
+			    // Add more MIME types as needed
+			};
+		
+		
+		    auto it = mimeTypes.find(extension);
+		    if (it != mimeTypes.end()) {
+		        return it->second;
+		    }
+		    return "application/octet-stream"; // default MIME type for unknown files
+		};
+		
+		auto getFile = [&getMimeType](const std::string& filePath) {
+		    std::ifstream file(filePath, std::ios::binary);
+		    if (!file) {
+		        return crow::response(404, "File not found");
+		    }
+		
+		    // Read the file into a string
+		    std::string fileContents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+		    
+		    // Determine the MIME type based on file extension
+		    size_t dotPos = filePath.rfind('.');
+		    std::string extension = (dotPos != std::string::npos) ? filePath.substr(dotPos) : "";
+		    std::string mimeType = getMimeType(extension);
+		
+		    // Create the response with file data
+		    crow::response res(fileContents);
+		    res.set_header("Content-Type", mimeType);
+		    return res;
+		};
+		
+		// Route to serve files from the "uploads" folder
+	    CROW_ROUTE(app, "/uploads/<string>")
+	    ([&getFile](const std::string& path) {
+	        std::string filePath = "uploads/" + CrowMiddleware::uri_decode(path.c_str()); // Folder where uploaded files are stored
+	        return getFile(filePath);
+	    });
+	    
+	    CROW_ROUTE(app, "/static/<string>")
+	    ([&getFile](const std::string& path) {
+	        std::string filePath = "static/" + CrowMiddleware::uri_decode(path.c_str()); // Folder where uploaded files are stored
+	        return getFile(filePath);
+	    });
+	    
+		//////////////////
+	
 	
 		CROW_ROUTE(app, "/opentcpsocket")
 		.methods("GET"_method, "POST"_method)(route_core_opentcpsocket_callback);

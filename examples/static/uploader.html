@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple File Uploader</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .upload-container {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .file-input {
+            display: none;
+        }
+        .select-button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        .upload-button {
+            background-color: #008CBA;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            display: none;
+        }
+        .file-info {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        .progress-container {
+            width: 100%;
+            background-color: #f1f1f1;
+            border-radius: 4px;
+            margin-top: 20px;
+            display: none;
+        }
+        .progress-bar {
+            width: 0%;
+            height: 20px;
+            background-color: #4CAF50;
+            border-radius: 4px;
+            text-align: center;
+            line-height: 20px;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>File Uploader</h1>
+    
+    <div class="upload-container">
+        <form id="uploadForm" enctype="multipart/form-data" method="POST" action="/upload">
+            <input type="file" id="fileInput" class="file-input" name="file">
+            <button type="button" id="selectButton" class="select-button">Select File</button>
+            <div id="fileInfo" class="file-info">No file selected</div>
+            <button type="submit" id="uploadButton" class="upload-button">Upload File</button>
+        </form>
+        <div id="progressContainer" class="progress-container">
+            <div id="progressBar" class="progress-bar">0%</div>
+        </div>
+    </div>
+
+    <script>
+        // Get DOM elements
+        const fileInput = document.getElementById('fileInput');
+        const selectButton = document.getElementById('selectButton');
+        const fileInfo = document.getElementById('fileInfo');
+        const uploadButton = document.getElementById('uploadButton');
+        const uploadForm = document.getElementById('uploadForm');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+
+        // Trigger file input when select button is clicked
+        selectButton.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // Display file info when file is selected
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                fileInfo.textContent = `Selected: ${file.name} (${formatFileSize(file.size)})`;
+                uploadButton.style.display = 'inline-block';
+            } else {
+                fileInfo.textContent = 'No file selected';
+                uploadButton.style.display = 'none';
+            }
+        });
+
+        // Handle form submission
+        uploadForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            if (fileInput.files.length === 0) {
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/upload', true);
+            // to ensure filename does not match with any of servers, use the following
+			// xhr.open('POST', '/upload/guid', true);
+			
+            // Track upload progress
+            xhr.upload.addEventListener('progress', (event) => {
+                if (event.lengthComputable) {
+                    progressContainer.style.display = 'block';
+                    const percentComplete = Math.round((event.loaded / event.total) * 100);
+                    progressBar.style.width = percentComplete + '%';
+                    progressBar.textContent = percentComplete + '%';
+                }
+            });
+
+            // Handle response
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    fileInfo.textContent = 'Uploading of : ' + xhr.responseText + ' successful!';
+                    uploadButton.style.display = 'none';
+                } else {
+                    fileInfo.textContent = 'Upload failed. Please try again.';
+                }
+            };
+
+            xhr.onerror = function() {
+                fileInfo.textContent = 'Connection error. Please try again.';
+            };
+
+            xhr.send(formData);
+        });
+
+        // Format file size
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+    </script>
+</body>
+</html>

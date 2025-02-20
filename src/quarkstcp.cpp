@@ -155,7 +155,7 @@ int tcpClientStart(const char* tcpUrl) {
 		}
 		else {
 			const char* data = boost::asio::buffer_cast<const char*>(receive_buffer.data());
-			std::cout << "client received: " << buf << std::endl;
+			std::cout << "client received: " << buf << ", data: " << data << ", len: " << len << std::endl;
 		}
 	}
 	
