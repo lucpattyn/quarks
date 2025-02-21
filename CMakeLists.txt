@@ -98,6 +98,12 @@ if (USE_WREN)
 target_link_libraries (ocv_microservice_crow  ${CMAKE_LIBRARY_PATH}/libwren.so)
 endif()
 
+# Link stdc++fs only if using an older GCC version (<9)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
+    target_link_libraries(ocv_microservice_crow stdc++fs)
+endif()
+
+
 #mac
 #target_link_libraries( ocv_microservice_crow ${OpenCV_LIBS} pthread -lrocksdb libv8.dylib libv8_libplatform.dylib  -dynamiclib -flat_namespace -lzmq -lboost_system)
 

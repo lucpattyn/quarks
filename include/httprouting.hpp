@@ -18,7 +18,13 @@ static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *use
 #endif
 ////////////////////////////////////////////////////////////////////////////////////////
 
-#include <filesystem>
+#if defined(__GNUC__) && (__GNUC__ < 9)
+    #include <experimental/filesystem>
+    namespace fs = std::experimental::filesystem;
+#else
+    #include <filesystem>
+    namespace fs = std::filesystem;
+#endif
 
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -1262,12 +1268,12 @@ public:
 		auto fileupload =
 		[](const crow::request& req, bool unique, std::string& out) {
 			std::string uploadDir = "uploads";
-			std::filesystem::path uploadPath = uploadDir; // Specify the directory name
+			fs::path uploadPath = uploadDir; // Specify the directory name
 	
 			// Check if the directory exists
-			if (!std::filesystem::exists(uploadPath)) {
+			if (!fs::exists(uploadPath)) {
 				// If it doesn't exist, create the directory
-				if (std::filesystem::create_directory(uploadPath)) {
+				if (fs::create_directory(uploadPath)) {
 					std::cout << "Directory created successfully!" << std::endl;
 				} else {
 					std::cerr << "Failed to create directory!" << std::endl;
