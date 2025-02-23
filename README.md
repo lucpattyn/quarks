@@ -1061,9 +1061,9 @@ For uploading files use multipart file posting:
 http://0.0.0.0:18080/upload
 
 ```
-Copy the "static" folder from examples and fetch
+Copy the "static" folder from "examples" into build and fetch
 
-'http://0.0.0.0:18080/static/uploader.html' as an example of how to do file uploading
+'http://0.0.0.0:18080/uploader.html' as an example of how to do file uploading
 
 Inorder to ensure a unique filename is generated in the server and doesn't replace any existing files, use :
 

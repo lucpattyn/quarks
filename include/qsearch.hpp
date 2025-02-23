@@ -12,6 +12,8 @@
 #include <mutex>
 #include <unordered_set>
 
+/////////////////////// Trie and Fuzzy Search /////////////////////////////////////////////
+
 static const char* FILE_NAME = "trie_data_large.bin";
 static const size_t INITIAL_SIZE = 1024 * 1024;  // 1MB initial file size
 
@@ -305,6 +307,8 @@ public:
 
 };
 
+
+/////////////////// End of Trie and Fuzzy Search ///////////////////////
 
 class QSearch {
 public:
