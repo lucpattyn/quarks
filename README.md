@@ -932,25 +932,26 @@ Expected output:
 
 ```
 
-Remove a word. Tag and meta are optional.
-If tag and meta is provided, then they are matched otherwise all occurances of the word is removed
+
+Delete/remove a word. Tag and meta are optional, but if provided, 
+then they are matched for removing, otherwise all occurances of the word is removed
 
 ```
 http://0:0:0:0:18080/fuzzy/delete?body={"word":"apple", "tag":"fruit","meta":"red"}
 
-```
 output: {"result":true}
 
+```
 
 Update a word (which is basically a delete operaton with oldword, tag and meta,
 then followed by an insert operation with word)
 
 ```
-http://0:0:0:0:18080/fuzzy/delete?body={"oldword":"apex", "tag":"noun","meta":"globe", "word":"apexpredator"}
+http://0:0:0:0:18080/fuzzy/update?body={"oldword":"apex", "tag":"noun","meta":"globe", "word":"apexpredator"}
 
-```
 output: {"result":true}
 
+```
 
 *** All of the fuzzy urls support POST format and is recommended to use ***
 
