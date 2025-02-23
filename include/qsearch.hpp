@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <mutex>
 #include <unordered_set>
+#include <algorithm>
 
 /////////////////////// Trie and Fuzzy Search /////////////////////////////////////////////
 
@@ -122,6 +123,8 @@ public:
         node->isEndOfWord = true;
         node->metadata.push_back(new WordData(category, userData)); // Store multiple metadata
     }
+
+	/////////////////////////////// beginning of search functions ///////////////////////////////////////
 
     std::vector<WordData> search(const std::string& word) {
         std::lock_guard<std::mutex> lock(trieMutex);
@@ -287,6 +290,62 @@ public:
 	}
 
 	/////////////////////////////// end of search functions ///////////////////////////////////////
+	
+	void deleteWord(const std::string& word, const std::string& category = "", const std::string& userData = "") {
+	    std::lock_guard<std::mutex> lock(trieMutex);
+	    TrieNode* node = root;
+	    std::vector<TrieNode*> nodesToCheck;
+	
+	    // Traverse the trie for the given word.
+	    for (char ch : word) {
+	        if (node->children.find(ch) == node->children.end()) {
+	            return; // Word not found
+	        }
+	        node = node->children[ch];
+	        nodesToCheck.push_back(node); // Keep track of the nodes visited.
+	    }
+	
+	    // If the word ends here and has metadata, proceed to remove it.
+	    if (node->isEndOfWord) {
+	        // Remove metadata if category/userData matches
+	        if (category.empty() && userData.empty()) {
+	            node->metadata.clear();
+	        } else {
+	            node->metadata.erase(std::remove_if(node->metadata.begin(), node->metadata.end(),
+	                [&](WordData* data) {
+	                    return (category.empty() || data->category == category) &&
+	                           (userData.empty() || data->userData == userData);
+	                }), node->metadata.end());
+	        }
+	
+	        // If metadata is empty after removal, mark it as not the end of a word
+	        if (node->metadata.empty()) {
+	            node->isEndOfWord = false;
+	        }
+	    }
+	
+	    // Now we need to clean up the trie if no children exist and if this node is not an end of any other word
+	    for (int i = nodesToCheck.size() - 1; i >= 0; --i) {
+	        node = nodesToCheck[i];
+	
+	        // If the node has no children and it's not the end of any other word, delete it
+	        if (node->children.empty() && !node->isEndOfWord) {
+	            // If it's not the root node, remove it from the parent's children map.
+	            if (i > 0) {
+	                TrieNode* parentNode = nodesToCheck[i - 1];
+	                parentNode->children.erase(word[i - 1]);
+	            }
+	        } else {
+	            break; // Stop if we encounter a node that is still part of another word.
+	        }
+	    }
+	}	
+
+
+    void updateWord(const std::string& oldWord, const std::string& newWord, const std::string& category = "", const std::string& userData = "") {
+        deleteWord(oldWord, category, userData);
+		insert(newWord, category, userData);
+    }
 
 
 	void expandIfNeeded() {

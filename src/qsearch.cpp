@@ -235,6 +235,80 @@ void QSearch::BuildHttpRoutes(void* appContext){
 	
 	};
 	
+	auto route_core_fuzzy_delete_callback =
+	[&trie](const crow::request& req) {
+		
+		std::string body = req.body;	
+		auto b = req.url_params.get("body");
+		if(b != nullptr) {
+			body = b;
+		}
+		
+		crow::json::wvalue out;
+		auto x = crow::json::load(body);
+		if (!x) {
+			out["error"] = "invalid parameters";
+			return out;
+		}
+
+		try {
+			std::string word = x["word"].s();
+			std::string tag = "";
+			if(x.has("tag")){
+				tag = x["tag"].s();
+			}
+			std::string meta = "";
+			if(x.has("meta")){
+				meta = x["meta"].s();
+			}
+			trie.deleteWord(word, tag, meta);
+			
+
+		} catch (const std::runtime_error& error) {
+			out["error"] = "Arguments not properly formatted";
+		}
+
+		out["result"] = true;
+
+		return out;
+	};
+	
+	auto route_core_fuzzy_update_callback =
+	[&trie](const crow::request& req) {
+		
+		std::string body = req.body;	
+		auto b = req.url_params.get("body");
+		if(b != nullptr) {
+			body = b;
+		}
+		
+		crow::json::wvalue out;
+		auto x = crow::json::load(body);
+		if (!x) {
+			out["error"] = "invalid parameters";
+			return out;
+		}
+
+		try {
+			std::string oldWord = x["oldword"].s();
+			std::string word = x["word"].s();
+			std::string tag = x["tag"].s();
+			std::string meta = x["meta"].s();;
+			
+			trie.updateWord(oldWord, word, tag, meta);
+			
+
+		} catch (const std::runtime_error& error) {
+			out["error"] = "oldword/word/tag/meta missing or not properly formatted";
+		}
+
+		out["result"] = true;
+
+		return out;
+	};
+	
+	
+	
 	CROW_ROUTE(app, "/fuzzy/insert")
 	.methods("GET"_method, "POST"_method)(route_core_fuzzy_insert_callback);
 
@@ -249,6 +323,13 @@ void QSearch::BuildHttpRoutes(void* appContext){
 
 	CROW_ROUTE(app, "/fuzzy/substring")
 	.methods("GET"_method, "POST"_method)(route_core_fuzzy_substring_callback);
+	
+	CROW_ROUTE(app, "/fuzzy/delete")
+	.methods("GET"_method, "POST"_method)(route_core_fuzzy_delete_callback);
+	
+	CROW_ROUTE(app, "/fuzzy/update")
+	.methods("GET"_method, "POST"_method)(route_core_fuzzy_update_callback);
+	
 }
 
 void QSearch::TestRun() {
@@ -323,7 +404,10 @@ void QSearch::TestRun() {
     trie.insert("apricot", "fruit", "orangish");
     trie.insert("apex", "word", "cresendo");
     trie.insert("banana", "fruit", "yellowish");
-
+    
+    trie.deleteWord("apex", "", "cresendo");
+    trie.updateWord("apple", "applered", "fruit", "red");
+	
     // Prefix search for "ap"
     prefixResults = trie.searchByPrefix("ap");
     std::cout << "Words with prefix 'ap':\n";

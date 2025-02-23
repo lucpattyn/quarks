@@ -1578,8 +1578,11 @@ public:
 			    // Add more MIME types as needed
 			};
 		
-		
-		    auto it = mimeTypes.find(extension);
+			std::string lowExt = extension;
+			std::transform(extension.begin(), extension.end(), lowExt.begin(),
+    			[](unsigned char c){ return std::tolower(c); });
+		    
+			auto it = mimeTypes.find(lowExt);
 		    if (it != mimeTypes.end()) {
 		        return it->second;
 		    }
