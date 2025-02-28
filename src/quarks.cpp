@@ -3968,7 +3968,7 @@ bool Core::searchJson(crow::json::rvalue& args,
 			//for (  ; prefixSearch ? (it->Valid() && it->key().starts_with(prefix)) : it->Valid();
 			//it->Next()) {
 			*/
-			
+#ifdef REV_SEARCH_JSON			
 			for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()){
 
 				std::string elem = it->value().ToString();
@@ -4099,7 +4099,8 @@ bool Core::searchJson(crow::json::rvalue& args,
 
 		//std::string moduleJS = moduleName + ".js";
 		//return ve.load(moduleJS, funcOnV8EngineLoaded);
-
+		
+#endif
 	}
 
 #endif

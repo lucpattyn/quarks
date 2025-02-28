@@ -13,6 +13,8 @@
 #include <unordered_set>
 #include <algorithm>
 
+#include <crow.h>
+
 /////////////////////// Trie and Fuzzy Search /////////////////////////////////////////////
 
 static const char* FILE_NAME = "trie_data_large.bin";
@@ -367,16 +369,210 @@ public:
 };
 
 
-/////////////////// End of Trie and Fuzzy Search ///////////////////////
+/////////////////// end of Trie and Fuzzy Search ///////////////////////
+
+//////////////////// Elastic Search ////////////////////////////////////
+
+
+class ElasticSearch {
+private:
+    std::string filename;
+    int fd;
+    void* mmap_ptr;
+    size_t file_size;
+    crow::json::wvalue index;
+
+    void loadIndex() {
+        fd = open(filename.c_str(), O_RDWR | O_CREAT, 0666);
+        if (fd == -1) {
+            perror("Error opening file");
+            exit(EXIT_FAILURE);
+        }
+
+        file_size = lseek(fd, 0, SEEK_END);
+        if (file_size == 0) {
+            ftruncate(fd, 4096);
+            file_size = 4096;
+        }
+
+        mmap_ptr = mmap(nullptr, file_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+        if (mmap_ptr == MAP_FAILED) {
+            perror("Error mapping file");
+            close(fd);
+            exit(EXIT_FAILURE);
+        }
+
+        std::string data(static_cast<char*>(mmap_ptr), file_size);
+        if (!data.empty() && data[0] != '\0') {
+            index = crow::json::load(data);
+        }
+    }
+
+    void persistIndex() {
+        std::string json_data = crow::json::dump(index);//index.dump();
+        if (json_data.size() > file_size) {
+            size_t new_size = json_data.size() * 2;
+            if (ftruncate(fd, new_size) == -1) {
+                perror("Error resizing file");
+                return;
+            }
+            munmap(mmap_ptr, file_size);
+            mmap_ptr = mmap(nullptr, new_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+            if (mmap_ptr == MAP_FAILED) {
+                perror("Error remapping file");
+                close(fd);
+                exit(EXIT_FAILURE);
+            }
+            file_size = new_size;
+        }
+        std::memcpy(mmap_ptr, json_data.c_str(), json_data.size());
+    }
+
+    static int levenshteinDistance(const std::string& s1, const std::string& s2) {
+        int len1 = s1.size(), len2 = s2.size();
+        std::vector<std::vector<int>> dp(len1 + 1, std::vector<int>(len2 + 1, 0));
+
+        for (int i = 0; i <= len1; i++) dp[i][0] = i;
+        for (int j = 0; j <= len2; j++) dp[0][j] = j;
+
+        for (int i = 1; i <= len1; i++) {
+            for (int j = 1; j <= len2; j++) {
+                if (s1[i - 1] == s2[j - 1]) {
+                    dp[i][j] = dp[i - 1][j - 1];
+                } else {
+                    dp[i][j] = std::min({ dp[i - 1][j - 1], dp[i - 1][j], dp[i][j - 1] }) + 1;
+                }
+            }
+        }
+        return dp[len1][len2];
+    }
+	
+	// Tokenize function to split a sentence into words
+	std::vector<std::string> tokenize(const std::string& s) {
+	    std::vector<std::string> tokens;
+	    std::stringstream ss(s);
+	    std::string token;
+	    while (ss >> token) {
+	        tokens.push_back(token);
+	    }
+	    return tokens;
+	}
+
+	// Check if the second string is a nearly matched substring of the first string
+	bool isNearlyMatched(const std::string& str1, const std::string& str2, int maxDistance) {
+    	std::vector<std::string> tokens1 = tokenize(str1);  // Tokenize first string
+    	std::vector<std::string> tokens2 = tokenize(str2);  // Tokenize second string
+
+    	int i = 0, j = 0;
+    	int len1 = tokens1.size(), len2 = tokens2.size();
+
+	    // Traverse tokens1 and check if tokens2 is a nearly matching substring
+	    while (i < len1 && j < len2) {
+	        // Compare the current token from tokens1 with the current token from tokens2
+	        int dist = levenshteinDistance(tokens1[i], tokens2[j]);
+	
+	        // If the distance is within the allowed threshold, consider it a match
+	        if (dist <= maxDistance) {
+	            j++;  // Move to the next token in tokens2
+	        }
+	        i++;  // Always move to the next token in tokens1
+	    }
+	
+	    // Return true if all tokens from tokens2 were found with acceptable distance
+	    return j == len2;
+}
+	
+
+public:
+    ElasticSearch(const std::string& file) : filename(file), fd(-1), mmap_ptr(nullptr), file_size(0) {
+        loadIndex();
+    }
+
+    void indexDocument(const std::string& tenant_id, const std::string& indexName, crow::json::wvalue& doc) {
+        index[tenant_id][indexName] = std::move(doc);
+        	
+		persistIndex();
+    }
+
+    void updateDocument(const std::string& tenant_id, const std::string& indexName, crow::json::wvalue& new_doc) {
+        if (index[tenant_id].count(indexName)) {
+            index[tenant_id][indexName] = std::move(new_doc);
+            persistIndex();
+        }
+    }
+
+    void deleteDocument(const std::string& tenant_id, const std::string& indexName) {
+        if (index[tenant_id].count(indexName)) {
+            crow::json::wvalue newTenant;
+			for (const auto& key : index[tenant_id].keys()) {
+	    		if (key != indexName) {
+	        		newTenant[key] = std::move(index[tenant_id][key]);
+	    		}
+			}
+			index[tenant_id] = std::move(newTenant);
+			
+			persistIndex();
+        }
+    }
+
+    std::vector<crow::json::wvalue> searchMultiple(const std::string& tenant_id, const std::string& indexName, const std::vector<std::pair<std::string, std::string>>& conditions, int fuzziness = 2, bool must = true) {
+        std::vector<crow::json::wvalue> results;
+
+		if(index.count(tenant_id) != true) 
+			return results;
+		
+		if(index[tenant_id].count(indexName) != true)
+			return results;	
+			
+		//for (const auto& key : index[tenant_id][indexName].keys()){
+            auto doc = crow::json::load(crow::json::dump(index[tenant_id][indexName]));
+			int match_count = 0;
+            for (const auto& [key, query] : conditions) {
+                if (doc.has(key)) {
+              		std::string value = doc[key].s();
+                    if (isNearlyMatched(value, query, fuzziness)) {
+                        match_count++;
+                    }
+                }
+            }
+            if ((must && match_count == conditions.size()) || (!must && match_count > 0)) {
+				results.push_back(std::move(doc));
+            }
+        //}
+
+        return results;
+    }
+
+    ~ElasticSearch() {
+        if (mmap_ptr != MAP_FAILED && mmap_ptr != nullptr) {
+            msync(mmap_ptr, file_size, MS_SYNC);
+            munmap(mmap_ptr, file_size);
+        }
+        if (fd != -1) {
+            close(fd);
+        }
+    }
+};
+
+///////////////////////// end of Elastic Search ////////////////////////////////////
+
 
 class QSearch {
 public:
 	QSearch(){
-		_trie = new MMapTrie(FILE_NAME, INITIAL_SIZE);
+		try{
+			_trie = new MMapTrie(FILE_NAME, INITIAL_SIZE);
+			_elastic = new ElasticSearch("elastic.dat");
+		}
+		catch (const std::exception& e) {
+        	std::cerr << "Error: " << e.what() << std::endl;
+    	}
+		
 	}
 	
 	void cleanup(){
 		delete _trie;
+		delete _elastic;
 	}
 	
 	~QSearch(){
@@ -385,24 +581,11 @@ public:
 	
 	void BuildHttpRoutes(void* appContext);
 	
-	/*void insert(const std::string& word, const std::string& category, const std::string& userData) {
-		_trie->insert(word, category, userData);
-	}
-	
-	// regular search
-	std::vector<WordData> search(const std::string& word){
-		return _trie->search(word);
-	}
-	
-	// fuzzy search
-	std::vector<std::pair<std::string, WordData>> fuzzySearch(const std::string& query, int maxEdits) {
-		return _trie->fuzzySearch(query, maxEdits);
-	}*/
-	
 	void TestRun();
 	
 private:
 	MMapTrie* _trie;
+	ElasticSearch* _elastic;
 	
 };
 

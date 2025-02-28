@@ -35,7 +35,7 @@ int main(int argc, char ** argv) {
 	
 	QSearch s;
 	s.BuildHttpRoutes(&app);
-	//s.TestRun();
+	s.TestRun();
 	
 	HttpRouter::BuildHttpRoutes(app);
 	
