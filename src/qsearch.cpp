@@ -262,13 +262,14 @@ void QSearch::BuildHttpRoutes(void* appContext){
 				meta = x["meta"].s();
 			}
 			trie.deleteWord(word, tag, meta);
-			
+		
+			out["result"] = true;	
 
 		} catch (const std::runtime_error& error) {
 			out["error"] = "Arguments not properly formatted";
+			
+			out["result"] = false;
 		}
-
-		out["result"] = true;
 
 		return out;
 	};
@@ -296,13 +297,13 @@ void QSearch::BuildHttpRoutes(void* appContext){
 			std::string meta = x["meta"].s();;
 			
 			trie.updateWord(oldWord, word, tag, meta);
-			
+		
+			out["result"] = true;	
 
 		} catch (const std::runtime_error& error) {
 			out["error"] = "oldword/word/tag/meta missing or not properly formatted";
+			out["result"] = false;
 		}
-
-		out["result"] = true;
 
 		return out;
 	};
@@ -330,6 +331,111 @@ void QSearch::BuildHttpRoutes(void* appContext){
 	CROW_ROUTE(app, "/fuzzy/update")
 	.methods("GET"_method, "POST"_method)(route_core_fuzzy_update_callback);
 	
+	
+	ElasticSearch& index = *_elastic;
+	
+	auto route_elastic_index_callback =
+	[&index](const crow::request& req) {
+		
+		std::string body = req.body;	
+		auto b = req.url_params.get("body");
+		if(b != nullptr) {
+			body = b;
+		}
+		
+		crow::json::wvalue out;
+		auto x = crow::json::load(body);
+		if (!x) {
+			out["error"] = "invalid parameters";
+			return out;
+		}
+
+		try {
+			std::string tenant = x["app"].s();
+    		std::string indexName = x["index"].s();
+    		
+    		crow::json::wvalue doc = x["doc"];
+    		index.indexDocument(tenant, indexName, doc);
+			
+
+		} catch (const std::runtime_error& error) {
+			out["error"] = "app/index/doc missing or not properly formatted";
+		}
+
+		out["result"] = true;
+
+		return out;
+	};
+
+	auto route_elastic_search_callback =
+	[&index](const crow::request& req) {
+		
+		std::string body = req.body;	
+		auto b = req.url_params.get("body");
+		if(b != nullptr) {
+			body = b;
+		}
+		
+		crow::json::wvalue out;
+		auto x = crow::json::load(body);
+		if (!x) {
+			out["error"] = "invalid parameters";
+			return out;
+		}
+
+		try {
+		
+			std::string tenant = x["app"].s();
+    		std::string indexName = x["index"].s();
+    		
+    		// Extract conditions
+    		std::vector<std::pair<std::string, std::string>> conditions;   
+    		if (x.has("conditions")) {
+        		crow::json::rvalue rConditions = x["conditions"];
+        
+        		// Ensure it's an object before iterating
+        		if (rConditions.t() == crow::json::type::Object) {
+	            	for (const auto& item : rConditions) {
+	            		std::string value = item.s();
+	                	conditions.emplace_back(item.key(), value);
+	            	}
+        		}
+    		}
+
+			int fuzziness = 2; 
+			if(x.has("fuzziness")){
+				fuzziness = x["fuzziness"].i();
+			}
+			bool must = false;
+			if(x.has("must")){
+				must = x["must"].b();
+			}
+			bool ignoreCase = false;
+			if(x.has("ignorecase")){
+				ignoreCase = x["ignorecase"].b();
+			}
+    		auto eResults = index.searchMultiple(tenant, indexName, conditions, fuzziness, must, ignoreCase);
+    
+    		std::cout << "Elastic Search Results:\n";
+    		for (const auto& res : eResults) {
+        		std::cout << crow::json::dump(res) << std::endl;
+   			}
+
+			out["result"] = std::move(eResults);
+			
+		} catch (const std::runtime_error& error) {
+			out["error"] = "app/index/conditions/fuzziness/must/ignorecase missing or not properly formatted";
+		}
+
+		return out;
+	};
+	
+	CROW_ROUTE(app, "/elastic/index")
+	.methods("GET"_method, "POST"_method)(route_elastic_index_callback);
+	
+	CROW_ROUTE(app, "/elastic/search")
+	.methods("GET"_method, "POST"_method)(route_elastic_search_callback);
+
 }
 
 void QSearch::TestRun() {

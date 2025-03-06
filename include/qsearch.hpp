@@ -480,8 +480,48 @@ private:
 	
 	    // Return true if all tokens from tokens2 were found with acceptable distance
 	    return j == len2;
-}
+	}	
 	
+	// Convert a string to lowercase
+	std::string toLower(const std::string& str) {
+	    std::string lowerStr = str;
+	    std::transform(lowerStr.begin(), lowerStr.end(), lowerStr.begin(), ::tolower);
+	    return lowerStr;
+	}
+	
+	// Check if the second string is a nearly matched substring of the first string (case-insensitive)
+	bool isNearlyMatchedIgnoreCase(const std::string& str1, const std::string& str2, int maxDistance) {
+	    std::vector<std::string> tokens1 = tokenize(str1);  // Tokenize first string
+	    std::vector<std::string> tokens2 = tokenize(str2);  // Tokenize second string
+	
+	    // Convert all tokens to lowercase
+	    for (std::string& token : tokens1) {
+	        token = toLower(token);
+	    }
+	    for (std::string& token : tokens2) {
+	        token = toLower(token);
+	    }
+	
+	    int i = 0, j = 0;
+	    int len1 = tokens1.size(), len2 = tokens2.size();
+	
+	    // Traverse tokens1 and check if tokens2 is a nearly matching substring
+	    while (i < len1 && j < len2) {
+	        // Compare the current token from tokens1 with the current token from tokens2
+	        int dist = levenshteinDistance(tokens1[i], tokens2[j]);
+	
+	        // If the distance is within the allowed threshold, consider it a match
+	        if (dist <= maxDistance) {
+	            j++;  // Move to the next token in tokens2
+	        }
+	        i++;  // Always move to the next token in tokens1
+	    }
+	
+	    // Return true if all tokens from tokens2 were found with acceptable distance
+	    return j == len2;
+	}
+		
+
 
 public:
     ElasticSearch(const std::string& file) : filename(file), fd(-1), mmap_ptr(nullptr), file_size(0) {
@@ -515,7 +555,9 @@ public:
         }
     }
 
-    std::vector<crow::json::wvalue> searchMultiple(const std::string& tenant_id, const std::string& indexName, const std::vector<std::pair<std::string, std::string>>& conditions, int fuzziness = 2, bool must = true) {
+    std::vector<crow::json::wvalue> searchMultiple(const std::string& tenant_id, const std::string& indexName, 
+					const std::vector<std::pair<std::string, std::string>>& conditions, 
+					int fuzziness = 2, bool must = true, bool ignoreCase = true) {
         std::vector<crow::json::wvalue> results;
 
 		if(index.count(tenant_id) != true) 
@@ -530,9 +572,16 @@ public:
             for (const auto& [key, query] : conditions) {
                 if (doc.has(key)) {
               		std::string value = doc[key].s();
-                    if (isNearlyMatched(value, query, fuzziness)) {
-                        match_count++;
-                    }
+					if(!ignoreCase){
+						if (isNearlyMatched(value, query, fuzziness)) {
+	                        match_count++;
+	                    }
+					} else {
+						if (isNearlyMatchedIgnoreCase(value, query, fuzziness)) {
+	                        match_count++;
+	                    }
+					}
+	                    
                 }
             }
             if ((must && match_count == conditions.size()) || (!must && match_count > 0)) {
