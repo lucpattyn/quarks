@@ -524,6 +524,8 @@ void QSearch::TestRun() {
 
 	ElasticSearch& index = *_elastic;
 	
+	std::cout << "Elastic Search Indexing:\n";
+    
 	crow::json::wvalue doc;
     doc["title"] = "Elasticsearch with C++";
     doc["content"] = "This is a test query document";
@@ -535,9 +537,9 @@ void QSearch::TestRun() {
         {"content", "query"}
     };
     
+    std::cout << "Elastic Search Results:\n";
     auto eResults = index.searchMultiple("app1", "articles", conditions, 2, true);
     
-    std::cout << "Elastic Search Results:\n";
     for (const auto& res : eResults) {
         std::cout << crow::json::dump(res) << std::endl;
     }

@@ -380,8 +380,11 @@ private:
     int fd;
     void* mmap_ptr;
     size_t file_size;
-    crow::json::wvalue index;
-
+    
+	using list = std::vector< crow::json::wvalue >;
+	crow::json::wvalue index;
+	list docs;
+	
     void loadIndex() {
         fd = open(filename.c_str(), O_RDWR | O_CREAT, 0666);
         if (fd == -1) {
@@ -529,8 +532,28 @@ public:
     }
 
     void indexDocument(const std::string& tenant_id, const std::string& indexName, crow::json::wvalue& doc) {
-        index[tenant_id][indexName] = std::move(doc);
+        if (index[tenant_id].count(indexName)){
+        	//std::cout << "tenant .. " << std::endl;
+
+			crow::json::wvalue& w = index[tenant_id][indexName];
+        	std::string s = crow::json::dump(index[tenant_id][indexName + "_size"]);
+			int size = std::stoi(s);
+			 
+			w[size] = std::move(doc);
+			index[tenant_id][indexName + "_size"] = size + 1;
         	
+        	//std::cout << "loading .. " << crow::json::dump(index[tenant_id]) << std::endl;
+			
+		} else{
+			auto docs = crow::json::load("[]");
+			crow::json::wvalue w = docs;
+			w[0] = std::move(doc);
+			index[tenant_id][indexName] = std::move(w);	
+			index[tenant_id][indexName + "_size"] = 1;
+			
+			std::cout << crow::json::dump(index[tenant_id]) << std::endl;			
+		}
+		
 		persistIndex();
     }
 
@@ -566,10 +589,13 @@ public:
 		if(index[tenant_id].count(indexName) != true)
 			return results;	
 			
-		//for (const auto& key : index[tenant_id][indexName].keys()){
-            auto doc = crow::json::load(crow::json::dump(index[tenant_id][indexName]));
+		std::string availableDocs = crow::json::dump(index[tenant_id][indexName]);
+		//std::cout << "available docs:" << availableDocs << std::endl;
+		
+	    auto docs = crow::json::load(availableDocs);
+		for(auto doc: docs){
 			int match_count = 0;
-            for (const auto& [key, query] : conditions) {
+			for (const auto& [key, query] : conditions) {
                 if (doc.has(key)) {
               		std::string value = doc[key].s();
 					if(!ignoreCase){
@@ -587,8 +613,8 @@ public:
             if ((must && match_count == conditions.size()) || (!must && match_count > 0)) {
 				results.push_back(std::move(doc));
             }
-        //}
-
+		}
+				
         return results;
     }
 
