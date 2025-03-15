@@ -556,26 +556,75 @@ public:
 		
 		persistIndex();
     }
-
-    void updateDocument(const std::string& tenant_id, const std::string& indexName, crow::json::wvalue& new_doc) {
-        if (index[tenant_id].count(indexName)) {
-            index[tenant_id][indexName] = std::move(new_doc);
-            persistIndex();
-        }
-    }
-
-    void deleteDocument(const std::string& tenant_id, const std::string& indexName) {
-        if (index[tenant_id].count(indexName)) {
-            crow::json::wvalue newTenant;
-			for (const auto& key : index[tenant_id].keys()) {
-	    		if (key != indexName) {
-	        		newTenant[key] = std::move(index[tenant_id][key]);
-	    		}
-			}
-			index[tenant_id] = std::move(newTenant);
+    
+    bool clearIndex(const std::string& tenant_id, const std::string& indexName){
+    	if (index[tenant_id].count(indexName)){
+    		crow::json::wvalue empty = crow::json::load("[]");
+    		index[tenant_id][indexName] = std::move(empty);
+    		index[tenant_id][indexName + "_size"] = 0;
 			
+			persistIndex(); 
+			
+			return true;
+		}
+		
+		return false;
+	}
+
+	int updateDocument(const std::string& tenant_id, const std::string& indexName, crow::json::wvalue& newDoc,
+					const std::vector<std::pair<std::string, std::string>>& conditions, 
+					int fuzziness = 0, bool must = true, bool ignoreCase = true){
+		
+		int ret = 0;
+		if(index.count(tenant_id) != true) 
+			return ret;
+		
+		if(index[tenant_id].count(indexName) != true)
+			return ret;	
+			
+	    crow::json::wvalue& docs = index[tenant_id][indexName];
+	    
+	    std::string s = crow::json::dump(index[tenant_id][indexName + "_size"]);
+		int size = std::stoi(s);
+		if(size < 1){
+			return ret;
+		}
+		for(int index = 0; index < size; index++){
+			crow::json::wvalue& doc = docs[index];
+			int match_count = 0;
+			for (const auto& [key, query] : conditions) {
+                if (doc.count(key)) {
+              		std::string value = crow::json::dump(doc[key]);
+					if(!ignoreCase){
+						if (isNearlyMatched(value, query, fuzziness)) {
+	                        match_count++;
+	                    }
+					} else {
+						if (isNearlyMatchedIgnoreCase(value, query, fuzziness)) {
+	                        match_count++;
+	                    }
+					}
+	                    
+                }
+            }
+            if ((must && match_count == conditions.size()) || (!must && match_count > 0)) {
+				docs[index] = std::move(newDoc);
+				ret++;
+            }
+		}
+		
+		if(ret > 0){
 			persistIndex();
-        }
+		}
+		
+		return ret;
+	}
+
+    int deleteDocument(const std::string& tenant_id, const std::string& indexName, 
+					const std::vector<std::pair<std::string, std::string>>& conditions, 
+					int fuzziness = 0, bool must = true, bool ignoreCase = true) {
+        crow::json::wvalue emptyDoc = crow::json::load("{}");;
+        return updateDocument(tenant_id, indexName, emptyDoc, conditions, fuzziness, must, ignoreCase);
     }
 
     std::vector<crow::json::wvalue> searchMultiple(const std::string& tenant_id, const std::string& indexName, 

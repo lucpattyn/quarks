@@ -367,8 +367,46 @@ void QSearch::BuildHttpRoutes(void* appContext){
 		return out;
 	};
 
-	auto route_elastic_search_callback =
+	auto route_elastic_indexclear_callback =
 	[&index](const crow::request& req) {
+		bool ret = false;
+		
+		std::string body = req.body;	
+		auto b = req.url_params.get("body");
+		if(b != nullptr) {
+			body = b;
+		}
+		
+		crow::json::wvalue out;
+		auto x = crow::json::load(body);
+		if (!x) {
+			out["error"] = "invalid parameters";
+			return out;
+		}
+
+		try {
+			std::string tenant = x["app"].s();
+    		std::string indexName = x["index"].s();
+    		
+    		ret = index.clearIndex(tenant, indexName);
+			
+
+		} catch (const std::runtime_error& error) {
+			out["error"] = "app/index/doc missing or not properly formatted";
+		}
+
+		out["result"] = ret;
+
+		return out;
+
+	};
+
+    //int action = 0; // 0 means search, 1 means update, -1 means delete
+	
+	auto route_elastic_action_callback =
+	[](ElasticSearch& index, int action, const crow::request& req ) {
+		
+		std::cout << "elastic action callback 1" << std::endl;
 		
 		std::string body = req.body;	
 		auto b = req.url_params.get("body");
@@ -385,9 +423,14 @@ void QSearch::BuildHttpRoutes(void* appContext){
 
 		try {
 		
+			std::cout << "elastic action callback 2" << std::endl;
+			
 			std::string tenant = x["app"].s();
     		std::string indexName = x["index"].s();
-    		
+    	
+			std::cout << "elastic action callback 3" << std::endl;
+			
+			
     		// Extract conditions
     		std::vector<std::pair<std::string, std::string>> conditions;   
     		if (x.has("conditions")) {
@@ -402,26 +445,70 @@ void QSearch::BuildHttpRoutes(void* appContext){
         		}
     		}
 
+			std::cout << "elastic action callback 4" << std::endl;
+			
+		
 			int fuzziness = 2; 
-			if(x.has("fuzziness")){
-				fuzziness = x["fuzziness"].i();
-			}
+			
 			bool must = false;
 			if(x.has("must")){
 				must = x["must"].b();
 			}
+			
+			std::cout << "elastic action callback 5" << std::endl;
+			
+		
 			bool ignoreCase = false;
 			if(x.has("ignorecase")){
 				ignoreCase = x["ignorecase"].b();
 			}
-    		auto eResults = index.searchMultiple(tenant, indexName, conditions, fuzziness, must, ignoreCase);
-    
-    		std::cout << "Elastic Search Results:\n";
-    		for (const auto& res : eResults) {
-        		std::cout << crow::json::dump(res) << std::endl;
-   			}
 
-			out["result"] = std::move(eResults);
+			std::cout << "elastic action callback 6" << action << std::endl;
+			
+		
+			if(action == 0){
+				std::cout << "action is 0 " << std::endl;
+				if(x.has("fuzziness")){
+					fuzziness = x["fuzziness"].i();
+				}
+				auto eResults = index.searchMultiple(tenant, indexName, conditions, fuzziness, must, ignoreCase);
+    
+    			std::cout << "Elastic Search Results:\n";
+    			for (const auto& res : eResults) {
+        			std::cout << crow::json::dump(res) << std::endl;
+   				}
+
+				out["result"] = std::move(eResults);
+				
+			} else if(action == 1){
+				fuzziness = 0;				
+				if(x.has("fuzziness")){
+					fuzziness = x["fuzziness"].i();
+				}
+			
+				int updated = 0;
+				if(x.has("doc")){
+					crow::json::wvalue doc = x["doc"];
+					updated = index.updateDocument(tenant, indexName, doc, conditions, fuzziness, must, ignoreCase);
+    			}
+					
+    			std::cout << "Elastic update result:" << updated;
+    			
+				out["result"] = updated;
+				
+			} else if(action == -1){
+				fuzziness = 0;				
+				if(x.has("fuzziness")){
+					fuzziness = x["fuzziness"].i();
+				}
+			
+				int deleted = index.deleteDocument(tenant, indexName, conditions, fuzziness, must, ignoreCase);
+    				
+    			std::cout << "Elastic update result:" << deleted;
+    			
+				out["result"] = deleted;
+			}
+    
 			
 		} catch (const std::runtime_error& error) {
 			out["error"] = "app/index/conditions/fuzziness/must/ignorecase missing or not properly formatted";
@@ -430,12 +517,39 @@ void QSearch::BuildHttpRoutes(void* appContext){
 		return out;
 	};
 	
+	auto route_elastic_search_callback =
+	[&index, &route_elastic_action_callback](const crow::request& req) {
+		std::cout << "elastic search callback" << std::endl;
+		auto ret = route_elastic_action_callback(index, 0, req);
+		
+		return ret;
+	};
+	
+	auto route_elastic_update_callback =
+	[&index, &route_elastic_action_callback](const crow::request& req) {
+		return route_elastic_action_callback(index, 1, req);
+	};
+	
+	auto route_elastic_delete_callback =
+	[&index, &route_elastic_action_callback](const crow::request& req) {
+		return route_elastic_action_callback(index, -1, req);
+	};
+	
 	CROW_ROUTE(app, "/elastic/index")
 	.methods("GET"_method, "POST"_method)(route_elastic_index_callback);
+	
+	CROW_ROUTE(app, "/elastic/index/clear")
+	.methods("GET"_method, "POST"_method)(route_elastic_indexclear_callback);
 	
 	CROW_ROUTE(app, "/elastic/search")
 	.methods("GET"_method, "POST"_method)(route_elastic_search_callback);
 
+	CROW_ROUTE(app, "/elastic/update")
+	.methods("GET"_method, "POST"_method)(route_elastic_update_callback);
+	
+	CROW_ROUTE(app, "/elastic/delete")
+	.methods("GET"_method, "POST"_method)(route_elastic_delete_callback);
+	
 }
 
 void QSearch::TestRun() {
@@ -524,7 +638,7 @@ void QSearch::TestRun() {
 
 	ElasticSearch& index = *_elastic;
 	
-	std::cout << "Elastic Search Indexing:\n";
+	std::cout << "Elastic Search Indexing ... \n";
     
 	crow::json::wvalue doc;
     doc["title"] = "Elasticsearch with C++";
