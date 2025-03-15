@@ -993,7 +993,7 @@ output: {"result":true}
 Clear all the docs under an index by app name
 
 ```
-http://0:0:0:0:18080/elastic/index?body={
+http://0:0:0:0:18080/elastic/index/clear?body={
 "app":"app1",
 "index":"articles",
 }
@@ -1046,6 +1046,9 @@ http://0:0:0:0:18080/elastic/update?body={
 output: {"result":1} // the number of documents updated
 
 ```
+
+*** All of the elastic urls support POST format and is recommended to use ***
+
 
 *After search implementation, v8 engine integration and scripting support,
 the next target was to allow listener support through zero mq to communicate with other processes and services
