@@ -832,7 +832,7 @@ In our example, we named the function - "jsFilter" in main.js.
 
 Quarks will allow minimum usage of scripting to ensure the server side codes remain super optimized.
 
-### Fuzzy Search
+### Fuzzy / Elastic Search
 
 Fuzzy search now works for queries of varying lengths.
 You can retrieve words like "world" even when searching for "worl".
@@ -968,6 +968,82 @@ Expected output:
 
 ```
 {"result":[{"meta":"peak","tag":"word","word":"apex"},{"meta":"red","tag":"fruit","word":"apple"}]}
+
+```
+
+Elasticsearch (Apache Lucene) like elasticity has been provided in search as well.
+
+Index a document with app and index name
+
+```
+http://0:0:0:0:18080/elastic/index?body={
+"app":"app1",
+"index":"articles",
+"doc":{
+    "title":"New Search with Cpp",
+    "content":"This is a new query document",
+    "timestamp" : "2025-03-15"
+ }
+}
+
+output: {"result":true}
+
+```
+
+Clear all the docs under an index by app name
+
+```
+http://0:0:0:0:18080/elastic/index?body={
+"app":"app1",
+"index":"articles",
+}
+
+output: {"result":true}
+
+```
+
+
+Search a document with app name and conditions 
+(must set to 'true' implies must match all conditions, false implies results will be fetched even if one condition is satisfied) : 
+
+```
+http://0:0:0:0:18080/elastic/search?body={
+"app":"app1",
+"index":"articles",
+"conditions":{
+    "title":"ElasticSearch",
+    "content":"query"
+ },
+ "fuzziness":2,
+ "must":true
+}
+
+
+output: {"result":[{"title":"Elasticsearch with C++","timestamp":"2025-02-24","content":"This is a test query document"}]}
+
+```
+
+Update a document with same conditions as search. It will find the document matching the condition 
+and replace it with new one mentiond in "doc" 
+
+```
+http://0:0:0:0:18080/elastic/update?body={
+"app":"app1",
+"index":"articles",
+"conditions":{
+    "title":"ElasticSearch",
+    "content":"query"
+ },
+ "fuzziness":0,
+ "must":true,
+"doc":{
+    "title":"New ElasticSearch with Cpp",
+    "content":"This is a new query document",
+    "timestamp" : "2025-03-15"
+ }
+}
+
+output: {"result":1} // the number of documents updated
 
 ```
 

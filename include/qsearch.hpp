@@ -412,24 +412,41 @@ private:
     }
 
     void persistIndex() {
-        std::string json_data = crow::json::dump(index);//index.dump();
-        if (json_data.size() > file_size) {
-            size_t new_size = json_data.size() * 2;
-            if (ftruncate(fd, new_size) == -1) {
-                perror("Error resizing file");
-                return;
-            }
-            munmap(mmap_ptr, file_size);
-            mmap_ptr = mmap(nullptr, new_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-            if (mmap_ptr == MAP_FAILED) {
-                perror("Error remapping file");
-                close(fd);
-                exit(EXIT_FAILURE);
-            }
-            file_size = new_size;
-        }
-        std::memcpy(mmap_ptr, json_data.c_str(), json_data.size());
-    }
+	    std::string json_data = crow::json::dump(index);
+	    size_t new_size = json_data.size();  // Size of new JSON data in bytes
+	
+	    // Ensure the file is large enough
+	    if (new_size > file_size) {
+	        if (ftruncate(fd, new_size) == -1) {
+	            perror("Error expanding file");
+	            return;
+	        }
+	        munmap(mmap_ptr, file_size);
+	        mmap_ptr = mmap(nullptr, new_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	        if (mmap_ptr == MAP_FAILED) {
+	            perror("Error remapping file");
+	            close(fd);
+	            exit(EXIT_FAILURE);
+	        }
+	        file_size = new_size;
+	    }
+	
+	    // Copy JSON data and explicitly null-terminate
+	    std::memcpy(mmap_ptr, json_data.c_str(), new_size);
+	    if (new_size < file_size) {
+	        // Clear remaining bytes to avoid leftover garbage
+	        std::memset(static_cast<char*>(mmap_ptr) + new_size, 0, file_size - new_size);
+	    }
+	
+	    // **Truncate file to match exact data size**
+	    if (ftruncate(fd, new_size) == -1) {
+	        perror("Error truncating file");
+	    }
+	
+	    // Ensure changes are written to disk
+	    msync(mmap_ptr, new_size, MS_SYNC);
+	}
+
 
     static int levenshteinDistance(const std::string& s1, const std::string& s2) {
         int len1 = s1.size(), len2 = s2.size();
