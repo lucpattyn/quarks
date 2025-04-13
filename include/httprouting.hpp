@@ -1788,11 +1788,12 @@ public:
 		};
 	
 		
-	    CROW_ROUTE(app, "/<string>")
+		// commented out because will create problem for websockets 
+	    /*CROW_ROUTE(app, "/<string>")
 	    ([&getFile](const std::string& path) {
 	        std::string filePath = "static/" + CrowMiddleware::uri_decode(path.c_str()); // Folder where uploaded files are stored
 	        return getFile(filePath);
-	    });
+	    });*/
 	    
 		CROW_ROUTE(app, "/")
 		([&defaultPageLoader](const crow::request& req) {

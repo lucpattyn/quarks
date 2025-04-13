@@ -2,7 +2,7 @@
 # Quarks
 A modern C++ based off-the-shelf server framework for storing, retrieving, processing data with high scalability and plugging in business logics.
 
-Quarks provides a highly scalable and distributable open source system based on actor model which can be easily deployed in closed networks.
+Quarks provides a highly scalable and distributable open source system which takes advantage of the actor model and can be easily deployed in closed networks.
 The ultimate aim is to come up with open source solutions to well known problems like chatting, image/video processing, transcoding, voice recognition etc. thus reducing dependencies
 on cloud platforms like AWS and GCP.
 Standardized chat and feed systems would eliminate the need to make private data available to public social networks, thus provisioning to safeguard user's own valuable data.
@@ -1407,6 +1407,9 @@ Definitely Quarks has to be running to view the examples
  ## Changes for Ubuntu 20.04
 
   1. Downgrade Boost version to 1.69
+  
+  To see the complete instructions see the install_in_ubuntu.md file
+  or visit [build quarks in Ubuntu 20.04 and above](https://dev.to/lucpattyn/install-quarks-in-ubuntu-2004-and-above-1fcf)
   
  ## Get started with Docker image:
  To quickly get started, follow these steps:
